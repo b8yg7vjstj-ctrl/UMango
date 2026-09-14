@@ -1,0 +1,17 @@
+[package]
+name = "umango-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "UMango 核心业务层：领域模型、包源适配器契约、版本与依赖解析"
+publish = false
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+node-semver = "2.2"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+
+[dev-dependencies]

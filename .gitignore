@@ -1,0 +1,23 @@
+# ---- 构建产物（全部在 OneDrive 同步目录之外或应予忽略） ----
+/build/
+/ui/build/
+/ui/.dart_tool/
+/ui/.flutter-plugins
+/ui/.flutter-plugins-dependencies
+/ui/macos/Flutter/ephemeral/
+/ui/macos/Pods/
+/ui/macos/Podfile.lock
+/core/target/
+/native/build/
+/native/cmake-build*/
+
+# ---- 编辑器 / 系统 ----
+.DS_Store
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# ---- 本地覆盖 ----
+local.properties
+*.local

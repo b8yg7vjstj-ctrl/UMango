@@ -1,0 +1,31 @@
+name: umango
+description: "UMango —— 跨平台包管理器图形界面（Flutter 前端）"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # dart:ffi 的 C 字符串/malloc 辅助（Dart 官方包）
+  ffi: ^2.1.4
+
+  # 渲染 CC0 授权的官方品牌图标（npm/pnpm/git/homebrew）。
+  # winget/scoop 无可用官方图标，改用自绘字母徽章（见 widgets/source_icon.dart）。
+  flutter_svg: ^2.2.0
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/

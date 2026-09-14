@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  与 DebugProfile 一致：关闭 App Sandbox。
+	  原因见 DebugProfile.entitlements 的注释 —— 包管理器 GUI 必须能执行
+	  外部 CLI 并写入沙箱外路径，否则核心功能不可用（代价是无法上架 App Store）。
+	-->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+
+	<!-- 访问包源 API -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!-- 允许加载随应用分发的 libumango_bridge.dylib -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>
