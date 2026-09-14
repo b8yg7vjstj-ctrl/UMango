@@ -96,14 +96,37 @@ cmd_smoke() {
 #
 # 本机的 flutter_tester 启动后无法连回测试框架的 socket（会静默挂住不返回），
 # 因此走集成测试路线；这条路更接近真实运行状态，验证强度反而更高。
+#
+# 两个坑：
+#  1. `flutter test integration_test`（目录形式）在桌面端**不可靠** ——
+#     只有第一个测试文件能成功启动应用，后续文件报
+#     "Unable to start the app on the device"。所以这里逐个文件单独调用。
+#  2. `flutter build` 会重新生成 .app，可能覆盖掉我们复制进去的 dylib，
+#     因此显式用 UMANGO_BRIDGE_LIB 指定动态库路径，让加载结果确定。
 cmd_ui_test() {
     log "Flutter 集成测试（真实 macOS 应用）"
-    cmake --build "${NATIVE_BUILD_DIR}" -j "$(sysctl -n hw.ncpu 2>/dev/null || echo 4)" >/dev/null 2>&1 || cmd_native
-    cmd_bundle
-    # 同一个 bundle 不能被两个实例同时占用，先清掉正在运行的实例
-    pkill -f "umango.app/Contents/MacOS/umango" 2>/dev/null || true
-    sleep 1
-    (cd "${UMANGO_ROOT}/ui" && flutter test integration_test -d macos)
+    [ -f "${DYLIB}" ] || cmd_native
+
+    local failed=0
+    local file name
+    for file in "${UMANGO_ROOT}"/ui/integration_test/*_test.dart; do
+        [ -f "${file}" ] || continue
+        name="$(basename "${file}")"
+        log "集成测试：${name}"
+        # 同一个 bundle 不能被两个实例同时占用，先清掉正在运行的实例
+        pkill -f "umango.app/Contents/MacOS/umango" 2>/dev/null || true
+        sleep 1
+        if ! (cd "${UMANGO_ROOT}/ui" && \
+              UMANGO_BRIDGE_LIB="${DYLIB}" \
+              flutter test "integration_test/${name}" -d macos); then
+            failed=1
+        fi
+    done
+
+    if [ "${failed}" -ne 0 ]; then
+        fail "有集成测试未通过"
+    fi
+    log "全部集成测试通过"
 }
 
 cmd_run() {
