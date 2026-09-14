@@ -324,4 +324,73 @@ c3\trefs/heads/main
         assert!(caps.list_versions);
         assert!(!caps.official_downloads);
     }
+
+    /// 真机测试：用真实远端仓库验证 `git ls-remote` 读取 tag 的完整链路。
+    ///
+    /// 这条测试此前长期无法验证 —— 开发环境一度访问不到 github.com，
+    /// `ls-remote` 必然失败（那时它验证的是降级分支）。网络恢复后它才真正执行。
+    #[test]
+    fn git_versions_from_real_remote() {
+        let adapter = GitAdapter;
+        if adapter.probe().state != AvailabilityState::Available {
+            eprintln!("跳过：本机没有可用的 git");
+            return;
+        }
+        match adapter.versions("jonschlinkert/is-number") {
+            Ok(versions) => {
+                assert!(!versions.is_empty(), "真实仓库应有 tag");
+                // 该仓库确实有 7.0.0 这个 tag
+                assert!(
+                    versions.iter().any(|v| v.version.contains("7.0.0")),
+                    "应包含 7.0.0，实际: {:?}",
+                    versions.iter().map(|v| &v.version).take(8).collect::<Vec<_>>()
+                );
+                // 必须按新到旧排序
+                assert!(
+                    vcmp::compare(&versions[0].version, &versions[versions.len() - 1].version)
+                        != std::cmp::Ordering::Less
+                );
+                // tag 名不带 v 前缀时也应被正确分类
+                assert!(versions
+                    .iter()
+                    .any(|v| v.channel == ReleaseChannel::Stable));
+            }
+            // 网络再次不可用时不算失败，但必须打印原因，避免"静默通过"
+            Err(e) => eprintln!("跳过（远端不可达）：{e}"),
+        }
+    }
+
+    /// 真机测试：短写法的仓库名应被自动补全成可克隆 URL。
+    #[test]
+    fn git_normalizes_short_name_for_real_remote() {
+        let adapter = GitAdapter;
+        if adapter.probe().state != AvailabilityState::Available {
+            return;
+        }
+        // 故意用 "owner/repo" 简写，适配器内部应补全为 https://github.com/...
+        let result = adapter.versions("jonschlinkert/is-odd");
+        match result {
+            Ok(versions) => assert!(!versions.is_empty()),
+            Err(e) => eprintln!("跳过（远端不可达）：{e}"),
+        }
+    }
+
+    /// 真机测试：不存在的仓库应给出明确的错误分类，而不是含糊失败。
+    #[test]
+    fn git_missing_repo_is_classified() {
+        let adapter = GitAdapter;
+        if adapter.probe().state != AvailabilityState::Available {
+            return;
+        }
+        let err = adapter
+            .versions("umango-nonexistent-owner-xyz/nonexistent-repo-abc")
+            .expect_err("不存在的仓库应报错");
+        // 允许两种合理分类：仓库不存在，或远端访问失败（取决于远端如何回应）
+        assert!(
+            matches!(err.code(), "package_not_found" | "network_error" | "command_failed"),
+            "错误分类不合理: {} / {}",
+            err.code(),
+            err
+        );
+    }
 }

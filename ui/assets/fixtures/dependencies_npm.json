@@ -1,0 +1,53 @@
+{
+  "data": {
+    "root": {
+      "children": [
+        {
+          "children": [],
+          "depth": 1,
+          "downloads": {
+            "kind": "unknown",
+            "reason": "尚未查询"
+          },
+          "id": {
+            "name": "is-number",
+            "source": "npm"
+          },
+          "kind": "runtime",
+          "requirement": "^6.0.0",
+          "resolved": "6.0.0",
+          "status": {
+            "state": "resolved"
+          }
+        }
+      ],
+      "depth": 0,
+      "downloads": {
+        "kind": "unknown",
+        "reason": "尚未查询"
+      },
+      "id": {
+        "name": "is-odd",
+        "source": "npm"
+      },
+      "kind": "runtime",
+      "requirement": "*",
+      "resolved": "3.0.1",
+      "status": {
+        "state": "resolved"
+      }
+    },
+    "summary": {
+      "conflict": 0,
+      "cyclic": 0,
+      "max_depth": 1,
+      "missing": 0,
+      "total": 2,
+      "truncated": 0,
+      "unverified": 0
+    },
+    "truncated": false,
+    "warnings": []
+  },
+  "ok": true
+}

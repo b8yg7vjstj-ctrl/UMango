@@ -8,7 +8,8 @@
 #   scripts/build.sh ui           仅构建 Flutter macOS 应用
 #   scripts/build.sh bundle       把 dylib 复制进已构建的 .app
 #   scripts/build.sh run          构建全部并启动应用
-#   scripts/build.sh test         跑全部测试（Rust 单测 + C++/Rust 桥接自检）
+#   scripts/build.sh test         跑全部测试（Rust 单测 + 桥接自检 + Flutter 集成测试）
+#   scripts/build.sh ui-test      只跑 Flutter 集成测试（在真实 macOS 应用里）
 #   scripts/build.sh smoke        只跑桥接层自检（最快的端到端验证）
 #
 # 环境变量：
@@ -83,11 +84,26 @@ cmd_test() {
     (cd "${UMANGO_ROOT}/core" && cargo test)
     log "C++ ↔ Rust 桥接层自检"
     cmd_smoke
+    cmd_ui_test
 }
 
 cmd_smoke() {
     [ -f "${NATIVE_BUILD_DIR}/umango_bridge_smoke" ] || cmd_native
     "${NATIVE_BUILD_DIR}/umango_bridge_smoke"
+}
+
+# Flutter 集成测试：在**真实运行的 macOS 应用**里跑，而不是 flutter_tester。
+#
+# 本机的 flutter_tester 启动后无法连回测试框架的 socket（会静默挂住不返回），
+# 因此走集成测试路线；这条路更接近真实运行状态，验证强度反而更高。
+cmd_ui_test() {
+    log "Flutter 集成测试（真实 macOS 应用）"
+    cmake --build "${NATIVE_BUILD_DIR}" -j "$(sysctl -n hw.ncpu 2>/dev/null || echo 4)" >/dev/null 2>&1 || cmd_native
+    cmd_bundle
+    # 同一个 bundle 不能被两个实例同时占用，先清掉正在运行的实例
+    pkill -f "umango.app/Contents/MacOS/umango" 2>/dev/null || true
+    sleep 1
+    (cd "${UMANGO_ROOT}/ui" && flutter test integration_test -d macos)
 }
 
 cmd_run() {
@@ -106,6 +122,7 @@ case "${1:-all}" in
     bundle) cmd_bundle ;;
     run)    cmd_run ;;
     test)   cmd_test ;;
+    ui-test) cmd_ui_test ;;
     smoke)  cmd_smoke ;;
     all)
         cmd_rust

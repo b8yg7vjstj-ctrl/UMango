@@ -48,12 +48,41 @@
 
 **不写无法证伪的代码。** 每个能力都要能指出"怎么验证它是对的"：
 
-| 层次 | 验证方式 |
-|------|----------|
-| Rust 业务逻辑 | 单元测试（含真实 CLI 调用的联网测试，离线时自动跳过） |
-| C++ ↔ Rust 集成 | `native/tests/umango_bridge_smoke.cpp` 端到端自检 |
-| 跨语言契约 | 断言 JSON 字段名与结构（契约破坏会被测试抓住） |
-| 平台受限代码 | **显式标注未验证**，并在 UI 上呈现给用户 |
+| 层次 | 验证方式 | 当前用例数 |
+|------|----------|-----------|
+| Rust 业务逻辑 | 单元测试（含真实 CLI/网络的测试，离线时打印原因跳过） | 102 |
+| C++ ↔ Rust 集成 | `native/tests/umango_bridge_smoke.cpp` 端到端自检 | 全部检查 |
+| Dart ↔ C ABI 契约 | `ui/integration_test/bridge_test.dart`（直连真实 dylib） | 15 |
+| 核心层 JSON 契约 | `ui/integration_test/logic_test.dart`（用真实抓取的 JSON 做 assertions） | 20 |
+| 界面行为 | `ui/integration_test/app_test.dart`（在真实 macOS 应用里驱动界面） | 14 |
+| 平台受限代码 | **显式标注未验证**，并在 UI 上呈现给用户 | — |
+
+一条经验：**"调用成功"不等于"功能正常"**。
+依赖树在单点失败时会降级返回 `ok=true`，只看 `ok` 会把"整棵树其实没解析出来"
+当成通过（这个坑在开发中真实踩到过）。因此断言必须落在**业务语义**上：
+存在 `state=resolved` 节点、`warnings` 为空、界面上出现了正确的文字。
+
+### 为什么用集成测试而不是 `flutter test`
+
+本机的 `flutter test`（flutter_tester）**完全不可用**：进程能启动，
+但从不连回测试框架的 socket，静默挂住 148 秒以上直至被外部超时杀掉。
+排查过程与证据：
+
+- 排除了路径因素（把工程复制到 `/tmp` 纯 ASCII 路径下同样失败）；
+- 排除了 Gatekeeper 隔离属性（清了 `com.apple.quarantine` 后仍失败）；
+- 排除了网络/权限因素（回环 TCP 自测正常，测试框架的 socket server 也确实起来了）；
+- verbose 日志显示：`Started flutter_tester process at pid N` 之后
+  出现 **148589 ms 的空档**，期间没有任何事件，直到外部超时杀掉进程。
+
+结论是 flutter_tester 自身在 macOS 26 + Flutter 3.44 上无法完成握手。
+改为 `flutter test integration_test -d macos` 后：
+
+- 测试运行在**真实应用**里（真的加载 dart:ffi、真的执行 npm、真的渲染窗口）；
+- 验证强度**高于** flutter_tester（那是模拟环境）；
+- 并且立刻抓出了两个真实缺陷：主题按钮浮层遮挡「搜索」按钮导致点不动、
+  下载卡片上的兜底指标未标注。
+
+因此 `ui/test/` 目录已移除 —— 留着跑不了的测试比没有测试更糟。
 
 ### 关于"未验证"的处理原则
 
@@ -91,5 +120,6 @@ Rust 侧报告的进程执行器必须是 cpp-bridge
 | 动态库未正式集成进 Xcode 工程 | 需脚本复制 dylib | 阶段2 改为 Copy Files 阶段或 Flutter plugin |
 | 动画配置仅内存态 | 重启恢复默认 | 阶段2 用 C++ 文件 IO 回调落盘 |
 | 安装功能未执行 | 只生成命令计划 | 阶段3 |
-| 无 UI 自动化测试 | 依赖手工验证 | 阶段5 补 widget / 集成测试 |
+| 无 CI | 测试需手动跑 `scripts/build.sh test` | 阶段5 接 CI（注意 flutter_tester 问题会影响 CI 方案） |
 | `flutter analyze` 在本项目路径下崩溃 | 无法用 analyze 做静态检查 | analysis server 处理含空格+非 ASCII 路径的 bug；改用 `flutter build macos` 验证编译 |
+| `flutter test` 不可用 | 普通单元测试跑不了 | 已改用 integration_test；若换机器可恢复 `ui/test/` |

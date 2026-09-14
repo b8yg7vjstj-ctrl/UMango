@@ -1,0 +1,9 @@
+{
+  "error": {
+    "advice": "manual",
+    "code": "package_not_found",
+    "message": "找不到包 `umango-no-such-pkg-xyz`",
+    "retryable": false
+  },
+  "ok": false
+}

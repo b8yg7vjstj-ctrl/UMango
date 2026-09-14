@@ -1,0 +1,155 @@
+{
+  "data": [
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "7.0.0"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "6.0.0"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "5.0.0"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "4.0.0"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "3.0.0"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "2.1.0"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "2.0.2"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "2.0.1"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "2.0.0"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "1.1.2"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "1.1.1"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "1.1.0"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "1.0.0"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "0.1.1"
+    },
+    {
+      "channel": "stable",
+      "deprecated": false,
+      "downloads": null,
+      "from_cache": false,
+      "note": null,
+      "published_at": null,
+      "requires": [],
+      "version": "0.1.0"
+    }
+  ],
+  "ok": true
+}

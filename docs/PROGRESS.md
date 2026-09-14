@@ -8,14 +8,33 @@
 **阶段1 目标已达成**：三层架构（Flutter + Rust + C++）打通，空 UI 框架可运行，
 动画配置系统可切换，包源／版本／依赖树三项只读能力可用并已真机验证。
 
-验证方式与结果：
+### 验证结果汇总
 
-| 验证项 | 命令 | 结果 |
+| 验证层 | 命令 | 结果 |
 |--------|------|------|
-| Rust 单元测试 | `cd core && cargo test` | **99 项全部通过**（core 44 + adapters 43 + ffi 12） |
+| Rust 单元测试 | `cd core && cargo test` | **102 项通过**（core 44 + adapters 46 + ffi 12） |
 | C++ ↔ Rust 端到端自检 | `scripts/build.sh smoke` | **全部检查通过** |
-| Flutter 应用构建 | `scripts/build.sh ui` | 成功产出 `umango.app` |
-| 应用真实运行 | 直接启动 .app 内二进制 | 启动成功，日志确认 C++ 宿主执行器已挂载 |
+| Flutter 集成测试（逻辑与契约） | `scripts/build.sh ui-test` | **20 项通过** |
+| Flutter 集成测试（FFI 直连） | 同上 | **15 项通过** |
+| Flutter 集成测试（界面） | 同上 | **14 项通过** |
+| 应用构建与运行 | `scripts/build.sh all` | 成功产出并启动 `umango.app` |
+
+合计 **151 项自动化测试**（102 Rust + 49 Flutter）+ 桥接层自检。
+
+### 界面测试实际断言了什么
+
+这是"UI 能用"的直接证据，而不是"能编译"的推断：
+
+- 启动后进入主界面，**不是**停留在加载页或错误页（错误路径是被优雅处理的，
+  不会抛异常，因此必须断言屏幕上出现了正确内容）；
+- 首页出现 `cpp-bridge`（该值由 Rust 经 C++ 报上来，证明三层真接通）；
+- 包源列表隐藏被门控的源；打开开关后 6 个源全部可见且状态明确；
+- 搜索真实包后渲染出卡片，含下载量角标与官方图标；
+- 切换动画预设后 `AnimationScope.config` **真的改变**；
+- 版本列表渲染出版本号与通道标签、通道筛选；
+- 依赖树渲染出节点行、统计，且每个节点都有「直接安装」与「跳转详情」入口；
+- 点击依赖节点确实压栈打开了该依赖的详情页；
+- 兜底指标（GitHub Stars）在卡片上被明确标注。
 
 应用启动日志（关键证据）：
 
@@ -103,17 +122,47 @@
    → 修复：主版本全零 + 无显式预发布标记 → 判为快照。
 10. **serde 把 `GitHubStars` 序列化成 `git_hub_stars`**：会变成难看的前端契约。
     → 修复：显式 `#[serde(rename = "github_stars")]` 钉死。
+11. **浮层遮挡导致「搜索」按钮点不动**（由界面集成测试抓出）：
+    主题切换按钮用 `Positioned(right: 14, top: 10)` 浮在内容区右上角，
+    正好压住了下载页的「搜索」按钮，点击落到浮层上。
+    hit-test 报告 `derived an Offset ... that would not hit test on the specified widget`。
+    这类"浮层遮挡"问题在视觉上完全看不出来（按钮看着好好的），
+    只有 hit-test 能暴露。→ 修复：把主题切换移进侧边栏底部，取消浮层。
+12. **下载卡片上的兜底指标没有标注**（由界面集成测试抓出）：
+    `DownloadBadge` 的"兜底"标记只在非紧凑模式下渲染，
+    而卡片用的是紧凑模式 —— 结果是 GitHub Stars 在卡片上看起来就像下载量，
+    直接违反了"下载量优先、Stars 兜底"必须可区分的要求。
+    → 修复：任何尺寸下都标注，并在紧凑模式补上短指标名（Stars）。
+13. **`flutter test` 在本机完全不可用**：flutter_tester 进程能启动，
+    但从此不再连回测试框架的 socket，静默挂住 148 秒以上（见 ROADMAP.md）。
+    → 改用 `flutter test integration_test -d macos`，在**真实应用**里跑测试。
+    这不只是绕开问题：它把验证强度从"模拟环境"提升到了"真实运行状态"，
+    并且正是它抓出了上面第 11、12 两个真实缺陷。
+
+### 测试自身的三个教训
+
+写测试时踩的坑同样值得记录（都是"测试写错了，不是代码错了"）：
+
+- **只断言 `ok=true` 会漏掉整棵树的降级**：依赖树在单点失败时正常返回，
+  必须同时断言存在 `state=resolved` 且 `warnings` 为空。
+- **`find.byType` 默认跳过 offstage**：页面跳转后旧页面变 offstage，
+  用"页面数量 ≥ 2"判断是否压栈必然失败；应断言当前可见页面的具体属性。
+- **不要在无意义的量上做符号比较**：纵向入场的 `dx` 恒为 0，
+  拿它和横向风格的 `dx` 比符号，期望值是 `-0.0` 而实际是 `-1.0`。
 
 ## 四、环境约束（会影响后续开发）
 
-- **`github.com:443` 不可达，但 `api.github.com` 可达**。
-  所以 `git clone` / `git ls-remote` 会失败，而 GitHub 搜索 API 正常。
-  阶段4 取用 PCL-CE / HMCL-CE 源码时需要镜像或离线包。
+- **网络已恢复**：`github.com` / `api.github.com` / `codeload` / `raw.githubusercontent`
+  现均可访问，`git ls-remote` 实测成功，git 适配器的 tag 读取链路已补上真机测试。
+  注意 `objects.githubusercontent.com` 仍不可达（大文件下载可能受影响）。
 - cargo 走清华 TUNA 镜像，npm 走 npmmirror，pub.dev 直连正常。
 - 项目位于 OneDrive 同步目录，构建产物已重定向到 `~/Library/Caches/umango-build/`。
-- `flutter analyze` 在本项目路径下**会崩溃**（analysis server 的 LSP 消息
+- **`flutter analyze` 在本项目路径下会崩溃**（analysis server 的 LSP 消息
   无法处理含空格与非 ASCII 的路径 → `FormatException`）。
-  这不是代码问题，验证请改用 `flutter build macos`（编译错误会正常报出）。
+  这不是代码问题，验证编译请改用 `flutter build macos`。
+- **`flutter test`（flutter_tester）在本机不可用**，详见
+  [ROADMAP.md](ROADMAP.md) 的"为什么用集成测试而不是 flutter test"。
+  因此 `ui/test/` 目录已移除，全部 Flutter 测试都在 `ui/integration_test/`。
 
 ## 五、下一步（阶段2 建议起点）
 

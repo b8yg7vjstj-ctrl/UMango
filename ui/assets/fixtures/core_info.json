@@ -1,0 +1,12 @@
+{
+  "data": {
+    "app": "UMango",
+    "arch": "aarch64",
+    "availability_ttl_secs": 86400,
+    "core_version": "0.1.0",
+    "platform": "macos",
+    "platform_display": "macOS",
+    "process_runner": "cpp-bridge"
+  },
+  "ok": true
+}

@@ -124,32 +124,13 @@ class _BridgeGateState extends State<_BridgeGate> {
       );
     }
 
-    return Stack(
-      children: [
-        const AppShell(),
-        Positioned(
-          right: 14,
-          top: 10,
-          child: IconButton(
-            onPressed: widget.onToggleTheme,
-            tooltip: '切换主题（当前：${_themeLabel(widget.themeMode)}）',
-            iconSize: 17,
-            icon: Icon(switch (widget.themeMode) {
-              ThemeMode.system => Icons.brightness_auto_outlined,
-              ThemeMode.light => Icons.light_mode_outlined,
-              ThemeMode.dark => Icons.dark_mode_outlined,
-            }),
-          ),
-        ),
-      ],
+    // 直接返回外壳，不再套一层 Stack 放浮层控件 ——
+    // 浮层会遮挡并吃掉下方控件的点击（见 app_shell.dart 侧边栏底部的注释）。
+    return AppShell(
+      onToggleTheme: widget.onToggleTheme,
+      themeMode: widget.themeMode,
     );
   }
-
-  String _themeLabel(ThemeMode mode) => switch (mode) {
-        ThemeMode.system => '跟随系统',
-        ThemeMode.light => '浅色',
-        ThemeMode.dark => '深色',
-      };
 }
 
 /// 桥接层加载失败的诊断页。

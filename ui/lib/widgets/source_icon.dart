@@ -152,6 +152,17 @@ class DownloadBadge extends StatelessWidget {
       UnknownDownloadStats() => Icons.help_outline,
     };
 
+    /// 紧凑模式下的短指标名。
+    ///
+    /// 兜底数据必须在**任何**尺寸下都能看出它不是下载量 ——
+    /// 早期版本只在非紧凑模式显示标注，导致下载卡片上的 GitHub Stars
+    /// 看起来就像下载量（这个问题是被集成测试抓出来的）。
+    final shortMetric = switch (stats) {
+      OfficialDownloadStats() => '下载量',
+      GitHubStarsStats() => 'Stars',
+      UnknownDownloadStats() => '',
+    };
+
     return Tooltip(
       message: '${stats.metricName}·${stats.sourceLabel}'
           '${stats.isFallback ? '\n（官方下载量不可用，已按规则兜底为 GitHub Stars）' : ''}',
@@ -170,23 +181,32 @@ class DownloadBadge extends StatelessWidget {
               color: isUnknown ? theme.colorScheme.outline : theme.colorScheme.onSurface,
             ),
           ),
-          if (!compact && !isUnknown) ...[
+          // 指标名：非紧凑模式总是显示；紧凑模式下仅兜底时显示（避免误读）
+          if (!isUnknown && (!compact || stats.isFallback)) ...[
             const SizedBox(width: 3),
             Text(
-              stats.metricName,
+              compact ? shortMetric : stats.metricName,
               style: TextStyle(fontSize: 11, color: theme.colorScheme.outline),
             ),
           ],
-          if (stats.isFallback && !compact) ...[
+          if (stats.isFallback) ...[
             const SizedBox(width: 4),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 3 : 4,
+                vertical: compact ? 0 : 1,
+              ),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF3E0),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const Text('兜底',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF8A5300))),
+              child: Text(
+                '兜底',
+                style: TextStyle(
+                  fontSize: compact ? 9 : 10,
+                  color: const Color(0xFF8A5300),
+                ),
+              ),
             ),
           ],
         ],

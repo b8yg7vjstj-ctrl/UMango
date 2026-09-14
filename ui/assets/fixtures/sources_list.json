@@ -1,0 +1,204 @@
+{
+  "data": [
+    {
+      "accent": "#CB3837",
+      "availability": {
+        "checked_at": "2026-09-14T15:46:01.550Z",
+        "cli_found": true,
+        "cli_path": "/opt/homebrew/bin/npm",
+        "cli_version": "10.9.7",
+        "detail": null,
+        "source": "npm",
+        "stale": false,
+        "state": "available"
+      },
+      "capabilities": {
+        "install": true,
+        "list_versions": true,
+        "official_downloads": true,
+        "resolve_deps": true,
+        "search": true,
+        "uninstall": true,
+        "upgrade": true
+      },
+      "cli_name": "npm",
+      "default_scope": "global",
+      "display_name": "npm",
+      "icon_key": "icon_npm",
+      "kind": "npm",
+      "supported_here": true,
+      "supported_platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "verification_note": null
+    },
+    {
+      "accent": "#F69220",
+      "availability": {
+        "checked_at": "2026-09-14T15:46:01.656Z",
+        "cli_found": true,
+        "cli_path": "/opt/homebrew/bin/pnpm",
+        "cli_version": "11.22.0",
+        "detail": null,
+        "source": "pnpm",
+        "stale": false,
+        "state": "available"
+      },
+      "capabilities": {
+        "install": true,
+        "list_versions": true,
+        "official_downloads": false,
+        "resolve_deps": true,
+        "search": true,
+        "uninstall": true,
+        "upgrade": true
+      },
+      "cli_name": "pnpm",
+      "default_scope": "global",
+      "display_name": "pnpm",
+      "icon_key": "icon_pnpm",
+      "kind": "pnpm",
+      "supported_here": true,
+      "supported_platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "verification_note": null
+    },
+    {
+      "accent": "#F05032",
+      "availability": {
+        "checked_at": "2026-09-14T15:46:01.920Z",
+        "cli_found": true,
+        "cli_path": "/usr/bin/git",
+        "cli_version": "git version 2.50.1 (Apple Git-155)",
+        "detail": null,
+        "source": "git",
+        "stale": false,
+        "state": "available"
+      },
+      "capabilities": {
+        "install": true,
+        "list_versions": true,
+        "official_downloads": false,
+        "resolve_deps": false,
+        "search": true,
+        "uninstall": false,
+        "upgrade": true
+      },
+      "cli_name": "git",
+      "default_scope": "project_local",
+      "display_name": "Git",
+      "icon_key": "icon_git",
+      "kind": "git",
+      "supported_here": true,
+      "supported_platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "verification_note": null
+    },
+    {
+      "accent": "#FBB040",
+      "availability": {
+        "checked_at": "2026-09-14T15:46:01.932Z",
+        "cli_found": true,
+        "cli_path": "/opt/homebrew/bin/brew",
+        "cli_version": "Homebrew 6.0.22",
+        "detail": null,
+        "source": "homebrew",
+        "stale": false,
+        "state": "available"
+      },
+      "capabilities": {
+        "install": true,
+        "list_versions": true,
+        "official_downloads": true,
+        "resolve_deps": true,
+        "search": true,
+        "uninstall": true,
+        "upgrade": true
+      },
+      "cli_name": "brew",
+      "default_scope": "user_system",
+      "display_name": "Homebrew",
+      "icon_key": "icon_homebrew",
+      "kind": "homebrew",
+      "supported_here": true,
+      "supported_platforms": [
+        "macos",
+        "linux"
+      ],
+      "verification_note": null
+    },
+    {
+      "accent": "#0078D4",
+      "availability": {
+        "checked_at": "2026-09-14T15:46:01.946Z",
+        "cli_found": false,
+        "cli_path": null,
+        "cli_version": null,
+        "detail": "WinGet 仅在 Windows 上可用",
+        "source": "winget",
+        "stale": false,
+        "state": "unsupported_platform"
+      },
+      "capabilities": {
+        "install": true,
+        "list_versions": true,
+        "official_downloads": false,
+        "resolve_deps": false,
+        "search": true,
+        "uninstall": true,
+        "upgrade": true
+      },
+      "cli_name": "winget",
+      "default_scope": "user_system",
+      "display_name": "WinGet",
+      "icon_key": "icon_winget",
+      "kind": "winget",
+      "supported_here": false,
+      "supported_platforms": [
+        "windows"
+      ],
+      "verification_note": "该包源的解析逻辑尚未在 Windows 真机验证（本项目在 macOS 上开发）。若结果异常，请把原始 CLI 输出反馈给项目。"
+    },
+    {
+      "accent": "#5D5D5D",
+      "availability": {
+        "checked_at": "2026-09-14T15:46:01.946Z",
+        "cli_found": false,
+        "cli_path": null,
+        "cli_version": null,
+        "detail": "Scoop 仅在 Windows 上可用",
+        "source": "scoop",
+        "stale": false,
+        "state": "unsupported_platform"
+      },
+      "capabilities": {
+        "install": true,
+        "list_versions": true,
+        "official_downloads": false,
+        "resolve_deps": true,
+        "search": true,
+        "uninstall": true,
+        "upgrade": true
+      },
+      "cli_name": "scoop",
+      "default_scope": "user_system",
+      "display_name": "Scoop",
+      "icon_key": "icon_scoop",
+      "kind": "scoop",
+      "supported_here": false,
+      "supported_platforms": [
+        "windows"
+      ],
+      "verification_note": "该包源的解析逻辑尚未在 Windows 真机验证（本项目在 macOS 上开发）。若结果异常，请把原始 CLI 输出反馈给项目。"
+    }
+  ],
+  "ok": true
+}

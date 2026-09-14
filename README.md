@@ -24,6 +24,7 @@ Flutter（界面 / 动画）
 | 下载量：官方优先 → GitHub Stars 兜底 | ✅ 两条链路均实测 |
 | 全局可切换动画风格（纵向入场 / 向右滑出） | ✅ |
 | 包源可用性 24 小时缓存保护 | ✅ |
+| 自动化测试 | ✅ 151 项（102 Rust + 49 Flutter 集成） |
 | 安装 / 卸载 / 升级的**实际执行** | ❌ 阶段3（当前只生成命令计划） |
 | winget / scoop 适配器 | ⚠️ 已实现但**无法在 macOS 上验证** |
 | 插件系统 | ❌ 阶段4 |
@@ -39,9 +40,19 @@ scripts/build.sh all
 # 构建并启动
 scripts/build.sh run
 
-# 跑全部测试（Rust 单测 + C++↔Rust 桥接自检）
+# 跑全部测试（Rust 单测 + 桥接自检 + Flutter 集成测试，约 6 分钟）
 scripts/build.sh test
+
+# 只跑 Flutter 集成测试（在真实 macOS 应用里驱动界面）
+scripts/build.sh ui-test
+
+# 只跑桥接层自检（最快的端到端验证，秒级）
+scripts/build.sh smoke
 ```
+
+> 测试说明：Flutter 测试走 `integration_test`，运行在**真实应用**里，
+> 而不是 flutter_tester（本机 flutter_tester 无法启动，原因见
+> [docs/ROADMAP.md](docs/ROADMAP.md)）。因此运行前需要先构建原生层。
 
 ### 环境要求
 
@@ -90,9 +101,8 @@ scripts/                 构建脚本
 
 ## 已知限制（如实记录）
 
-- **github.com:443 在本开发环境不可达**，但 `api.github.com` 可达。
-  因此 git 源的搜索（走 API）可用，而 `git ls-remote` 读 tag 会失败 ——
-  这反而验证了降级链路确实生效。
+- **网络已恢复**：`git ls-remote` 实测可用，git 适配器的 tag 读取链路已补上真机测试。
+  但开发期曾长期无法访问 github.com，因此代码里保留了完整的降级分支与对应测试。
 - **winget / scoop 的解析逻辑未经真机验证**，界面上以「未在真机验证」标记显式告知。
 - **动态库尚未正式集成进 Xcode 工程**，当前由 `scripts/build.sh bundle` 复制进 .app。
 - **App Sandbox 已关闭**：包管理器 GUI 需要执行外部 CLI 并写入沙箱外路径，

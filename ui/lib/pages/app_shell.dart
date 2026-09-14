@@ -24,8 +24,22 @@ enum AppSection {
   final IconData activeIcon;
 }
 
+String _themeLabel(ThemeMode mode) => switch (mode) {
+      ThemeMode.system => '跟随系统',
+      ThemeMode.light => '浅色',
+      ThemeMode.dark => '深色',
+    };
+
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({
+    super.key,
+    required this.onToggleTheme,
+    required this.themeMode,
+  });
+
+  /// 切换主题（跟随系统 → 浅色 → 深色）
+  final VoidCallback onToggleTheme;
+  final ThemeMode themeMode;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -143,15 +157,40 @@ class _AppShellState extends State<AppShell> {
                 }),
                 const Spacer(),
                 const Divider(height: 1),
+                /*
+                 * 主题切换放在侧边栏底部，而不是用 Stack 浮在内容区右上角。
+                 *
+                 * 原因：浮层会盖住下面的控件并吃掉点击 —— 早先版本把主题按钮
+                 * 用 Positioned(right: 14, top: 10) 叠在内容之上，结果它正好压住了
+                 * 下载页右上角的「搜索」按钮，点击落到浮层上，搜索根本触发不了。
+                 * 这类"浮层遮挡"问题在视觉上完全看不出来，只能靠 hit-test 暴露。
+                 */
                 Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Text(
-                    '阶段1 · 骨架与只读能力\n安装执行将在阶段3 接入',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      height: 1.5,
-                      color: theme.colorScheme.outline,
-                    ),
+                  padding: const EdgeInsets.fromLTRB(14, 10, 8, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '阶段1 · 骨架与只读能力\n安装执行将在阶段3 接入',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            height: 1.5,
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: widget.onToggleTheme,
+                        tooltip: '切换主题（当前：${_themeLabel(widget.themeMode)}）',
+                        iconSize: 16,
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(switch (widget.themeMode) {
+                          ThemeMode.system => Icons.brightness_auto_outlined,
+                          ThemeMode.light => Icons.light_mode_outlined,
+                          ThemeMode.dark => Icons.dark_mode_outlined,
+                        }),
+                      ),
+                    ],
                   ),
                 ),
               ],
