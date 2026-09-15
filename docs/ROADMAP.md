@@ -52,8 +52,11 @@
 |------|----------|-----------|
 | Rust 业务逻辑 | 单元测试（含真实 CLI/网络的测试，离线时打印原因跳过） | 102 |
 | C++ ↔ Rust 集成 | `native/tests/umango_bridge_smoke.cpp` 端到端自检 | 全部检查 |
-| Dart ↔ C ABI 契约 | `ui/integration_test/bridge_test.dart`（直连真实 dylib） | 15 |
+| Dart ↔ C ABI 契约 | `ui/test/bridge_ffi_test.dart`（直连真实 dylib，秒级） | 15 |
+| Dart 数据模型契约 | `ui/test/models_test.dart`（用真实抓取的 JSON 断言） | 17 |
+| 动画配置逻辑 | `ui/test/animation_config_test.dart` | 19 |
 | 核心层 JSON 契约 | `ui/integration_test/logic_test.dart`（用真实抓取的 JSON 做 assertions） | 20 |
+| Dart ↔ C ABI（应用内） | `ui/integration_test/bridge_test.dart` | 15 |
 | 界面行为 | `ui/integration_test/app_test.dart`（在真实 macOS 应用里驱动界面） | 14 |
 | 平台受限代码 | **显式标注未验证**，并在 UI 上呈现给用户 | — |
 
@@ -62,27 +65,38 @@
 当成通过（这个坑在开发中真实踩到过）。因此断言必须落在**业务语义**上：
 存在 `state=resolved` 节点、`warnings` 为空、界面上出现了正确的文字。
 
-### 为什么用集成测试而不是 `flutter test`
+### 关于 `flutter test` 挂住这件事（一次错误诊断的纠正）
 
-本机的 `flutter test`（flutter_tester）**完全不可用**：进程能启动，
-但从不连回测试框架的 socket，静默挂住 148 秒以上直至被外部超时杀掉。
-排查过程与证据：
+**结论先说**：`flutter test` 现在是**正常工作**的。本机曾出现"flutter_tester
+启动后静默挂住、不报错也不退出"的现象，我最初归因于 Flutter 工具链在
+macOS 26 上的 bug，**这个判断是错的** —— 真实原因是当时**网络中断**。
 
-- 排除了路径因素（把工程复制到 `/tmp` 纯 ASCII 路径下同样失败）；
-- 排除了 Gatekeeper 隔离属性（清了 `com.apple.quarantine` 后仍失败）；
-- 排除了网络/权限因素（回环 TCP 自测正常，测试框架的 socket server 也确实起来了）；
-- verbose 日志显示：`Started flutter_tester process at pid N` 之后
-  出现 **148589 ms 的空档**，期间没有任何事件，直到外部超时杀掉进程。
+排查过程与证据（保留下来，因为排除过程本身有价值）：
 
-结论是 flutter_tester 自身在 macOS 26 + Flutter 3.44 上无法完成握手。
-改为 `flutter test integration_test -d macos` 后：
+- 排除了工程路径因素：把工程复制到 `/tmp` 纯 ASCII 路径下，同样挂住；
+- 排除了 Gatekeeper 隔离属性：清掉 `com.apple.quarantine` 后仍挂住；
+- 排除了回环网络被禁：本地 TCP 自测正常，测试框架的 socket server 也确实起来了；
+- verbose 日志显示 `Started flutter_tester process at pid N` 之后有
+  **148589 ms 的完全空档**，直到被外部超时杀掉。
 
-- 测试运行在**真实应用**里（真的加载 dart:ffi、真的执行 npm、真的渲染窗口）；
-- 验证强度**高于** flutter_tester（那是模拟环境）；
-- 并且立刻抓出了两个真实缺陷：主题按钮浮层遮挡「搜索」按钮导致点不动、
-  下载卡片上的兜底指标未标注。
+**网络恢复后重新验证**：`flutter test` 立刻正常工作，
+51 项单元测试 23 秒跑完。所以当时的挂起是 flutter_tester 在启动阶段
+发起了某种网络访问（DNS/HTTP）并被阻塞，而不是工具链本身的缺陷。
 
-因此 `ui/test/` 目录已移除 —— 留着跑不了的测试比没有测试更糟。
+### 但集成测试依然保留，两层各有分工
+
+| 层次 | 命令 | 耗时 | 用途 |
+|------|------|------|------|
+| Flutter 单元测试 | `flutter test` | ~23s | 开发中快速回归：模型契约、动画逻辑、FFI 直连 |
+| Flutter 集成测试 | `flutter test integration_test -d macos` | ~4min | 真实应用里驱动界面，验证"界面真的能用" |
+
+集成测试不只是补充，它抓出过两个**单元测试抓不到**的真实缺陷
+（浮层遮挡导致按钮点不动、下载卡片兜底标注缺失）——
+因为这两个问题只在真实渲染与真实布局下才暴露。所以两层都要留。
+
+**踩坑提醒**：`flutter test integration_test`（目录形式）在桌面端只启动一次应用，
+后续测试文件会报 "Unable to start the app on the device"，
+因此 `scripts/build.sh` 里是逐个文件单独调用的。
 
 ### 关于"未验证"的处理原则
 

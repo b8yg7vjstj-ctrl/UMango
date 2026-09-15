@@ -14,12 +14,14 @@
 |--------|------|------|
 | Rust 单元测试 | `cd core && cargo test` | **102 项通过**（core 44 + adapters 46 + ffi 12） |
 | C++ ↔ Rust 端到端自检 | `scripts/build.sh smoke` | **全部检查通过** |
+| Flutter 单元测试 | `scripts/build.sh flutter-test` | **51 项通过**（约 23 秒） |
 | Flutter 集成测试（逻辑与契约） | `scripts/build.sh ui-test` | **20 项通过** |
-| Flutter 集成测试（FFI 直连） | 同上 | **15 项通过** |
+| Flutter 集成测试（FFI，应用内） | 同上 | **15 项通过** |
 | Flutter 集成测试（界面） | 同上 | **14 项通过** |
 | 应用构建与运行 | `scripts/build.sh all` | 成功产出并启动 `umango.app` |
 
-合计 **151 项自动化测试**（102 Rust + 49 Flutter）+ 桥接层自检。
+合计 **202 项自动化测试**（102 Rust + 51 Flutter 单测 + 49 Flutter 集成）+ 桥接层自检。
+一条命令跑完：`scripts/build.sh test`。
 
 ### 界面测试实际断言了什么
 
@@ -133,11 +135,17 @@
     而卡片用的是紧凑模式 —— 结果是 GitHub Stars 在卡片上看起来就像下载量，
     直接违反了"下载量优先、Stars 兜底"必须可区分的要求。
     → 修复：任何尺寸下都标注，并在紧凑模式补上短指标名（Stars）。
-13. **`flutter test` 在本机完全不可用**：flutter_tester 进程能启动，
-    但从此不再连回测试框架的 socket，静默挂住 148 秒以上（见 ROADMAP.md）。
-    → 改用 `flutter test integration_test -d macos`，在**真实应用**里跑测试。
-    这不只是绕开问题：它把验证强度从"模拟环境"提升到了"真实运行状态"，
-    并且正是它抓出了上面第 11、12 两个真实缺陷。
+13. **误判：把 `flutter test` 挂住归因于工具链缺陷**。
+    现象是 flutter_tester 启动后静默挂住 148 秒以上、不报错也不退出。
+    我做了不少排除（换 ASCII 路径、清 quarantine、回环 TCP 自测）后
+    错误地下了"flutter_tester 在 macOS 26 上不可用"的结论，
+    并且**据此删除了 `ui/test/` 目录** —— 这是本次开发中最值得反省的一步：
+    在证据不足时下了过强的结论，还顺手砍掉了正常的测试路径。
+    真实原因是当时的**网络中断**：网络恢复后 `flutter test` 立刻正常
+    （51 项单测 23 秒通过）。
+    教训：给"不可用"下结论前，先确认**环境**因素（网络/DNS）已被排除 ——
+    我排除了路径、权限、loopback，却漏了最容易出问题的外网访问。
+    集成测试仍然保留，因为它的验证强度确实更高（抓出过第 11、12 两个缺陷）。
 
 ### 测试自身的三个教训
 
@@ -160,9 +168,13 @@
 - **`flutter analyze` 在本项目路径下会崩溃**（analysis server 的 LSP 消息
   无法处理含空格与非 ASCII 的路径 → `FormatException`）。
   这不是代码问题，验证编译请改用 `flutter build macos`。
-- **`flutter test`（flutter_tester）在本机不可用**，详见
-  [ROADMAP.md](ROADMAP.md) 的"为什么用集成测试而不是 flutter test"。
-  因此 `ui/test/` 目录已移除，全部 Flutter 测试都在 `ui/integration_test/`。
+- **`flutter test` 可用**（曾因网络中断而静默挂住，易被误判为工具链故障；
+  遇挂起先查网络）。Flutter 测试分两层：`ui/test/`（单测，秒级）与
+  `ui/integration_test/`（真实应用集成测试）。
+- **⚠️ OneDrive 会改挂载目录名**：开发过程中 `OneDrive-个人` 被 OneDrive 客户端
+  改名为 `OneDrivePersonal`，项目路径随之变化。
+  因此脚本一律用相对路径（`scripts/env.sh` 基于 `BASH_SOURCE` 推导项目根），
+  不要在文档或脚本里写死绝对路径。
 
 ## 五、下一步（阶段2 建议起点）
 

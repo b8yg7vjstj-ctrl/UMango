@@ -8,7 +8,8 @@
 #   scripts/build.sh ui           仅构建 Flutter macOS 应用
 #   scripts/build.sh bundle       把 dylib 复制进已构建的 .app
 #   scripts/build.sh run          构建全部并启动应用
-#   scripts/build.sh test         跑全部测试（Rust 单测 + 桥接自检 + Flutter 集成测试）
+#   scripts/build.sh test         跑全部测试（Rust + 桥接自检 + Flutter 单测 + 集成测试）
+#   scripts/build.sh flutter-test 只跑 Flutter 单元测试（flutter_tester，秒级）
 #   scripts/build.sh ui-test      只跑 Flutter 集成测试（在真实 macOS 应用里）
 #   scripts/build.sh smoke        只跑桥接层自检（最快的端到端验证）
 #
@@ -79,11 +80,24 @@ cmd_bundle() {
     echo "已复制到 Contents/Frameworks 与 Contents/MacOS"
 }
 
+# Flutter 单元测试（flutter_tester，秒级）。用于开发中快速回归。
+#
+# 说明：flutter_tester 曾在网络中断的环境下静默挂住（不报错、不退出），
+# 网络恢复后即正常工作。若哪天又挂住，先检查网络。
+cmd_flutter_test() {
+    log "Flutter 单元测试（flutter_tester）"
+    [ -f "${DYLIB}" ] || cmd_native
+    (cd "${UMANGO_ROOT}/ui" && \
+        UMANGO_BRIDGE_LIB="${DYLIB}" \
+        flutter test)
+}
+
 cmd_test() {
     log "Rust 单元测试"
     (cd "${UMANGO_ROOT}/core" && cargo test)
     log "C++ ↔ Rust 桥接层自检"
     cmd_smoke
+    cmd_flutter_test
     cmd_ui_test
 }
 
@@ -146,6 +160,7 @@ case "${1:-all}" in
     run)    cmd_run ;;
     test)   cmd_test ;;
     ui-test) cmd_ui_test ;;
+    flutter-test) cmd_flutter_test ;;
     smoke)  cmd_smoke ;;
     all)
         cmd_rust

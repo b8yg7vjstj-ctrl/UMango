@@ -24,7 +24,7 @@ Flutter（界面 / 动画）
 | 下载量：官方优先 → GitHub Stars 兜底 | ✅ 两条链路均实测 |
 | 全局可切换动画风格（纵向入场 / 向右滑出） | ✅ |
 | 包源可用性 24 小时缓存保护 | ✅ |
-| 自动化测试 | ✅ 151 项（102 Rust + 49 Flutter 集成） |
+| 自动化测试 | ✅ 202 项（102 Rust + 51 Flutter 单测 + 49 Flutter 集成） |
 | 安装 / 卸载 / 升级的**实际执行** | ❌ 阶段3（当前只生成命令计划） |
 | winget / scoop 适配器 | ⚠️ 已实现但**无法在 macOS 上验证** |
 | 插件系统 | ❌ 阶段4 |
@@ -40,19 +40,32 @@ scripts/build.sh all
 # 构建并启动
 scripts/build.sh run
 
-# 跑全部测试（Rust 单测 + 桥接自检 + Flutter 集成测试，约 6 分钟）
+# 跑全部测试（Rust + 桥接自检 + Flutter 单测 + Flutter 集成测试，约 5 分钟）
 scripts/build.sh test
 
-# 只跑 Flutter 集成测试（在真实 macOS 应用里驱动界面）
+# 只跑 Flutter 单元测试（flutter_tester，秒级，开发中快速回归）
+scripts/build.sh flutter-test
+
+# 只跑 Flutter 集成测试（在真实 macOS 应用里驱动界面，约 4 分钟）
 scripts/build.sh ui-test
 
 # 只跑桥接层自检（最快的端到端验证，秒级）
 scripts/build.sh smoke
 ```
 
-> 测试说明：Flutter 测试走 `integration_test`，运行在**真实应用**里，
-> 而不是 flutter_tester（本机 flutter_tester 无法启动，原因见
-> [docs/ROADMAP.md](docs/ROADMAP.md)）。因此运行前需要先构建原生层。
+### 两层 Flutter 测试的分工
+
+| 层次 | 位置 | 耗时 | 用途 |
+|------|------|------|------|
+| 单元测试 | `ui/test/` | ~23s | 数据模型契约、动画逻辑、FFI 直连 |
+| 集成测试 | `ui/integration_test/` | ~4min | 真实应用里驱动界面，验证"界面真的能用" |
+
+集成测试不是可选项：它抓出过两个单元测试抓不到的真实缺陷
+（浮层遮挡导致「搜索」按钮点不动、下载卡片的兜底指标缺标注），
+因为这些问题只在真实渲染与真实布局下才暴露。
+
+> 两类 Flutter 测试都要先构建原生层（`scripts/build.sh native`），
+> 因为它们会真实加载 `libumango_bridge.dylib` 并执行 npm 等 CLI。
 
 ### 环境要求
 
