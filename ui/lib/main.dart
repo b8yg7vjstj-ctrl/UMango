@@ -17,6 +17,7 @@ import 'ffi/umango_bridge.dart';
 import 'pages/about_page.dart';
 import 'pages/app_shell.dart';
 import 'theme/app_theme.dart';
+import 'theme/pcl_theme.dart';
 
 void main() {
   runApp(const UmangoApp());
@@ -42,7 +43,19 @@ class _UmangoAppState extends State<UmangoApp> {
       child: MaterialApp(
         title: 'UMango',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
+        /*
+         * 浅色主题换成 buildPclTheme()：PCL-CE 复刻的**唯一契约**
+         * （docs/DESIGN_PCL_CE.md 第 1~4 节）只定义了浅色 token —— 那里的颜色
+         * 取自 PCL-CE 的 Application.xaml，是「1:1 还原」的依据，所以浅色必须是它。
+         *
+         * 深色模式继续沿用 AppTheme.dark()：规格没有给出任何深色 token，
+         * 若在此用浅色 token 反推深色（例如把 background 直接反过来用），
+         * 得到的是自造配色，既不是 PCL 观感、也无法被规格校验 —— 宁可让深色保留
+         * 原有的 Material 深色方案（功能完整、可读性已验证），也不发明没有依据的数值。
+         * 取舍的后果：深色模式下外壳的白色圆角窗口与 PCL 蓝色标题栏保持不变
+         * （它们是写死 token 的自绘组件），页面内部的 Material 控件则走深色方案。
+         */
+        theme: buildPclTheme(),
         darkTheme: AppTheme.dark(),
         themeMode: _themeMode,
         home: _BridgeGate(

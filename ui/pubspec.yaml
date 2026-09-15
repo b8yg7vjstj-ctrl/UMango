@@ -34,3 +34,5 @@ flutter:
     - assets/icons/
     # 真实抓取的核心层 JSON 输出，供集成测试断言前后端契约
     - assets/fixtures/
+    # lucide 官方 SVG（ISC 许可），PCL 风格界面按钮/图标基元
+    - assets/lucide/

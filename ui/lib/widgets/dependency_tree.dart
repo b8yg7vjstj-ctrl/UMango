@@ -1,4 +1,4 @@
-/// 依赖关系树可视化。
+/// 依赖关系树可视化（PCL-CE 观感）。
 ///
 /// 需求：
 ///   · 版本列表依赖关系树可视化，**清晰展示依赖链条**；
@@ -8,14 +8,34 @@
 /// 呈现方式：缩进 + 连接线（而不是紧凑的横排图）——
 /// 包依赖的深度通常 2~4 层、每层节点数不定，纵向缩进树在桌面宽屏上可读性最好，
 /// 也天然适配"列表逐条入场"的动画方向。
+///
+/// 视觉契约：`docs/DESIGN_PCL_CE.md`。本文件只用 PCL token 与 PCL 组件
+/// （[PclColors] / [PclMetrics] / [PclTypography] / PclPanel / PclIcon /
+/// PclIconButton / PclTag），不再使用 Material 默认观感（Card / ListTile /
+/// 主题色驱动的 Icon 等），以保证与 PCL-CE 复刻的其余页面观感一致。
 library;
 
 import 'package:flutter/material.dart';
 
 import '../animation/motion_widgets.dart';
 import '../models/umango_models.dart';
-import '../theme/app_theme.dart';
+import '../theme/pcl_theme.dart';
+import 'pcl_widgets.dart';
 import 'source_icon.dart';
+
+// ---------------------------------------------------------------------------
+// 本文件专用的契约数值（集中放置，方便与设计文档对照）
+// ---------------------------------------------------------------------------
+
+/// 每一层缩进的宽度：连接线的阶梯步长（原实现值，语义为「层级可读性」）。
+const double _indentStep = 20;
+
+/// 未验证状态的警示色 `#8A5300`。
+///
+/// 该值不在 `pcl_theme.dart` 的 token 表里，但 `DESIGN_PCL_CE.md` 与本次改造
+/// 契约都明确要求「未验证 / 降级」用这个琥珀色 —— 因此按契约硬编码，
+/// 不做 token 化改写（token 表由主题文件维护，不在此处扩展）。
+const Color _warnAmber = Color(0xFF8A5300);
 
 /// 依赖树面板。
 class DependencyTreeView extends StatefulWidget {
@@ -99,13 +119,26 @@ class _DependencyTreeViewState extends State<DependencyTreeView> {
         if (truncatedByUi || widget.tree.truncated)
           Padding(
             padding: const EdgeInsets.only(top: 10),
-            child: Text(
-              widget.tree.truncated
-                  ? '依赖树已达到深度或节点上限，更深层未展开（这是刻意的保护，避免依赖爆炸拖垮界面）'
-                  : '为保证流畅，仅显示前 ${widget.maxVisibleNodes} 个节点',
-              style: TextStyle(
-                fontSize: 11.5,
-                color: Theme.of(context).colorScheme.outline,
+            // 截断提示是"刻意的保护"而非错误，故用最浅蓝底 c8 的 PclPanel，
+            // 文字保持 12 号 gray3 的说明层级。
+            child: PclPanel(
+              radius: PclMetrics.windowRadius,
+              color: PclColors.c8,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const PclIcon(name: 'info', size: 14, color: PclColors.gray3),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      widget.tree.truncated
+                          ? '依赖树已达到深度或节点上限，更深层未展开（这是刻意的保护，避免依赖爆炸拖垮界面）'
+                          : '为保证流畅，仅显示前 ${widget.maxVisibleNodes} 个节点',
+                      style: PclTypography.captionStyle,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -125,6 +158,10 @@ class _FlatNode {
 }
 
 /// 依赖树的统计头部：一眼看出总共多少个、有没有问题。
+///
+/// 视觉：PclPanel（圆角 6）+ 12 号 gray3 说明文字；异常项保留各自的语义色
+/// （未验证=琥珀、缺失/冲突=error、成环=c2、全部成功=c3），
+/// 这样"有没有问题"依然能在一行内被扫出来。
 class _TreeSummary extends StatelessWidget {
   const _TreeSummary({required this.tree, required this.nodeCount});
 
@@ -133,53 +170,57 @@ class _TreeSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final s = tree.summary;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10),
-      ),
+    return PclPanel(
+      radius: PclMetrics.windowRadius,
+      color: Colors.white,
+      border: Border.all(color: PclColors.gray5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Wrap(
-        spacing: 10,
+        spacing: 12,
         runSpacing: 8,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text('共 $nodeCount 个依赖节点',
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            '共 $nodeCount 个依赖节点',
+            style: PclTypography.captionStyle.copyWith(fontWeight: FontWeight.w600),
+          ),
           if (s.maxDepth > 0)
-            _Stat(icon: Icons.account_tree_outlined, text: '最深 ${s.maxDepth} 层', tone: null),
+            _Stat(
+              icon: 'layers',
+              text: '最深 ${s.maxDepth} 层',
+              tone: PclColors.gray3,
+            ),
           if (s.unverified > 0)
             _Stat(
-              icon: Icons.help_outline,
+              icon: 'help-circle',
               text: '${s.unverified} 个未验证',
-              tone: const Color(0xFF8A5300),
+              tone: _warnAmber,
             ),
           if (s.missing > 0)
             _Stat(
-              icon: Icons.error_outline,
+              icon: 'x',
               text: '${s.missing} 个找不到匹配版本',
-              tone: theme.colorScheme.error,
+              tone: PclColors.error,
             ),
           if (s.conflict > 0)
             _Stat(
-              icon: Icons.warning_amber_outlined,
+              icon: 'triangle-alert',
               text: '${s.conflict} 个版本冲突',
-              tone: theme.colorScheme.error,
+              tone: PclColors.error,
             ),
           if (s.cyclic > 0)
             _Stat(
-              icon: Icons.loop,
+              icon: 'refresh-cw',
               text: '${s.cyclic} 个依赖成环（已截断）',
-              tone: const Color(0xFF4A3B8F),
+              tone: PclColors.c2,
             ),
           if (!s.hasProblems && s.unverified == 0)
             const _Stat(
-              icon: Icons.check_circle_outline,
+              icon: 'circle-check',
               text: '依赖全部解析成功',
-              tone: Color(0xFF1E6B33),
+              tone: PclColors.c3,
             ),
         ],
       ),
@@ -187,28 +228,33 @@ class _TreeSummary extends StatelessWidget {
   }
 }
 
+/// 统计头部里的一项：lucide 图标（14）+ 12 号文字，颜色按语义给定。
 class _Stat extends StatelessWidget {
   const _Stat({required this.icon, required this.text, required this.tone});
 
-  final IconData icon;
+  final String icon;
   final String text;
-  final Color? tone;
+  final Color tone;
 
   @override
   Widget build(BuildContext context) {
-    final color = tone ?? Theme.of(context).colorScheme.onSurfaceVariant;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: color),
+        PclIcon(name: icon, size: 14, color: tone),
         const SizedBox(width: 4),
-        Text(text, style: TextStyle(fontSize: 12, color: color)),
+        Text(
+          text,
+          style: PclTypography.captionStyle.copyWith(color: tone),
+        ),
       ],
     );
   }
 }
 
 /// 依赖故障的兜底呈现：把降级原因明确列出来，而不是静默显示一棵残缺的树。
+///
+/// 视觉：PclPanel + lucide `triangle-alert` + [PclColors.redBack] 底 + 12 号文字。
 class _WarningsPanel extends StatelessWidget {
   const _WarningsPanel({required this.warnings});
 
@@ -216,46 +262,56 @@ class _WarningsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return ListEntrance(
       index: 0,
-      child: Container(
-        width: double.infinity,
+      child: PclPanel(
+        radius: PclMetrics.windowRadius,
+        color: PclColors.redBack,
+        border: Border.all(color: PclColors.redLight),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF8E1),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFFFE0A3)),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline, size: 15, color: Color(0xFF8A5300)),
+                const PclIcon(
+                  name: 'triangle-alert',
+                  size: 14,
+                  color: PclColors.redDark,
+                ),
                 const SizedBox(width: 6),
-                Text(
-                  '解析过程中有 ${warnings.length} 项降级处理（网络异常或源访问失败的兜底）',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF8A5300),
+                Expanded(
+                  child: Text(
+                    '解析过程中有 ${warnings.length} 项降级处理（网络异常或源访问失败的兜底）',
+                    style: PclTypography.captionStyle.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: PclColors.redDark,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
+            // 保留 SelectableText：降级原因常常要贴给上游排障，必须可复制。
             ...warnings.take(6).map(
                   (w) => Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: SelectableText(
                       '· $w',
-                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF6B4200)),
+                      style: PclTypography.captionStyle.copyWith(
+                        color: PclColors.redDark,
+                      ),
                     ),
                   ),
                 ),
             if (warnings.length > 6)
-              Text('… 其余 ${warnings.length - 6} 项省略',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A5300))),
+              Text(
+                '… 其余 ${warnings.length - 6} 项省略',
+                style: PclTypography.captionStyle.copyWith(
+                  color: PclColors.redDark,
+                ),
+              ),
           ],
         ),
       ),
@@ -264,6 +320,10 @@ class _WarningsPanel extends StatelessWidget {
 }
 
 /// 单行依赖节点：缩进 + 连接线 + 状态 + 可点操作。
+///
+/// 视觉契约：行高 36（与 [PclMetrics.listItemHeight] / `PclListItem` 一致）、
+/// 状态图标 16、行文字 13、版本号等宽 12 号 gray3、
+/// 操作按钮 [PclIconButton]`(size: 22)`。
 class DependencyRow extends StatelessWidget {
   const DependencyRow({
     super.key,
@@ -288,13 +348,14 @@ class DependencyRow extends StatelessWidget {
   final VoidCallback? onInstall;
   final VoidCallback? onOpen;
 
-  static const double _indentWidth = 20;
-  static const double _rowHeight = 46;
+  static const double _indentWidth = _indentStep;
+
+  /// 行高 36：与 PclListItem 一致，保证依赖树与左栏列表的节奏相同。
+  static const double _rowHeight = PclMetrics.listItemHeight;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final (stateColor, stateIcon, stateText) = _stateVisual(node, theme);
+    final (Color stateColor, String stateIcon, String stateText) = _stateVisual(node);
 
     return ListEntrance(
       index: index,
@@ -311,67 +372,75 @@ class DependencyRow extends StatelessWidget {
                     depth: node.depth,
                     isLast: isLast,
                     ancestorsHasMore: ancestorsHasMore,
-                    color: theme.dividerColor,
+                    color: PclColors.gray5,
                   ),
                 ),
               ),
             ],
-            // 折叠箭头
+            // 折叠箭头：复用 PclIconButton，天然带 hover 底 c6 与 tooltip
             SizedBox(
               width: 20,
               child: hasChildren
-                  ? InkWell(
-                      onTap: onToggle,
-                      borderRadius: BorderRadius.circular(4),
-                      child: Icon(
-                        collapsed ? Icons.chevron_right : Icons.expand_more,
-                        size: 18,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                  ? PclIconButton(
+                      icon: collapsed ? 'chevron-right' : 'chevron-down',
+                      size: 20,
+                      tooltip: collapsed ? '展开依赖' : '折叠依赖',
+                      onPressed: onToggle,
                     )
                   : const SizedBox.shrink(),
             ),
             const SizedBox(width: 4),
-            // 状态圆点
+            // 状态图标（16），文字状态放 tooltip 里，避免行内信息过载
             Tooltip(
               message: stateText,
-              child: Icon(stateIcon, size: 15, color: stateColor),
+              child: PclIcon(name: stateIcon, size: 16, color: stateColor),
             ),
             const SizedBox(width: 8),
-            // 名字（可点击跳转详情页）
+            // 名字（可点击跳转详情页）：hover 时变主强调色，是 PCL 的链接观感，
+            // 因此不用 Material 的 InkWell 水波纹。
             Flexible(
-              child: InkWell(
-                onTap: onOpen,
-                borderRadius: BorderRadius.circular(4),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                  child: Text(
-                    node.name,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      decoration: onOpen != null ? TextDecoration.underline : null,
-                      decorationColor: theme.colorScheme.outline,
+              child: _HoverBuilder(
+                enabled: onOpen != null,
+                builder: (BuildContext context, bool hovered) => GestureDetector(
+                  onTap: onOpen,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                    child: Text(
+                      node.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: PclTypography.body,
+                        fontWeight: FontWeight.w600,
+                        fontFamilyFallback: PclTypography.fontFallback,
+                        color: (hovered && onOpen != null)
+                            ? PclColors.c3
+                            : PclColors.c1,
+                        decoration: onOpen != null
+                            ? TextDecoration.underline
+                            : null,
+                        decorationColor: PclColors.gray5,
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            // 解析出的版本 / 声明的范围
+            // 解析出的版本 / 声明的范围：等宽 12 号 gray3，压在 gray8 圆角底上
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(4),
+                color: PclColors.gray8,
+                borderRadius: BorderRadius.circular(PclMetrics.tagRadius),
               ),
               child: Text(
                 node.displayVersion,
-                style: TextStyle(
-                  fontSize: 11.5,
+                style: const TextStyle(
+                  fontSize: PclTypography.caption,
                   fontFamily: 'monospace',
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: PclColors.gray3,
                 ),
               ),
             ),
@@ -381,7 +450,9 @@ class DependencyRow extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 6),
                 child: Text(
                   node.kind.displayName,
-                  style: TextStyle(fontSize: 10.5, color: theme.colorScheme.outline),
+                  style: PclTypography.labelStyle.copyWith(
+                    color: PclColors.gray4,
+                  ),
                 ),
               ),
             const Spacer(),
@@ -389,62 +460,63 @@ class DependencyRow extends StatelessWidget {
             DownloadBadge(stats: node.downloads, compact: true),
             const SizedBox(width: 8),
             // 两种操作：直接安装 / 跳转详情
-            if (onInstall != null)
-              Tooltip(
-                message: '直接安装该依赖',
-                child: IconButton(
-                  onPressed: onInstall,
-                  iconSize: 16,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.download_outlined),
-                ),
+            if (onInstall != null) ...[
+              PclIconButton(
+                icon: 'download',
+                size: 22,
+                tooltip: '直接安装该依赖',
+                onPressed: onInstall,
               ),
+              const SizedBox(width: 4),
+            ],
             if (onOpen != null)
-              Tooltip(
-                message: '跳转到该依赖的版本详情',
-                child: IconButton(
-                  onPressed: onOpen,
-                  iconSize: 16,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.arrow_forward_outlined),
-                ),
+              PclIconButton(
+                icon: 'external-link',
+                size: 22,
+                tooltip: '跳转到该依赖的版本详情',
+                onPressed: onOpen,
               ),
+            const SizedBox(width: 4),
           ],
         ),
       ),
     );
   }
 
-  (Color, IconData, String) _stateVisual(DependencyNode node, ThemeData theme) {
+  /// 节点状态 → (颜色, lucide 图标名, 说明文字)。
+  ///
+  /// 颜色按契约：resolved 用 c3、unverified 用 #8A5300、missing 与 conflict 用
+  /// error、cyclic 用 c2；truncated 是"没展开"的中性态，用 gray3。
+  (Color, String, String) _stateVisual(DependencyNode node) {
     return switch (node.state) {
       DependencyState.resolved => (
-          const Color(0xFF1E6B33),
-          Icons.check_circle_outline,
+          PclColors.c3,
+          'circle-check',
           '版本已解析',
         ),
       DependencyState.unverified => (
-          const Color(0xFF8A5300),
-          Icons.help_outline,
+          _warnAmber,
+          'help-circle',
           '未验证：${node.reason ?? '无法获取该依赖的元数据'}',
         ),
       DependencyState.missing => (
-          theme.colorScheme.error,
-          Icons.error_outline,
+          PclColors.error,
+          'x',
           '没有满足 ${node.requirement} 的版本',
         ),
       DependencyState.conflict => (
-          theme.colorScheme.error,
-          Icons.warning_amber_outlined,
+          PclColors.error,
+          'triangle-alert',
           '版本冲突：${node.reason ?? ''}',
         ),
       DependencyState.cyclic => (
-          const Color(0xFF4A3B8F),
-          Icons.loop,
+          PclColors.c2,
+          'refresh-cw',
           '依赖成环，已在此截断：${node.reason ?? ''}',
         ),
       DependencyState.truncated => (
-          theme.colorScheme.outline,
-          Icons.more_horiz,
+          PclColors.gray3,
+          'chevron-right',
           '未展开（达到深度上限）',
         ),
     };
@@ -452,6 +524,8 @@ class DependencyRow extends StatelessWidget {
 }
 
 /// 画缩进用的竖线与拐角。用线条呈现层级，比纯缩进更能看清"链条"。
+///
+/// 线条颜色固定 [PclColors.gray5]（PCL 的分隔线色），不再跟随 Material 主题。
 class _TreeLinesPainter extends CustomPainter {
   _TreeLinesPainter({
     required this.depth,
@@ -499,4 +573,46 @@ class _TreeLinesPainter extends CustomPainter {
       old.isLast != isLast ||
       old.ancestorsHasMore != ancestorsHasMore ||
       old.color != color;
+}
+
+// ---------------------------------------------------------------------------
+// 私有辅助
+// ---------------------------------------------------------------------------
+
+/// 悬停侦测（私有）：`pcl_widgets.dart` 的 hover 包装没有导出，
+/// 而依赖名需要在 hover 时切换颜色 —— 这里用一个极小的局部实现，
+/// 避免为了一个 hover 状态去扩公共 API。
+class _HoverBuilder extends StatefulWidget {
+  const _HoverBuilder({required this.builder, this.enabled = true});
+
+  /// 依据 hover 状态构建子树。
+  final Widget Function(BuildContext context, bool hovered) builder;
+
+  /// 是否响应悬停（禁用时恒为 false，且不把手型光标换成 click）。
+  final bool enabled;
+
+  @override
+  State<_HoverBuilder> createState() => _HoverBuilderState();
+}
+
+class _HoverBuilderState extends State<_HoverBuilder> {
+  bool _hovered = false;
+
+  void _setHovered(bool value) {
+    if (!widget.enabled || _hovered == value) {
+      return;
+    }
+    setState(() => _hovered = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = widget.enabled;
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: enabled ? (_) => _setHovered(true) : null,
+      onExit: enabled ? (_) => _setHovered(false) : null,
+      child: widget.builder(context, enabled && _hovered),
+    );
+  }
 }
