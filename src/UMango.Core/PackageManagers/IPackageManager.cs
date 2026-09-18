@@ -49,6 +49,12 @@ public interface IPackageManager
     /// <summary>搜索包</summary>
     Task<IReadOnlyList<PackageInfo>> SearchAsync(string query, int limit, CancellationToken ct = default);
 
+    /// <summary>
+    /// 列出**已安装**的包（需求「应用列表读取」）。
+    /// 不支持的适配器由基类返回"不支持"错误，界面据此隐藏入口。
+    /// </summary>
+    Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default);
+
     /// <summary>列出全部版本</summary>
     Task<IReadOnlyList<PackageVersion>> GetVersionsAsync(string name, CancellationToken ct = default);
 

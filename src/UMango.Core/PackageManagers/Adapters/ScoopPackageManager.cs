@@ -26,6 +26,50 @@ namespace UMango.Core.PackageManagers.Adapters;
 /// </summary>
 public sealed class ScoopPackageManager : CliPackageManagerBase
 {
+
+    /// <summary>
+    /// 列出已安装的 app。
+    ///
+    /// ⚠️ **未在真机验证**（scoop 仅存在于 Windows，本机是 macOS）。
+    /// 命令形态依据官方文档：`scoop list` 输出纯文本表格，形如
+    /// <code>
+    /// Installed apps:
+    /// Name   Version  Source  Updated  Info
+    /// ----   -------  ------  -------  ----
+    /// wget   1.21.3   main    2023-01-01
+    /// </code>
+    /// 解析沿用与 search 相同的"先找到 ---- 分隔线再收数据行"策略。
+    /// 若真实输出与此不符，会抛带原始片段的解析错误（便于回报），而不是默默给错数据。
+    /// </summary>
+    public override async Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default)
+    {
+        var output = await RunCliAsync(["list"], null, null, ct).ConfigureAwait(false);
+        if (!output.Success) return [];
+
+        var list = new List<InstalledPackage>();
+        var seenSeparator = false;
+        foreach (var raw in output.StdOut.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0) continue;
+            if (line.StartsWith("----")) { seenSeparator = true; continue; }
+            if (!seenSeparator) continue;
+
+            var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) continue;
+            if (!parts[0].All(c => char.IsAsciiLetterOrDigit(c) || "-._+".Contains(c))) continue;
+
+            list.Add(new InstalledPackage
+            {
+                Source = Kind,
+                Name = parts[0],
+                Version = parts.Length > 1 ? parts[1] : null,
+                InstallPath = InstallDirectory
+            });
+        }
+        return list;
+    }
+
     /// <summary>
     /// 未在真机验证的说明文案。界面会在包源分类项上显示它，
     /// 用户回报解析异常时也靠它知道"该找作者反馈原始 CLI 输出"。

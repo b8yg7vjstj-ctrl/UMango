@@ -22,6 +22,43 @@ public sealed class PnpmPackageManager : CliPackageManagerBase
 {
     public override PackageSourceKind Kind => PackageSourceKind.Pnpm;
 
+
+    /// <summary>
+    /// 列出全局已安装的包。
+    /// **实测格式**：`pnpm list -g --depth=0 --json` 返回**数组**，
+    /// 首元素形如 { "path": "~/Library/pnpm/global/v11", "private": true, "dependencies": {...} }。
+    /// 注意与 npm 的差别：npm 返回对象，pnpm 返回数组 —— 直接照搬 npm 的解析会拿不到数据。
+    /// </summary>
+    public override async Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default)
+    {
+        var output = await RunCliAsync(["list", "-g", "--depth=0", "--json"], null, null, ct).ConfigureAwait(false);
+        if (!output.Success) return [];
+
+        using var doc = ParseJson<JsonDocument>(output.StdOut, "pnpm list -g");
+        if (doc is null) return [];
+
+        var list = new List<InstalledPackage>();
+        IEnumerable<JsonElement> roots = doc.RootElement.ValueKind == JsonValueKind.Array
+            ? doc.RootElement.EnumerateArray()
+            : new[] { doc.RootElement };
+
+        foreach (var root in roots)
+        {
+            var installPath = root.TryGetProperty("path", out var pv) ? pv.GetString() : null;
+            if (!root.TryGetProperty("dependencies", out var deps) || deps.ValueKind != JsonValueKind.Object)
+                continue;
+            foreach (var dep in deps.EnumerateObject())
+            {
+                var version = dep.Value.TryGetProperty("version", out var v) ? v.GetString() : null;
+                list.Add(new InstalledPackage
+                {
+                    Source = Kind, Name = dep.Name, Version = version, InstallPath = installPath
+                });
+            }
+        }
+        return list.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     /// <summary>
     /// 能力声明。
     ///

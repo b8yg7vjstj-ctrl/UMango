@@ -122,6 +122,13 @@ public sealed record SourceCapabilities(
     bool Uninstall,
     bool Upgrade)
 {
+    /// <summary>
+    /// 是否支持列出已安装的包。
+    /// 用 init-only 属性而不是构造参数：既向后兼容现有的 6 处 new(...) 位置参数调用，
+    /// 又让个别适配器可以单独关掉这个能力。
+    /// </summary>
+    public bool ListInstalled { get; init; } = true;
+
     public static readonly SourceCapabilities None = new(false, false, false, false, false, false, false);
 }
 

@@ -22,6 +22,44 @@ namespace UMango.Core.PackageManagers.Adapters;
 /// </summary>
 public sealed class HomebrewPackageManager : CliPackageManagerBase
 {
+
+    /// <summary>
+    /// 列出已安装的 formula。
+    /// **实测格式**：`brew list --formula --versions` 每行形如
+    /// <code>
+    /// aom 3.12.1
+    /// aria2 1.37.0_2
+    /// brotli 1.1.0 1.2.0      ← 同一 formula 可能装了多个版本
+    /// </code>
+    /// 因此第 2 列是当前版本，其余列归入 OtherVersions。
+    /// 说明：cask（图形应用）暂未纳入 —— 需要 --cask 分支与不同的解析，
+    /// 这里如实留白而不是混进 formula 列表。
+    /// </summary>
+    public override async Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default)
+    {
+        var output = await RunCliAsync(["list", "--formula", "--versions"], null, null, ct).ConfigureAwait(false);
+        if (!output.Success) return [];
+
+        var list = new List<InstalledPackage>();
+        foreach (var raw in output.StdOut.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0) continue;
+
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 1) continue;
+
+            list.Add(new InstalledPackage
+            {
+                Source = Kind,
+                Name = parts[0],
+                Version = parts.Length > 1 ? parts[1] : null,
+                OtherVersions = parts.Length > 2 ? parts[2..] : []
+            });
+        }
+        return list.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     /// <summary>
     /// 官方安装量查询的并发上限（避免一次起几十个 curl 进程）。
     /// 注意：详情查询是**单次批量调用**，不吃这个上限。

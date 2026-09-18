@@ -27,6 +27,78 @@ namespace UMango.Core.PackageManagers.Adapters;
 /// </summary>
 public sealed class GitPackageManager : CliPackageManagerBase
 {
+
+    /// <summary>
+    /// 列出本地克隆的仓库。
+    ///
+    /// **概念说明**：git 没有"安装"这个概念 —— 它只是把仓库克隆到某个目录。
+    /// 因此这里不是"列出已安装的包"，而是**扫描默认克隆目录，找出其中的 git 仓库**。
+    /// 这一语义差异在界面文案上要体现为"本地仓库"而不是"已安装"。
+    ///
+    /// 判定方式：目录下存在 .git（目录或文件，后者用于 worktree / submodule）。
+    /// 深度限制为 2，避免在庞大的目录树上做全盘扫描。
+    /// </summary>
+    public override Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default)
+    {
+        var root = DefaultInstallDirectory;
+        if (!Directory.Exists(root)) return Task.FromResult<IReadOnlyList<InstalledPackage>>([]);
+
+        var repos = ScanLocalRepositories(root);
+        var list = new List<InstalledPackage>();
+        try
+        {
+            foreach (var dir in repos)
+            {
+                ct.ThrowIfCancellationRequested();
+                list.Add(new InstalledPackage
+                {
+                    Source = Kind,
+                    Name = Path.GetFileName(dir),
+                    Version = null,          // 本地仓库的"版本"取决于当前检出，不在这里猜
+                    InstallPath = dir
+                });
+            }
+        }
+        catch (Exception)
+        {
+            // 扫描本地目录失败不应抛到界面：返回已找到的部分
+        }
+        return Task.FromResult<IReadOnlyList<InstalledPackage>>(
+            list.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList());
+    }
+
+    /// <summary>
+    /// 扫描目录，找出其中的 git 仓库路径。
+    /// 抽成 public static 是为了**可测试** —— 否则测试要么造一个真实仓库树放在默认目录里
+    /// （会污染用户环境），要么继承本类（本类是 sealed）。
+    /// </summary>
+    public static IReadOnlyList<string> ScanLocalRepositories(string root, int maxDepth = 2)
+    {
+        if (!Directory.Exists(root)) return [];
+        return EnumerateRepos(root, depth: 0, maxDepth: maxDepth).ToList();
+    }
+
+    private static IEnumerable<string> EnumerateRepos(string dir, int depth, int maxDepth)
+    {
+        if (depth > maxDepth) yield break;
+
+        if (Directory.Exists(Path.Combine(dir, ".git")) || File.Exists(Path.Combine(dir, ".git")))
+        {
+            yield return dir;
+            yield break;   // 找到仓库就不再往里钻（避免列出子模块）
+        }
+
+        IEnumerable<string> subs;
+        try { subs = Directory.EnumerateDirectories(dir); }
+        catch (Exception) { yield break; }   // 无权限等：跳过
+
+        foreach (var sub in subs)
+        {
+            foreach (var found in EnumerateRepos(sub, depth + 1, maxDepth))
+                yield return found;
+        }
+    }
+
     /// <summary>
     /// `git ls-remote` 的超时。
     ///

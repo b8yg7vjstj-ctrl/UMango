@@ -32,6 +32,43 @@ public sealed class WingetPackageManager : CliPackageManagerBase
 {
     public override PackageSourceKind Kind => PackageSourceKind.Winget;
 
+
+    /// <summary>
+    /// 列出已安装的包。
+    ///
+    /// ⚠️ **未在真机验证**（winget 仅存在于 Windows，本机是 macOS）。
+    /// 命令：`winget list --output json --disable-interactivity --accept-source-agreements`。
+    /// JSON 结构在不同 winget 版本间不一致，沿用与 search 相同的宽容解析
+    /// （Sources[].Packages[] / Packages[] / 扁平数组三种形态都接受），
+    /// 字段名同样做多次回退（PackageIdentifier|PackageId|Id、Version|PackageVersion）。
+    /// </summary>
+    public override async Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default)
+    {
+        var output = await RunCliAsync(
+            ["list", "--output", "json", "--disable-interactivity", "--accept-source-agreements"],
+            null, null, ct).ConfigureAwait(false);
+        if (!output.Success) return [];
+
+        using var doc = ParseJson<JsonDocument>(output.StdOut, "winget list");
+        if (doc is null) return [];
+
+        var packages = EnumerateSearchItems(doc.RootElement);
+        var list = new List<InstalledPackage>();
+        foreach (var item in packages)
+        {
+            var id = FirstString(item, "PackageIdentifier", "PackageId", "Id");
+            if (string.IsNullOrWhiteSpace(id)) continue;
+            list.Add(new InstalledPackage
+            {
+                Source = Kind,
+                Name = id,
+                Version = FirstString(item, "Version", "PackageVersion"),
+                InstallPath = InstallDirectory
+            });
+        }
+        return list.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     /// <summary>
     /// 能力声明：
     ///   · OfficialDownloadCounts = false —— winget 没有任何公开的下载量接口

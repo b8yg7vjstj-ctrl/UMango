@@ -140,13 +140,30 @@ public abstract class CliPackageManagerBase : IPackageManager
 
     // ---------- CLI 调用（共性） ----------
 
-    /// <summary>运行该包管理器的 CLI，返回原始输出。</summary>
+    /// <summary>
+    /// 运行该包管理器的 CLI，返回原始输出。
+    ///
+    /// **这里是平台门控的唯一入口**：不支持当前平台的包管理器（macOS 上的 winget/scoop）
+    /// 会直接抛出 unsupported_platform，**根本不会去起进程**。
+    ///
+    /// 为什么把门控放在这里而不是各个方法里：
+    /// 曾经出现过「ProbeAsync 做了门控，但 ListInstalledAsync 忘了」的真实缺陷 ——
+    /// 结果是 macOS 上真的去启动 winget 进程并抛"No such file or directory"。
+    /// 放在唯一入口上，任何适配器的任何 CLI 调用都不可能绕过。
+    /// </summary>
     protected Task<ProcessOutput> RunCliAsync(
         IEnumerable<string> args,
         ProcessRunner.OutputLineHandler? onLine = null,
         int? timeoutMs = null,
         CancellationToken ct = default)
     {
+        if (!Kind.Supports(SystemInfo.Platform))
+        {
+            throw new ProcessException(
+                $"{DisplayName} 不支持 {SystemInfo.Platform.DisplayName()}，已阻止执行 {CliName}",
+                "unsupported_platform", "", -1);
+        }
+
         var spec = new ProcessSpec
         {
             Program = CliName,
@@ -242,6 +259,9 @@ public abstract class CliPackageManagerBase : IPackageManager
     public virtual Task<IReadOnlyList<PackageVersion>> GetVersionsAsync(
         string name, CancellationToken ct = default)
         => Task.FromException<IReadOnlyList<PackageVersion>>(Unsupported("版本列表"));
+
+    public virtual Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default)
+        => Task.FromException<IReadOnlyList<InstalledPackage>>(Unsupported("已安装列表"));
 
     public virtual Task<IReadOnlyList<DependencyRef>> GetDependenciesAsync(
         string name, string? version, CancellationToken ct = default)

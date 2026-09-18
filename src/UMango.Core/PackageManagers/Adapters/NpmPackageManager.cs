@@ -134,6 +134,36 @@ public sealed class NpmPackageManager : CliPackageManagerBase
         return list;
     }
 
+
+    /// <summary>
+    /// 列出全局已安装的包。
+    /// **命令与输出格式取自真机实测**：`npm list -g --depth=0 --json` 返回
+    /// <code>
+    /// { "name": "lib", "dependencies": { "包名": { "version": "1.0.0", "overridden": false }, ... } }
+    /// </code>
+    /// depth=0 保证只列顶层（不递归依赖树），否则输出会爆炸。
+    /// </summary>
+    public override async Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default)
+    {
+        var output = await RunCliAsync(["list", "-g", "--depth=0", "--json"], null, null, ct).ConfigureAwait(false);
+        if (!output.Success) return [];
+
+        using var doc = ParseJson<JsonDocument>(output.StdOut, "npm list -g");
+        if (doc is null) return [];
+
+        var list = new List<InstalledPackage>();
+        // 有的 registry/版本会把结果包在 dependencies 里，也有的直接给对象
+        var deps = doc.RootElement.TryGetProperty("dependencies", out var d) ? d : doc.RootElement;
+        if (deps.ValueKind != JsonValueKind.Object) return [];
+
+        foreach (var dep in deps.EnumerateObject())
+        {
+            var version = dep.Value.TryGetProperty("version", out var v) ? v.GetString() : null;
+            list.Add(new InstalledPackage { Source = Kind, Name = dep.Name, Version = version });
+        }
+        return list.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     /// <summary>
     /// npm 的安装按下载方式拆成四步 —— 这就是进度界面上要逐项显示的子项。
     /// </summary>

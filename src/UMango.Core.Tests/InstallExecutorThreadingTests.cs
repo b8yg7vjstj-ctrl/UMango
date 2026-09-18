@@ -82,6 +82,9 @@ public class InstallExecutorThreadingTests
         public Task<IReadOnlyList<DependencyRef>> GetDependenciesAsync(string n, string? v, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<DependencyRef>>([]);
 
+        public Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<InstalledPackage>>([]);
+
         // ★ 关键：真正异步，让 await 产生真实让出
         public async Task<IReadOnlyList<InstallStep>> PlanInstallAsync(string n, string? v, CancellationToken ct = default)
         {
