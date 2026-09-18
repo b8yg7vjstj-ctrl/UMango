@@ -19,6 +19,7 @@
         放在应用级资源里，页面就不必各自再定义一份；页面里同 key 的资源仍会覆盖它（行为一致）。
       -->
       <local:BoolToVisibilityConverter x:Key="BoolToVis"/>
+      <local:InverseBoolConverter x:Key="InverseBool"/>
       <views:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis"/>
     </ResourceDictionary>
   </Application.Resources>

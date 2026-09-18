@@ -205,6 +205,8 @@
           <views:ProgressView x:Name="ViewProgress" Visibility="Collapsed"/>
           <views:SettingsView x:Name="ViewSettings" Visibility="Collapsed"/>
           <views:ToolsView x:Name="ViewTools" Visibility="Collapsed"/>
+          <!-- 下载器：工具页左栏选「下载器」时显示（见 MainWindow.xaml.cs 的 ApplyNavOverride） -->
+          <views:DownloaderView x:Name="ViewDownloader" Visibility="Collapsed"/>
         </Grid>
       </Grid>
     </Grid>

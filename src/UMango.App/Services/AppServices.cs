@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Threading;
 using UMango.Core.Install;
+using UMango.Core.Download;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
@@ -41,6 +42,15 @@ public static class AppServices
 
     /// <summary>安装执行器（复用上面两个单例）。</summary>
     public static InstallExecutor Executor => LazyExecutor.Value;
+
+    /// <summary>
+    /// 下载引擎注册表（aria2 / eD2k / 内置 HttpClient）。
+    /// 独立于包管理器适配器：下载器是通用能力，任何链接都能下，不只是安装包。
+    /// </summary>
+    public static DownloadEngineRegistry DownloadEngines => LazyEngines.Value;
+
+    private static readonly Lazy<DownloadEngineRegistry> LazyEngines =
+        new(() => new DownloadEngineRegistry(), isThreadSafe: true);
 
     /// <summary>
     /// 初始化过程中被吞掉的错误（正常为 null）。

@@ -50,6 +50,9 @@ public partial class MainWindow : Window
         // 不补这一步就会出现"左栏没有高亮项、右区却已经切页"的错位。
         _shell.LeftMenuChanged += SyncLeftSelection;
 
+        // 二级导航变化 → 由外壳裁决是否要换成独立页面（当前只有"下载器"这一例）。
+        _shell.NavChanged += _ => ApplyNavOverride();
+
         // 选项卡也可能被别处改（快捷键、将来页面内的跳转）→ 跟着切右区、勾选顶部 banner。
         _shell.PropertyChanged += OnShellPropertyChanged;
 
@@ -144,9 +147,38 @@ public partial class MainWindow : Window
         ViewProgress.Visibility = VisibleIf(tab == AppTab.Progress);
         ViewSettings.Visibility = VisibleIf(tab == AppTab.Settings);
         ViewTools.Visibility = VisibleIf(tab == AppTab.Tools);
+
+        // 二级导航可能仍停在"下载器"上，切完选项卡要重新裁决一次显示的是谁
+        ApplyNavOverride();
     }
 
     private static Visibility VisibleIf(bool visible) => visible ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>
+    /// 选项卡内的二级导航覆盖。
+    ///
+    /// 外壳不替页面做二级导航（页面自己响应 CurrentNavKey），但**下载器是个例外**：
+    /// 它是一个独立页面（不是 ToolsView 内部的一个分区），放在 PCL-CE 「百宝箱」的位置，
+    /// 所以由外壳在这里把 ToolsView 换成 DownloaderView。
+    /// 这样 ToolsView 无需知道下载器的存在，改动面最小。
+    /// </summary>
+    private void ApplyNavOverride()
+    {
+        var downloaderSelected = _shell.CurrentTab == AppTab.Tools
+                                 && _shell.CurrentNavKey == "downloader";
+
+        ViewDownloader.Visibility = VisibleIf(downloaderSelected);
+
+        // 选中下载器时把 ToolsView 收起，否则两个页面会叠在一起
+        if (downloaderSelected)
+        {
+            ViewTools.Visibility = Visibility.Collapsed;
+        }
+        else if (_shell.CurrentTab == AppTab.Tools)
+        {
+            ViewTools.Visibility = Visibility.Visible;
+        }
+    }
 
     // ================= 左栏菜单 =================
 

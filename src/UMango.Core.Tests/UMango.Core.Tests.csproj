@@ -23,7 +23,7 @@
       （若日后测试需要引用 WPF 类型，删掉这一行并改用 Windows/CrossOver 运行。）
     -->
     <DisableTransitiveFrameworkReferences>true</DisableTransitiveFrameworkReferences>
-  </PropertyGroup>
+    </PropertyGroup>
 
   <ItemGroup>
     <!-- 版本均为较新的稳定版；除测试框架外不引入任何第三方依赖（不新增 NuGet 依赖是硬性要求） -->

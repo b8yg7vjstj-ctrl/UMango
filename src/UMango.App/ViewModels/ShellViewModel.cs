@@ -128,6 +128,8 @@ public partial class ShellViewModel : ObservableObject
         ],
         _ =>
         [
+            // 下载器放在工具页下，对应 PCL-CE 的「百宝箱」位置
+            new NavItem("downloader", "下载器"),
             new NavItem("diagnostics", "系统诊断"),
             new NavItem("licenses", "合规与许可"),
             new NavItem("about", "关于")
