@@ -16,6 +16,7 @@ namespace UMango.App.Tests;
 /// 这三层任何一处脱节，都会表现为"这里打开了、那里还是关的，重启后又变回去"。
 /// 这类问题很难靠肉眼发现，所以用测试钉住。
 /// </summary>
+[Collection("静态状态")]
 public class SharedSettingConsistencyTests : IDisposable
 {
     private readonly bool _original;

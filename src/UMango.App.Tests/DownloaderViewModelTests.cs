@@ -11,6 +11,7 @@ namespace UMango.App.Tests;
 /// 纯逻辑（协议识别、引擎选择、状态文案）已在 Core 的 DownloaderSession 里测过；
 /// 这里专测**这一层自己的职责**：属性转发、命令可用性、线程编组与终端行收集。
 /// </summary>
+[Collection("静态状态")]
 public class DownloaderViewModelTests
 {
     private sealed class FakeEngine(string id, bool available, params DownloadProtocol[] protocols) : IDownloadEngine

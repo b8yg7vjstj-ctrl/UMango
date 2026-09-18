@@ -10,6 +10,7 @@ namespace UMango.App.Tests;
 /// 菜单项写错、切换时没重建菜单、选中项没复位，都会表现为"点了没反应或右区与高亮不一致"，
 /// 而这类问题在 XAML 静态审计里查不出来（绑定与资源都是对的，逻辑错了）。
 /// </summary>
+[Collection("静态状态")]
 public class ShellViewModelTests
 {
     [Fact]

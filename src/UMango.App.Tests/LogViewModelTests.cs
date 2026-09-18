@@ -12,6 +12,7 @@ namespace UMango.App.Tests;
 /// 所以"包里到底有没有东西、内容对不对"必须被验证，
 /// 而不是等用户发来一个空包才发现。
 /// </summary>
+[Collection("静态状态")]
 public class LogViewModelTests
 {
     private static MemoryLogSink SinkWith(params (LogLevel Level, string Message)[] entries)

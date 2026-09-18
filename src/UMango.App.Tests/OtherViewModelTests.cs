@@ -6,6 +6,7 @@ using Xunit;
 namespace UMango.App.Tests;
 
 /// <summary>其余 ViewModel 的测试。逐个确认它们在无 WPF 宿主下可用。</summary>
+[Collection("静态状态")]
 public class OtherViewModelTests
 {
     // ================= DownloadViewModel =================
@@ -188,6 +189,7 @@ public class OtherViewModelTests
 /// <summary>
 /// 已安装列表接入界面的测试（需求 P0-4：Core 侧早已实现，此前缺界面消费方）。
 /// </summary>
+[Collection("静态状态")]
 public class InstalledListUiTests
 {
     [Fact]
