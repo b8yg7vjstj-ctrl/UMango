@@ -1,6 +1,7 @@
 using System.Windows;
 using UMango.App.Services;
 using UMango.App.Themes;
+using UMango.Core.Configuration;
 
 namespace UMango.App;
 
@@ -44,19 +45,22 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// 应用"设置里保存的主题"。
+    /// 应用设置里保存的主题。
     ///
-    /// 为什么读的是 <see cref="ThemeManager"/> 而不是自己去翻设置文件：
-    /// 主题的唯一权威就是 ThemeManager，设置页切换主题时也是调它（不另存一份），
-    /// 因此在启动时把它的当前状态重新 Apply 一遍，等价于"恢复上次的主题"；
-    /// 而**没有保存过设置时它的默认值正是 PCL 经典 + 浅色**（需求要求的缺省）。
-    /// 这样将来设置页把选择持久化进 ThemeManager 之后，这一行不需要任何改动。
+    /// 设置服务是主题选择的**持久化权威**（描述符见 Core 的 UiSettings），
+    /// ThemeManager 是**运行时权威**（它负责替换 token 字典）。
+    /// 启动时把前者读出来交给后者，就实现了"恢复上次的主题"。
+    /// 没有保存过设置时读到的是描述符里的默认值 = PCL 经典 + 浅色，正是需求要求的缺省。
     /// </summary>
     private static void ApplySavedTheme()
     {
         try
         {
-            ThemeManager.Apply(ThemeManager.CurrentKind, ThemeManager.IsDark);
+            var family = AppSettings.Settings.Get<ThemeFamily>(UiSettings.ThemeKindKey);
+            var dark = AppSettings.Settings.Get<bool>(UiSettings.DarkModeKey);
+
+            var kind = family == ThemeFamily.Fluent10 ? ThemeKind.Fluent10 : ThemeKind.PclClassic;
+            ThemeManager.Apply(kind, dark);
         }
         catch (Exception)
         {

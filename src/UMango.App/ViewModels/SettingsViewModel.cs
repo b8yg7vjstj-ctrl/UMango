@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using UMango.App.Services;
 using UMango.App.Themes;
 using UMango.Core.Animation;
+using UMango.Core.Configuration;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
@@ -54,12 +55,12 @@ public partial class SettingsViewModel : ObservableObject
     /// </summary>
     public bool AnimationEnabled
     {
-        get => AppSettings.Animation.Enabled;
+        get => AppSettings.Settings.Get<bool>(UiSettings.AnimationEnabledKey);
         set
         {
-            if (AppSettings.Animation.Enabled == value) return;
-            AppSettings.Animation.Enabled = value;
-            AppSettings.SaveAnimation();
+            if (AnimationEnabled == value) return;
+            AppSettings.Settings.Set(UiSettings.AnimationEnabledKey, value);
+            AppSettings.Save();
             OnPropertyChanged();
         }
     }
@@ -67,13 +68,18 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>动画方向（切换后全局生效，对应需求"暴露为全局可切换设置"）</summary>
     public AnimationDirectionOption SelectedAnimationDirection
     {
-        get => AnimationDirections.FirstOrDefault(o => o.Mode == AppSettings.Animation.Direction)
-               ?? AnimationDirections[0];
+        get
+        {
+            var mode = AppSettings.Settings.Get<AnimationDirectionMode>(UiSettings.AnimationDirectionKey);
+            return AnimationDirections.FirstOrDefault(o => o.Mode == mode) ?? AnimationDirections[0];
+        }
         set
         {
-            if (value is null || AppSettings.Animation.Direction == value.Mode) return;
-            AppSettings.Animation.Direction = value.Mode;
-            AppSettings.SaveAnimation();
+            if (value is null) return;
+            if (AppSettings.Settings.Get<AnimationDirectionMode>(UiSettings.AnimationDirectionKey) == value.Mode) return;
+
+            AppSettings.Settings.Set(UiSettings.AnimationDirectionKey, value.Mode);
+            AppSettings.Save();
             OnPropertyChanged();
             AnimationDirectionChanged?.Invoke();
         }
@@ -85,13 +91,14 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>动画速度倍率（0.5 慢放 ~ 2.0 加速）</summary>
     public double AnimationSpeedFactor
     {
-        get => AppSettings.Animation.SpeedFactor;
+        get => AppSettings.Settings.Get<double>(UiSettings.AnimationSpeedKey);
         set
         {
+            // 量程与描述符里的 Min/Max 一致；越界由设置服务拒绝（这里先夹一次，避免滑块抖动时报错）
             var clamped = Math.Clamp(value, 0.5, 2.0);
-            if (Math.Abs(AppSettings.Animation.SpeedFactor - clamped) < 0.001) return;
-            AppSettings.Animation.SpeedFactor = clamped;
-            AppSettings.SaveAnimation();
+            if (Math.Abs(AnimationSpeedFactor - clamped) < 0.001) return;
+            AppSettings.Settings.Set(UiSettings.AnimationSpeedKey, clamped);
+            AppSettings.Save();
             OnPropertyChanged();
         }
     }
@@ -157,6 +164,13 @@ public partial class SettingsViewModel : ObservableObject
         {
             var option = SelectedTheme ?? Themes[0];
             ThemeManager.Apply(option.Kind, IsDark);
+
+            // 持久化：否则重启后又回到默认主题（之前审计发现的缺口）
+            AppSettings.Settings.Set(UiSettings.ThemeKindKey,
+                option.Kind == ThemeKind.Fluent10 ? ThemeFamily.Fluent10 : ThemeFamily.PclClassic);
+            AppSettings.Settings.Set(UiSettings.DarkModeKey, IsDark);
+            AppSettings.Save();
+
             StatusMessage = $"已应用主题：{option.Title}（{(IsDark ? "深色" : "浅色")}）。";
         }
         catch (Exception ex)

@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Threading;
 using UMango.Core.Install;
 using UMango.Core.Animation;
+using UMango.Core.Configuration;
 using UMango.Core.Download;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
@@ -119,135 +120,112 @@ public static class AppServices
 }
 
 /// <summary>
-/// 界面设置的极简持久化（目前只有「调试模式」）。
+/// 界面设置的入口。
 ///
-/// 为什么需要：Core 的 <see cref="TerminalBridge.DebugMode"/> 是**静态**开关，
-/// 进程重启就没了，而用户显然期望"上次打开过调试模式，下次还是打开的"。
-/// 存储位置与 install-records.json 同目录，便于一起备份/清理。
+/// **唯一权威是 Core 的 <see cref="SettingsService"/>**：
+/// 这里不再手写 JSON 节点，而是把设置声明交给 <see cref="UiSettings"/> 的描述符目录，
+/// 于是"新增一个设置"只需要加一条描述符，不用在这里补一对手写读写。
+///
+/// 历史说明：本类原先自己拼 JsonObject 存 debugMode，后来加了动画设置又要各写一遍，
+/// 属于典型的重复代码；且默认值会散落两边（设置页显示一个、动画系统用另一个）。
 /// </summary>
 public static class AppSettings
 {
     private static readonly object Gate = new();
-    private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
-    private static bool _loaded;
+    private static bool _initialized;
 
-    /// <summary>设置文件路径（与记录文件同目录）。</summary>
+    /// <summary>设置文件路径（与 install-records.json 同目录，便于一起备份/清理）。</summary>
     public static string SettingsPath { get; } = Path.Combine(
         Path.GetDirectoryName(InstallRecordStore.DefaultStorePath) ?? ".",
-        "ui-settings.json");
+        "settings.json");
 
-    /// <summary>
-    /// 调试模式。读写的是 Core 的静态开关本身（唯一权威），
-    /// 避免"内存镜像"和真实开关不一致；写入时顺手落盘。
-    /// </summary>
+    /// <summary>设置服务（描述符已注册）。</summary>
+    public static SettingsService Settings { get; } = CreateService();
+
+    private static SettingsService CreateService()
+    {
+        var service = new SettingsService(new JsonFileSettingsStore(SettingsPath));
+        UiSettings.RegisterAll(service);
+
+        // DebugMode 这个键要同步到 Core 的静态开关（TerminalBridge.DebugMode）——
+        // 那是终端桥的实际读取点，不能在两处各存一份。
+        service.Changed += key =>
+        {
+            if (key == UiSettings.DebugModeKey)
+            {
+                TerminalBridge.DebugMode = service.Get<bool>(UiSettings.DebugModeKey);
+            }
+        };
+        return service;
+    }
+
+    /// <summary>调试模式（读写经设置服务，并同步到 TerminalBridge 的静态开关）。</summary>
     public static bool DebugMode
     {
-        get
-        {
-            EnsureLoaded();   // 读取前先保证已尝试恢复，见 EnsureLoaded 的说明
-            return TerminalBridge.DebugMode;
-        }
+        get { EnsureLoaded(); return Settings.Get<bool>(UiSettings.DebugModeKey); }
         set
         {
-            if (TerminalBridge.DebugMode == value) return;
-            TerminalBridge.DebugMode = value;
+            EnsureLoaded();
+            if (Settings.Get<bool>(UiSettings.DebugModeKey) == value) return;
+            Settings.Set(UiSettings.DebugModeKey, value);
             Save();
         }
     }
 
     /// <summary>
-    /// 全局动画设置（唯一权威是 Core 的 <see cref="AnimationSettings"/> 实例）。
-    /// 与 DebugMode 同样处理：读写真实对象、写入时落盘，避免内存镜像与真实状态不一致。
+    /// 当前的动画设置（每次读取都从设置服务重新构造）。
+    /// 传值给 AnimationPlanner 用，**不要长期缓存这个对象** —— 见 UiSettings 的说明。
     /// </summary>
     public static AnimationSettings Animation
     {
-        get
-        {
-            EnsureLoaded();
-            return _animation;
-        }
+        get { EnsureLoaded(); return UiSettings.ReadAnimationSettings(Settings); }
     }
-
-    private static readonly AnimationSettings _animation = new();
-
-    /// <summary>改完动画设置后调用，落盘。</summary>
-    public static void SaveAnimation() => Save();
 
     /// <summary>从磁盘恢复设置。幂等，供 <see cref="AppServices.Initialize"/> 调用。</summary>
     public static void Load()
     {
         lock (Gate)
         {
-            if (_loaded) return;
-            _loaded = true;
+            if (_initialized) return;
+            _initialized = true;
 
             try
             {
-                if (!File.Exists(SettingsPath)) return;
-                if (JsonNode.Parse(File.ReadAllText(SettingsPath)) is not JsonObject root) return;
-
-                if (root["debugMode"] is JsonValue value && value.TryGetValue<bool>(out var flag))
-                {
-                    TerminalBridge.DebugMode = flag;
-                }
-
-                if (root["animationEnabled"] is JsonValue ae && ae.TryGetValue<bool>(out var enabled))
-                {
-                    _animation.Enabled = enabled;
-                }
-                if (root["animationDirection"] is JsonValue ad && ad.TryGetValue<int>(out var dir)
-                    && Enum.IsDefined(typeof(AnimationDirectionMode), dir))
-                {
-                    _animation.Direction = (AnimationDirectionMode)dir;
-                }
-                if (root["animationSpeedFactor"] is JsonValue asf && asf.TryGetValue<double>(out var speed)
-                    && speed > 0)
-                {
-                    _animation.SpeedFactor = speed;
-                }
+                Settings.Load();
+                // 载入后把静态开关同步一次（否则上次的调试模式要等用户再点一下才生效）
+                TerminalBridge.DebugMode = Settings.Get<bool>(UiSettings.DebugModeKey);
             }
             catch (Exception)
             {
                 // 设置文件损坏 / 无权限：保持默认值继续。
-                // 一个界面开关读不出来，不应该拦住整个应用的启动。
+                // 一份读不出来的设置文件不应该拦住整个应用的启动。
             }
         }
     }
 
-    /// <summary>
-    /// 懒恢复：不依赖调用方是否记得先调 <see cref="AppServices.Initialize"/>。
-    /// （App.xaml.cs 由外壳 agent 维护，这里不能假设它的调用时机。）
-    /// </summary>
+    /// <summary>懒恢复：不依赖调用方是否记得先调 Load。</summary>
     private static void EnsureLoaded()
     {
-        if (_loaded) return;
+        if (_initialized) return;
         Load();
     }
 
-    private static void Save()
+    /// <summary>落盘。任何一次设置变更后调用。</summary>
+    public static void Save()
     {
-        try
-        {
-            var dir = Path.GetDirectoryName(SettingsPath);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-            var node = new JsonObject
-            {
-                ["debugMode"] = TerminalBridge.DebugMode,
-                ["animationEnabled"] = _animation.Enabled,
-                ["animationDirection"] = (int)_animation.Direction,
-                ["animationSpeedFactor"] = _animation.SpeedFactor,
-            };
-            File.WriteAllText(SettingsPath, node.ToJsonString(JsonOpts));
-        }
+        try { Settings.Save(); }
         catch (Exception)
         {
-            // 落盘失败不影响本次会话：开关已经在内存/TerminalBridge 上生效了。
+            // 落盘失败不应中断业务：内存里的设置仍然有效，下次变更会再试
         }
     }
+
+    /// <summary>诊断/备份用：导出当前设置 JSON。</summary>
+    public static string ExportJson() => Settings.ToJson();
 }
 
 /// <summary>
-/// 把回调切回 UI 线程。
+/// 把动作切回 UI 线程。
 ///
 /// 为什么必须有：Core 的终端桥在线程池线程（CLI 的 stdout/stderr 回调）上触发
 /// <see cref="TerminalBridge.LineAppended"/>，而 WPF 的 ObservableCollection 只能在
@@ -260,10 +238,10 @@ internal static class UiDispatch
     /// <summary>已在 UI 线程则直接执行，否则投递到 Dispatcher 异步执行（调用方不等待）。</summary>
     public static void Post(Action action)
     {
-        Dispatcher? dispatcher = null;
+        System.Windows.Threading.Dispatcher? dispatcher = null;
         try
         {
-            dispatcher = Application.Current?.Dispatcher;
+            dispatcher = System.Windows.Application.Current?.Dispatcher;
         }
         catch (Exception)
         {
