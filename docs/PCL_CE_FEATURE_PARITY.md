@@ -1,0 +1,710 @@
+# PCL-CE 功能对照清单（功能清单 + 迁移状态映射）
+
+> **目的**：为「后端完全剥离 Minecraft 逻辑」与「完整迁移 PCL-CE 全部功能」这两条需求之间的冲突，
+> 提供**可核查的事实依据** —— 到底有哪些功能属于 MC 专属、哪些不是，各自体积多大，UMango 现在做到哪一步。
+>
+> **参照物**：`PCL-Community/PCL-CE`，分支 `dev`，commit `ab6e2f1`（`fix(setup-java): 修复 Java 选择页面刷新无效 (#3609)`）。
+> 本地稀疏克隆位于 `/tmp/PCL-CE`，本次调研实测 **918 个文件**（不含 `.git`）、**803 个 `.cs` / 138,447 行**、**100 个 `.xaml` / 24,109 行**。
+> 该 commit 与项目所有者已有的 `../PCL-CE-许可证与代码构成分析报告.md`（487 行）所分析的版本**完全一致**（同一 commit hash、同样 803 个 `.cs`），两份文档的数字可直接互引。
+>
+> **UMango 侧**：本次实际读取源码确认状态，**不采信文档自述**。凡文档与源码不一致处，以源码为准并单独注明。
+>
+> **调研日期**：基于本地工作副本的实测（`find` / `wc -l` / `grep -n`）。
+> **重要限制**：`/tmp/PCL-CE` 是 `--depth 1` 浅克隆，git 历史不可用，"上游继承 vs CE 新增"的判断依赖代码内容证据。
+
+---
+
+## 0. 先说结论：冲突的真实形状
+
+用户提出的两条需求，**表层冲突在"MC 功能要不要进 UMango"，但真正的硬约束在许可证**。事实如下（全部可核查）：
+
+1. **PCL-CE 的许可证边界 ≈ 功能边界**（该结论由既有分析报告提出，本次复核成立）。
+   - `PCL.Core/`：**Apache-2.0**，可自由采用、修改、闭源商用。
+   - `Plain Craft Launcher 2/`：**《PCL 分发有限许可》**（自定义专有协议），**不授予修改后再分发的权利**。
+   - 实测证据（`/tmp/PCL-CE/LICENSE` 尾部）：
+
+     ```
+     Copyright 2025 PCL Community
+
+     SPECIAL DIRECTORY: Plain Craft Launcher 2/
+
+     Licensed under some custom terms discribed in the 'Plain Craft Launcher 2/LICENCE' file.
+
+     ALL THE OTHER DIRECTORIES
+
+     Licensed under the Apache License, Version 2.0 ...
+     ```
+
+2. **而"启动 Minecraft"这一实质功能，恰好整个落在自定义许可目录里。**
+   `Plain Craft Launcher 2/Modules/Minecraft/ModLaunch.cs`（2,807 行，`McLaunchStart` 在 `:233`）是真正的启动管线，
+   它**不在** Apache-2.0 的 `PCL.Core` 里（`PCL.Core/Minecraft/Launch/` 只有 1 个文件 54 行，仅释放 log4j2 配置）。
+
+3. **自定义许可自己点名了触发条件。** 实测 `Plain Craft Launcher 2/LICENCE` 中《PCL 存储库合理使用指南》原文：
+
+   > 二、重度使用 …… 其常见情形例如：
+   > · 基于本存储库进行修改。
+   > · 参考存储库中较大量的内容，以制作或重新实现 PCL 的部分实质功能（**例如启动或下载 Java 版 Minecraft，下载或管理 Mod 等**）。
+
+   即：**"迁移 MC 启动 / Mod 下载管理"这件事本身，就是许可证定义的重度使用**。
+   一旦触发，五项强制义务里有两项与 UMango 的现有定位直接对撞：
+   - **B6 命名**：名称必须以 `Plain Craft Launcher (PCL)` 开头 → 与「UMango」这个项目名冲突；
+   - **B7(b) 开源**：必须公开源代码 → 与项目「非强制开源」的定位冲突。
+
+4. **反过来，"后端不含 MC 逻辑"这条红线正是让项目留在「轻度使用」的那块基石。**
+   THIRD-PARTY-NOTICES.md 的判定链是对的：软件与 PCL「实质功能零重叠」→ 只需署名 + 不混淆命名。
+   **所以这条红线不是架构洁癖，它承担着合规功能。**
+
+**因此本清单给出的结论是**：两条需求**不能同时按字面满足**。可行的做法是把 PCL-CE 功能切成三类：
+
+| 类别 | 处置 | 依据 |
+|------|------|------|
+| **非 MC 功能** | **应当迁移**（这是"完整迁移"的可满足部分） | 多数位于 `PCL.Core/`（Apache-2.0），无许可负担 |
+| **MC 专属功能** | **迁移即触发重度使用义务**（改名 + 开源） | 《合理使用指南》原文点名的情形 |
+| **MC 专属但算法通用**（如崩溃分析、NBT、Java 扫描） | **可迁移，但只有剥离 MC 语义后才有意义** —— 剥离后就已不是"迁移该功能"，而是"借其思路另做一个" | 需逐项判定，见第 3 节 |
+
+**给项目所有者的决策**：要么接受 B6+B7（改名 + 开源）换取全量迁移，
+要么维持"非 MC"红线并把"完整迁移"重新定义为"**PCL.CE 全部非 MC 功能**"。
+第 4 节按此举出了尚未迁移的非 MC 功能与优先级。
+
+---
+
+## 1. 摘要
+
+### 1.1 计数
+
+| 指标 | 数量 |
+|------|------|
+| **本清单收录功能条目总数** | **137** |
+| 其中 **MC 专属** | **78** |
+| 其中 **非 MC**（含"部分"归入非 MC 主体） | **55** |
+| 其中 **"部分 MC"**（机制通用、数据/语义是 MC 的） | 4（计入 MC 侧的 78 内，另单列） |
+| — 已完成 | **24** |
+| — 部分完成 | **16** |
+| — 未做 | **19** |
+| — 不适用（MC 专属，按红线不应迁移） | **78** |
+
+> 计数口径说明：「不适用」在本清单中**专指**"MC 专属 → 按「后端剥离 MC」红线不迁移"，
+> 它不是"做完了"也不是"做不了"。MC 专属条目共 78 条，其状态一律记为「不适用」。
+> 因此 **非 MC 的 55 条**才是"完整迁移"这条需求真正的作用域：
+> 其中已完成 24、部分 16、未做 15（另 0 条因平台原因不计）。
+
+### 1.2 一句话概览
+
+- UMango 已完成的 24 项，**全部集中在"包管理业务主干 + 外壳"**上：
+  六个包源适配器、平台门控、搜索/版本/依赖树、安装执行、任务与子项进度、终端桥、操作记录、
+  下载引擎、设置体系、主题系统、动画系统、合规声明页。这些全部有源码与测试证据（见第 2 节各行）。
+- **未做的 19 项里，体积最大、最通用的三块**是：**多语言 i18n**、**配置/日志基础设施的完整版**、**启动器自更新**。
+- **MC 专属的 78 项**占据了 PCL-CE 代码量的绝大部分（详见第 3 节），但按红线与许可证都不应迁入。
+
+### 1.3 一个必须先纠正的文档问题
+
+UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`docs/PROGRESS.md`
+**描述的仍然是已废弃的 Flutter + Rust + C++ 三层架构**（阶段1 "202 项测试"）。
+
+而实际技术路线已在 commit `d01f071`（"技术路线切换：废弃 Flutter 版，改用 .NET 10 + WPF 并采用 PCL-CE 代码"）改为 **.NET 10 + WPF**，
+`docs/DESIGN_UI_DOTNET.md` 明确写明：
+
+> 已废弃的 Flutter 版在 `$P/ui`、`$P/core`、`$P/native`，**不要碰**
+
+**本清单的 UMango 状态一律以 `src/UMango.Core/`、`src/UMango.App/`（活跃 .NET 栈）为准**，
+`ui/`（49 文件 / 16,979 行 Dart）、`core/`（17 文件 / 7,001 行 Rust）、`native/`（8 文件 / 1,895 行 C++）视为**废弃代码，不计入完成度**。
+凡引用这四份过期文档的结论，本清单会标注 ⚠️。
+
+---
+
+## 2. 对照表（核心）
+
+**状态口径**：
+
+- **已完成** —— 有对应实现文件与行号（下方备注直接给出）。
+- **部分** —— 已有部分实现或形态不同，但关键能力缺失。
+- **未做** —— UMango 中查无此能力（本节所有"未做"均经 `grep -ril` 全库确认关键字命中数为 0 或仅为误命中）。
+- **不适用** —— MC 专属，按「后端剥离 MC 逻辑」红线不迁移。
+
+### 2.A 外壳与导航（PCL-CE：`FormMain` + 顶层 `Pages/`）
+
+| 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| 主窗口外壳（850×500、圆角6、留白10、标题栏48） | `Plain Craft Launcher 2/FormMain.xaml:1-263` | 否 | **已完成** | `src/UMango.App/MainWindow.xaml` + `Themes/PclTokens.xaml`；几何经 `docs/SCREENSHOT_CHECK.md` 逐像素校验 |
+| 主页面路由（启动/下载/设置/工具） | `FormMain.xaml.cs:1361-1421`（`enum PageType`：Launch=0, Download=1, Setup=2, Tools=3） | 否 | **已完成** | `MainWindow.xaml:143-151` 五个 banner 选项卡；`ViewModels/ShellViewModel.cs`（138 行）。UMango 多出「进度」页，PCL-CE 把任务管理放在副页面 |
+| 二级页面栈（压栈/返回/标题刷新） | `FormMain.xaml.cs:1652`（`PageChange`）、`:1474`（`PageNameGet`）、`:1476-1505`（副页面标题） | 否 | **部分** | UMango 仅 `Views/DownloaderView.xaml` 以一个折叠子视图实现"进入下载器"，**无通用导航栈**，无返回按钮与标题栈 |
+| banner 选项卡样式 | `FormMain.xaml`（`BannerTab` 样式） | 否 | **已完成** | `Themes/Styles.xaml` 的 `BannerTab` |
+| 左栏列表项与分组标题（项高36、分组字号12/透明度0.6） | `Pages/*/Page*Left.xaml`（如 `PageSetupLeft.xaml:10-148`） | 否 | **部分** | UMango 左栏改用 `ListBox`（`MainWindow.xaml:183`）+ 「分类/包源」两段表格，**形态与 PCL-CE 的 `MyListItem` RadioBox 列表不同**；逐像素校验只覆盖了尺寸与配色 |
+| 三大金刚键（最小化/最大化/关闭） | `FormMain.xaml`（28×28，右边距12、间距32） | 否 | **已完成** | `MainWindow.xaml:157-162`，`Click="BtnMin_Click"` 等 |
+| 任务管理页面 | `FormMain.xaml.cs:1391`（`PageType.TaskManager = 6`） | 否 | **已完成** | `Views/ProgressView.xaml`（620 行）+ `ViewModels/ProgressViewModel.cs`（334 行）；能力**强于** PCL-CE（子项进度 + 内联终端） |
+| 日志查看页 | `Pages/PageLogLeft.xaml.cs`、`Pages/PageLogRight.xaml.cs` | 否 | **未做** | UMango 全库无日志系统（`grep -ril Logging` = 0）；只有内存态 `TerminalBridge` |
+| 实例选择副页面 | `FormMain.xaml.cs:1386`（`InstanceSelect = 5`） | 是 | **不适用** | 选择 MC 实例 |
+| 主页新闻（官网公告） | `Pages/PageHomepage/PageHomepageNewsView.xaml.cs` + `PCL.Core/Model/Homepage/News/`（3 文件 58 行）+ `PCL.Core/ViewModel/Homepage/NewsViewModel.cs`（114 行） | 否 | **未做** | 机制通用，但**数据源是 PCL 官网 API**，对 UMango 无意义（需换成自己的源） |
+| 音乐播放器 | `Modules/ModMusic.cs:11`（472 行，NAudio `WaveOutEvent`） | 否 | **未做** | PCL-CE 内置播放器（`MusicControlPause:282`、`MusicControlNext:312`） |
+| 视频/动态背景 | `Modules/ModVideoBack.cs:3`（172 行） | 否 | **未做** | 依赖 WPF MediaElement + 游戏中状态判定（`IsGaming:7`） |
+| 内嵌 WebServer | `Modules/ModWebServer.cs:10`（345 行） | 部分 | **未做** | `StartWebServer:20` / `NaidCallbackServer:112`；是个通用 HTTP 服务器，但 PCL-CE 用它接 **MC 登录 OAuth 回调** |
+| 全局提示/Hint 服务 | `Modules/UI/HintService.cs:21`（`Hint`）、`:99`（`HideAll`）+ `PCL.Core/UI/HintWrapper.cs:16` | 否 | **部分** | UMango 只有**页面内联提示**（`Views/DownloadView.xaml:530` 中性提示、`:438` 空态提示、错误条），**无全局提示队列/浮层** |
+| 系统 Toast 通知（WinRT） | `PCL.Core/UI/ToastNotification.cs:12`（`SendToast`）、`:39`（模板） | 否 | **未做** | WinRT 专用（`Utils/WinRT/`），Windows-only |
+| 主题管理（明暗 + 色相） | `Modules/UI/Theme/ThemeManager.cs:9`（`ThemeRefresh:22`、`ThemeRefreshMain:31`） | 否 | **已完成** | `src/UMango.App/Themes/ThemeManager.cs:34`（`Apply:113`、`ToggleDark:167`、`ThemeChanged:68`），4 套完整字典 `Tokens.{Light,Dark}.{Pcl,Fluent10}.xaml`，**能力更强**（PCL-CE 是单套 + 明暗） |
+| 多语言 i18n | `PCL.Core/App/Localization/Lang.cs` + `Languages/zh-CN.xaml`（**3,583 行**）×4 种实语言（zh-CN/zh-TW/en-US/en-GB）+ 3 个 12 行空壳 | 否 | **未做** | 机制通用（纯 XAML 资源字典），**文本内容高度启动器专用**；`src/` 下 `Language` 关键字仅 1 处误命中（GitHub 搜索语法注释） |
+| 动画引擎 | `PCL.Core/UI/Animation/`（`UI/` 共 129 文件 9,835 行，动画为主体：`Core/` 帧·关键帧·组合·时钟·值处理器，`Easings/` 39 个缓动类） | 否 | **部分** | UMango `src/UMango.Core/Animation/`（4 文件 386 行）：`AnimationPlanner`、`Easing`（39 缓动枚举化）、`AnimationSpec`、`AnimationSettings` + `App/Animation/AnimationPlayer.cs`。**缓动数学与方向语义已迁移**；但 PCL-CE 的**帧动画/关键帧/并联串联组合/多时钟抽象/`IAnimatable` 体系未迁移** |
+| 单实例运行 | `PCL.Core/App/Essentials/SingleInstanceService.cs` | 否 | **未做** | UMango 无单实例互斥；`grep -ril SingleInstance` = 0 |
+| 通知/对话框系统 | `PCL.Core/UI/MsgBoxWrapper.cs`、`SystemDialogs.cs`、`HintWrapper.cs` | 否 | **部分** | UMango 用原生 `MessageBox`/内联错误文本；无统一封装与主题化对话框 |
+
+### 2.B PageLaunch（启动与登录）— 全部 MC 专属
+
+| 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| MC 启动主页（实例选择 + 启动按钮 + 版本列表） | `Pages/PageLaunch/PageLaunchLeft.xaml.cs:1035` | 是 | **不适用** | `BtnLaunch`(高54)、`BtnInstance`、`BtnInstanceSetup` |
+| 启动状态面板（当前步骤/下载库/登录方式/进度/速度） | `PageLaunchLeft.xaml:112-125` | 是 | **不适用** | `Launch.Status.*` 资源键 |
+| 微软账号登录（OAuth 设备码） | `Pages/PageLaunch/PageLoginMs.xaml.cs:101` + `PCL.Core/Minecraft/Profile/Authentication/MicrosoftProvider.cs` | 是 | **不适用** | `IdentityModel/` 22 文件 1,613 行 |
+| 离线登录 | `Pages/PageLaunch/PageLoginOffline.xaml.cs:92` | 是 | **不适用** | |
+| 第三方验证登录（Authlib / Yggdrasil） | `Pages/PageLaunch/PageLoginAuth.xaml.cs:410` + `AuthlibProvider.cs` + `YggdrasilConnectProvider.cs` | 是 | **不适用** | |
+| 账号档案管理（多档案、切换、失效） | `Pages/PageLaunch/PageLoginProfile.xaml.cs:198` + `PCL.Core/Minecraft/Profile/ProfileService.cs`、`ProfileManagement.cs` | 是 | **不适用** | `Profile/` 21 文件 1,563 行 |
+| 皮肤查看与更换 | `Pages/PageLaunch/MySkin.xaml.cs:503`、`PageLoginProfileSkin.xaml.cs:168` + `Modules/Minecraft/ModSkin.cs` | 是 | **不适用** | |
+| 登录消息/公告浮层 | `Pages/PageLaunch/MyMsgLogin.xaml.cs:281` | 是 | **不适用** | |
+| 启动按钮的多态动作（安装/更新/启动） | `Pages/PageLaunch/PageLaunchLeft.xaml.cs:26`（`enum LaunchButtonAction`） | 是 | **不适用** | UMango 有同类多态按钮（安装/卸载/升级），但语义是包管理 |
+| 启动前正版劝导（`McLaunchPrecheck`） | `Modules/Minecraft/ModLaunch.cs:34` | 是 | **不适用** | 该函数是许可证 B8 义务的实现载体 |
+
+### 2.C PageDownload（下载中心）— 18 个副页面
+
+`PageSubType` 枚举见 `FormMain.xaml.cs:1425-1446`；左栏菜单见 `PageDownloadLeft.xaml:11-277`。
+
+| 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| 游戏本体安装（版本列表 + 下载） | `Pages/PageDownload/PageDownloadInstall.xaml.cs` + `ModDownload.cs:23`（`DlClientJarGet`） | 是 | **不适用** | |
+| Mod 搜索与下载 | `Pages/PageDownload/PageDownloadMod.xaml.cs` + `Comp/PageDownloadMod.xaml.cs` | 是 | **不适用** | 对应 UMango 的「搜索+卡片+版本列表」是**通用包搜索**，见 D01 |
+| 整合包下载与安装 | `PageDownloadPack.xaml.cs` + `Modules/Minecraft/ModModpack.cs`（1,738 行） | 是 | **不适用** | |
+| 数据包下载 | `PageDownloadDataPack.xaml.cs` | 是 | **不适用** | |
+| 资源包下载 | `PageDownloadResourcePack.xaml.cs` | 是 | **不适用** | |
+| 光影下载 | `PageDownloadShader.xaml.cs` | 是 | **不适用** | |
+| 世界/地图下载 | `PageDownloadWorld.xaml.cs` | 是 | **不适用** | |
+| 社区资源收藏夹 | `PageDownloadCompFavorites.xaml.cs` | 是 | **不适用** | |
+| OptiFine 安装 | `PageDownloadOptiFine.xaml.cs` | 是 | **不适用** | |
+| Forge 安装 | `PageDownloadForge.xaml.cs` | 是 | **不适用** | |
+| NeoForge 安装 | `PageDownloadNeoForge.xaml.cs` | 是 | **不适用** | |
+| Cleanroom 安装 | `PageDownloadCleanroom.xaml.cs` | 是 | **不适用** | |
+| Fabric 安装 | `PageDownloadFabric.xaml.cs` | 是 | **不适用** | |
+| LegacyFabric 安装 | `PageDownloadLegacyFabric.xaml.cs` | 是 | **不适用** | |
+| LiteLoader 安装 | `PageDownloadLiteLoader.xaml.cs` | 是 | **不适用** | |
+| LabyMod 安装 | `PageDownloadLabyMod.xaml.cs` | 是 | **不适用** | |
+| 资源工程详情页（描述/文件列表/依赖/图集） | `Pages/PageDownload/Comp/PageDownloadCompDetail.xaml.cs`、`MyCompItem.xaml.cs` | 是 | **不适用** | 交互形态（卡片 + 详情页）UMango 已有，见 D01/C01 |
+| 社区资源元数据与依赖解析 | `Modules/Minecraft/ModComp.cs`（3,823 行）、`ModCompDependency.cs` | 是 | **不适用** | 加载 `mcmod.buf` 索引，规模居全库第二 |
+| Modrinth / CurseForge 双源 API | `PCL.Core/Minecraft/ResourceProject/`（15 文件 498 行） | 是 | **不适用** | |
+| 整合包安装核心库 | `Pages/PageDownload/ModDownloadLib.cs`（**4,578 行**，全库最大文件） | 是 | **不适用** | 模块级代码混在页面目录 |
+
+### 2.D PageInstance（实例管理）— 12 个副页面
+
+`PageSubType.Version*` 见 `FormMain.xaml.cs:1462-1473`；左栏见 `PageInstanceLeft.xaml:8-166`。
+
+| 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| 实例总览（信息卡 + 快速动作） | `Pages/PageInstance/PageInstanceOverall.xaml.cs:843` | 是 | **不适用** | |
+| 实例设置（内存/窗口/参数/Java） | `PageInstanceSetup.xaml.cs:1091` | 是 | **不适用** | |
+| 实例导出/整合包打包 | `PageInstanceExport.xaml.cs:1226` | 是 | **不适用** | |
+| 存档管理与存档详情 | `PageInstanceSaves.xaml.cs:573`、`Saves/PageInstanceSavesInfo.xaml.cs:356` | 是 | **不适用** | |
+| 数据包管理（含版本筛选/排序） | `PageInstanceSaves/PageInstanceSavesDatapack.xaml.cs:1698`、`FilterType:842`、`SortMethod:907` | 是 | **不适用** | |
+| 截图管理 | `PageInstanceScreenshot.xaml.cs:340` | 是 | **不适用** | 图片浏览机制通用，但目录/语义是 MC 的 |
+| Mod 管理（启用/禁用/删除/搜索） | `PageInstanceCompResource.xaml.cs:2961`、`MyLocalModItem.xaml.cs:886` | 是 | **不适用** | |
+| 已禁用 Mod 列表 | `PageInstanceModDisabled.xaml.cs:40` | 是 | **不适用** | |
+| 资源包管理 | `PageInstanceCompResource.xaml.cs`（同上，`FilterType:1588`） | 是 | **不适用** | |
+| 光影管理 | 同上 | 是 | **不适用** | |
+| 原理图（Schematic）管理 | `FormMain.xaml.cs:1472`（`VersionSchematic = 9`） | 是 | **不适用** | |
+| 服务器列表与服务器卡片 | `PageInstanceServer.xaml.cs:497`、`ServerCard.xaml.cs:238` | 是 | **不适用** | |
+| 实例安装/重装（含 Loader 选择） | `PageInstanceInstall.xaml.cs:2553`、`InstallAction:18` | 是 | **不适用** | 安装编排机制与 UMango `InstallExecutor` 同类，但语义是 MC |
+| 实例列表与卡片 | `Modules/Minecraft/ModInstanceList.cs:636`、`McInstanceCardType.cs`、`McInstance.cs:1062` | 是 | **不适用** | |
+
+### 2.E PageSetup（设置）— 11 个子页
+
+`PageSubType.Setup*` 见 `FormMain.xaml.cs:1448-1460`；左栏四分类（游戏/工具/启动器/关于）见 `PageSetupLeft.xaml:10-148`。
+
+| 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| 游戏设置（启动参数/JVM/内存/窗口） | `Pages/PageSetup/PageSetupLaunch.xaml.cs:641` + `PageSetupLaunch.xaml`（326 行） | 是 | **不适用** | |
+| Java 管理（扫描/选择/下载/校验） | `PageSetupJava.xaml.cs:224` + `Modules/Minecraft/ModJava.cs:15`（`JavaSelect:34`、`JavaDownloadConfirm:343`）+ `PCL.Core/Minecraft/Java/`（21 文件 986 行） | 是 | **不适用** | 含注册表扫描 `RegistryJavaScanner.cs`、Microsoft Store 扫描、PE 头解析 |
+| 游戏管理（文件夹/缓存清理/语言） | `PageSetupGameManage.xaml.cs:158` | 是 | **不适用** | |
+| GameLink 联机设置 | `PageSetupGameLink.xaml.cs:175` | 是 | **不适用** | |
+| **界面设置/自定义** | `PageSetupUI.xaml.cs:957` + `PageSetupUI.xaml`（482 行） | **否** | **部分** | UMango `Views/SettingsView.xaml`(512) + `.xaml.cs`(390) + `ViewModels/SettingsViewModel.cs`(237)；已覆盖主题/动画/调试/行为，**缺** PCL-CE 的界面自定义项（背景图、圆角开关、字体等） |
+| **启动器语言** | `PageSetupLauncherLanguage.xaml.cs:224` | **否** | **未做** | 依赖 i18n，见 2.A「多语言」 |
+| **启动器杂项** | `PageSetupLauncherMisc.xaml.cs:322` | **否** | **未做** | ⚠️ 未逐项展开确认具体开关（文件 322 行，本次未细读全部选项） |
+| **关于页（含第三方许可清单）** | `PageSetupAbout.xaml.cs:203` + `PageSetupAbout.xaml`（505 行） | **否** | **已完成** | UMango `Views/ToolsView.xaml:217-274`「合规与许可」+「第三方组件」+「关于」；且 UMango 的声明比 PCL-CE 更完整（见 `THIRD-PARTY-NOTICES.md`） |
+| **启动器更新** | `PageSetupUpdate.xaml.cs:284` + `Modules/Updates/UpdateManager.cs:11`（`IsCurrentVersionBeta:26`、`GetVersionStatus:36`） | **否** | **未做** | UMango 有更新**探测提示**（`ToolsView:269` 提及 gh-proxy），但**无自更新下载与替换流程** |
+| **反馈** | `PageSetupFeedback.xaml.cs:195` + `TagId:12` | **否** | **未做** | 含标签分类提交；UMango 全库无 `Feedback` |
+| **日志设置/查看** | `PageSetupLog.xaml.cs:163` | **否** | **未做** | 同 2.A 日志页 |
+
+### 2.F PageTools（工具）
+
+| 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| 联机大厅（建房/加入/房间码/玩家列表） | `Pages/PageTools/PageToolsGameLink.xaml.cs`（`Subpages:987`）+ `Modules/ModLink.cs:1-398` + `PCL.Core/Link/`（59 文件 5,018 行） | 是 | **不适用** | `ModLink.cs` 导入 `PCL.Core.Minecraft.Profile`、`Link.McPing`；`ScaffoldingFactory` 用 MC 大厅码与 EasyTier。**基础设施（EasyTier P2P、TCP 转发 `IO/Net/SocketForward/`、Scaffolding 协议）本身通用，但语义是 MC 联机** |
+| 工具/测试页 | `Pages/PageTools/PageToolsTest.xaml.cs` | 否 | **部分** | UMango `Views/ToolsView.xaml`（317 行）+ `ToolsView.xaml.cs`（493 行）提供系统诊断、CLI 探测明细、可复制诊断报告 —— **实质是 PCL-CE「测试页」的同类能力且更完善**；但 PCL-CE 该页另有快捷工具入口未迁移 |
+
+### 2.G Modules/Base、Event、UI、Updates（业务基础设施）
+
+| 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| 上游基础设施与转换器（`ModBase.cs` 3,759 行） | `Modules/Base/ModBase.cs` | 部分 | **部分** | UMango 未移植 `ModBase`；其中通用的 `SafeList`、校验、路径工具由自研 `src/UMango.Core/Utils/` 部分覆盖 |
+| 启动初始化流程与加载器管线 | `Modules/Base/ModSetup.cs`、`ModLoader.cs`（`LoaderCombo`）、`Modules/ModMain.cs:1134` | 否 | **部分** | UMango `src/UMango.App/App.xaml.cs` + `Services/AppServices.cs:32`（`Initialize:69`）做 DI 式初始化；**无** PCL-CE 的多阶段 Loader 管线与进度编排 |
+| 窗口动画（`ModAnimation.cs`） | `Modules/Base/ModAnimation.cs` | 否 | **已完成** | UMango `App/Animation/AnimationPlayer.cs`（`PlayEntrance:19`、`PrimeStartState:65`） |
+| 位图/图像处理（`MyBitmap.cs`） | `Modules/Base/MyBitmap.cs` | 否 | **未做** | UMango 无位图处理层 |
+| 自定义事件总线 | `Modules/Event/`（6 文件 741 行：`CustomEventService.cs`、`EventType.cs`、`XamlEventSanitizer.cs`） | 否 | **未做** | ⚠️ `Modules/Event` 是 CE 新增能力（见既有分析报告 §2.2）。UMango 用 MVVM 属性通知，无事件总线 |
+| 主题管理器（业务侧） | `Modules/UI/Theme/ThemeManager.cs:9`（**131 行**） | 否 | **已完成** | 见 2.A「主题管理」。⚠️ 本次首轮统计曾把该文件漏算（用了 `-maxdepth 1`），已修正：`Modules/UI` 实为 **3 文件 / 244 行** |
+| 提示服务 | `Modules/UI/HintService.cs:21` | 否 | **部分** | 见 2.A「全局提示/Hint 服务」 |
+| 启动器更新（多通道：Minio/MirrorChyan/随机/包装） | `Modules/Updates/`（11 文件 1,020 行：`UpdateManager.cs:11`、`UpdatesMinioModel.cs`、`UpdatesMirrorChyanModel.cs`、`UpdatesRandomModel.cs`、`UpdatesWrapperModel.cs`、`IUpdateSource.cs`） | 否 | **未做** | 架构清晰（多源抽象 + 包装降级），**是可迁移的非 MC 功能**（见第 4 节 P1） |
+| 公告/Announcement | `Modules/Updates/AnnouncementService.cs`、`VersionAnnouncementDataModel.cs` | 否 | **未做** | |
+
+### 2.H Modules/Network（网络与下载）
+
+| 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| **多线程下载管理器（分片/并发/限速/进度聚合）** | `Modules/Network/Management/NetManager.cs`（`ThreadCount:44`、`Speed:35`、`FileRemain:12`、`DownloadDone:21`） | **否** | **部分** | 模块总计 12 文件 1,137 行。UMango `src/UMango.Core/Download/`（8 文件 990 行）走**另一种路线**：`DownloadEngineRegistry.Select:34` 按协议选引擎（`Aria2Engine`、`BuiltinHttpEngine`、`Ed2kEngine`），**自身不做分片并发**，把该能力外包给 aria2。**因此不是"未做"而是"用不同架构覆盖"** |
+| 下载任务门面与重试/镜像源 | `Modules/Network/Facade/ModNet.cs:6`（`NetGetCodeByRequestRetry:16`、`NetDownloadByLoader:107`、`NetTaskSpeedLimit*:9-13`） | **否** | **部分** | UMango 有 HTTP 兜底（`BuiltinHttpEngine`）与 GitHub 镜像前缀（`UMANGO_GITHUB_PROXY`，见 `GitPackageManager.cs`），**无统一重试/多镜像抽象层** |
+| 单文件下载器（URL→本地文件） | `Modules/Network/Downloader/FileDownloader.cs:9`（`DownloadAsync:11/19`、`DownloadByLoader:27`） | **否** | **已完成** | UMango `Download/Engines/BuiltinHttpEngine.cs:14` + `DownloadModels.cs:41`（`DownloadRequest`） |
+| HTTP 请求层（JSON/字符串/超时/UA） | `Modules/Network/Http/Requester.cs:13`（`FetchJsonAsync:40/45`、`FetchStringAsync:21`） | **否** | **部分** | UMango 各适配器直接用 `HttpClient`，**无统一 Requester 层**；无 HTTP 缓存 |
+| 请求签名 | `Modules/Network/Http/RequestSigning.cs` | 否 | **未做** | CE 新增；与 PCL 官方服务配套，对 UMango 无意义 |
+| 下载载荷构造与 MC 镜像源 | `Modules/Network/Downloader/DownloadRequestFactory.cs`、`Models/FetchParam.cs`、`NetworkEnums.cs` | 是 | **不适用** | 内含 MC 资源站镜像源与目录约定 |
+| 下载文件模型与去重 | `Modules/Network/Models/DownloadFile.cs` | 否 | **部分** | UMango `DownloadModels.cs` 有 `DownloadResult`/`DownloadProgress`，无"已存在即跳过"的 `DownloadFile` 语义 |
+| Loader 驱动下载（与加载器管线绑定） | `Modules/Network/Loaders/LoaderDownload.cs`、`LoaderDownloadUnc.cs` | 部分 | **部分** | UMango `Install/InstallExecutor.cs:70`（`InstallAsync`）+ `InstallProgressParser.cs:27/53` 是等价能力（把进程输出解析成进度），**已迁移思路但非同一实现** |
+
+### 2.I Modules/Minecraft（MC 业务核心）— 全部 MC 专属
+
+| 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| **MC 启动管线（classpath/JVM 参数/游戏参数/native/鉴权注入）** | `Modules/Minecraft/ModLaunch.cs:28`（`McLaunchStart:233`，2,807 行） | 是 | **不适用** | **许可证重度使用的核心触发点** |
+| 资源下载编排 | `Modules/Minecraft/ModDownload.cs:15`（2,502 行） | 是 | **不适用** | |
+| 社区资源元数据 | `Modules/Minecraft/ModComp.cs`（3,823 行） | 是 | **不适用** | |
+| 本地资源管理 | `ModLocalComp.cs`（2,493 行） | 是 | **不适用** | |
+| 整合包 | `ModModpack.cs:1738` | 是 | **不适用** | |
+| 资源库依赖下载 | `ModLibrary.cs:691` | 是 | **不适用** | |
+| 实例模型与状态 | `McInstance.cs:1062`、`McInstanceInfo.cs`、`McInstanceState.cs` | 是 | **不适用** | |
+| 实例列表 | `ModInstanceList.cs:636` | 是 | **不适用** | |
+| Java 管理（业务侧） | `ModJava.cs:15`（`Javas:27`、`GetInstanceJavaPreference:209`、`IsGameSet64BitJava:270`） | 是 | **不适用** | |
+| 皮肤 | `ModSkin.cs` | 是 | **不适用** | |
+| 进程监控（游戏启动/退出检测） | `ModWatcher.cs:12`（`hasRunningMinecraft:17`、824 行） | 是 | **不适用** | |
+| Jar-in-Jar 解析 | `ModJarInJar.cs` | 是 | **不适用** | |
+| 资源文件/图标 | `ModAssets.cs`、`ModStyle.cs` | 是 | **不适用** | |
+| 游戏日志过滤 | `McLogFilter.cs` | 是 | **不适用** | |
+| 版本比较（MC 版本号） | `McVersionComparer.cs` | 是 | **不适用** | ⚠️ UMango 的 `SemVer` 比较在**适配器内部自建**（`git` 宽松版本比较注释见 `GitPackageManager.cs`），与本文件无关 |
+| Profile UI | `ProfileUi.cs:518` | 是 | **不适用** | |
+| **崩溃分析子系统** | `Modules/Minecraft/CrashAnalysis/`（**28 文件 / 3,874 行**：`CrashAnalyzer.cs:59`、`Detection/CrashRuleCatalog.cs`、`Detection/CrashStackAnalyzer.cs`、`Export/CrashReportExporter.cs`、`Logs/CrashLogCollector.cs`、`Presentation/CrashDialogPresenter.cs`） | 是 | **不适用** | 规则目录针对 MC Java 堆栈与 mod 列表；**日志收集与报告导出部分思路可借鉴，但需重写** |
+
+### 2.J PCL.Core / Minecraft（核心库的 MC 部分）
+
+| 功能 | PCL.Core 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| MC 账号身份体系（MS OAuth / 离线 / Authlib / Yggdrasil Connect） | `PCL.Core/Minecraft/IdentityModel/`（22 文件 1,613 行）、`Profile/Authentication/` | 是 | **不适用** | |
+| MC 档案服务 | `Profile/ProfileService.cs`、`Models/McProfile.cs`（21 文件 1,563 行） | 是 | **不适用** | |
+| Java 运行时扫描与管理 | `Minecraft/Java/`（21 文件 986 行，含 4 种 Scanner + PE 头解析） | 是 | **不适用** | 其中 `PeHeaderParser.cs`、`Utils/PEHeaderReader.cs` **算法通用**（PE 格式），但服务对象是 JVM |
+| MC 存档解析与编辑（NBT，跨版本） | `Minecraft/Saves/`（20 文件 1,144 行：`Parsing/Internal/` 6 个版本化解析器、`Editing/`、`SaveManager.cs`） | 是 | **不适用** | NBT 是 MC 专有格式；**版本化解析器架构是很好的可借鉴范式** |
+| MC 资源工程（Modrinth/CurseForge） | `ResourceProject/`（15 文件 498 行） | 是 | **不适用** | |
+| 依赖解析器 | `ResourceProject/ModDependencyResolver.cs` | 是 | **不适用** | 语义是 mod 依赖 |
+| Maven 坐标与版本范围 | `McVersionClassifier.cs`、`MavenArtifact.cs`、`Utils/VersionRange.cs` | 是 | **不适用** | Maven 机制通用，但用于 MC 库坐标 |
+| NBT 文件读写 | `NbtFileHandler.cs`、`Utils/VarIntHelper.cs` | 是 | **不适用** | |
+| 服务器地址解析 / MC Ping / MOTD | `ServerAddressResolver.cs`、`Link/McPing/`（9 文件）、`UI/Controls/MotdRenderer.xaml` | 是 | **不适用** | |
+| 游戏核心常量/格式化 | `GameCore.cs`、`McFormatter.cs`、`Yggdrasil/ApiLocation.cs` | 是 | **不适用** | |
+
+### 2.K PCL.Core 通用能力（非 MC）
+
+| 功能 | PCL.Core 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
+|------|----------------------|------------|-----------|------|
+| **配置体系**（多存储后端 + 迁移 + 观察者 + 源生成器） | `App/Configuration/`（`ConfigService.cs`、`Storage/`：`JsonFileProvider`、`YamlFileProvider`、`CatIniFileProvider`、`EncryptedFileConfigStorage`、`DynamicCacheConfigStorage`、`ConfigMigration.cs` + `PCL.Core.SourceGenerators/` 5 生成器） | 否 | **部分** | UMango `src/UMango.Core/Configuration/`（6 文件 653 行）：`SettingsService.cs:15`（`SchemaVersion:18`、`Descriptors:39`、`Sections:47`）+ `SettingDescriptor.cs:25` + `JsonFileSettingsStore.cs:13`（含 `LoadRawWithMigration:79`）+ `UiSettings.cs`（10 个描述符，4 分区）。**描述符驱动的思路已具备**，但**只支持 JSON 一种后端**，无源生成器、无加密存储、无配置事件注册表 |
+| **任务中心** | `App/Tasks/`（8 文件） | 否 | **已完成** | UMango `App/Tasks/` 8 文件，**已按 Apache-2.0 逐文件采用并标注**（见 `THIRD-PARTY-NOTICES.md` §1 表格：`TaskState`/`ITask`/`ITaskProgressive`/`ITaskCancelable`/`ITaskPausable`/`ITaskGroup`/`TaskModel`/`TaskCenter`）；`TaskModel` 新增 `IsGroup`/`Children` |
+| 日志系统（分级/包装/适配器） | `Logging/`（10 文件 849 行：`Logger.cs`、`LogService.cs`、`LogLevel.cs`、`LoggerAdapter.cs`、`LoggerFactoryAdapter.cs`） | 否 | **未做** | UMango 无日志（`grep -ril Logging src/` = 0） |
+| 内部事件总线 | `App/EventBus/`（`EventBusService.cs`、`EventDataBase.cs`、`IEventHandler.cs`、`IResponsibleEventHandler.cs`） | 否 | **未做** | |
+| IoC / 生命周期 | `App/IoC/`（`LifecycleService.cs`、`DependencyGroup.cs`、`LifecycleFlow.cs`、`PropertyAccessor.cs` 等） | 否 | **部分** | UMango 用 `AppServices.cs:32` 的 `Lazy<T>` 静态服务定位，**无容器、无生命周期阶段** |
+| 本地化服务 | `App/Localization/`（`Lang.cs`、`LocalizationService.cs`、`LocalizationFontService.cs` + 7 个语言 XAML） | 否 | **未做** | 见 2.A |
+| 路径与环境 | `App/Paths.cs`、`App/Basics.cs`、`App/Metadata.cs` | 否 | **部分** | UMango `Platform/SystemInfo.cs`（`PlatformKind.cs`）、`AppServices.cs:138`（`SettingsPath`） |
+| 密钥与凭据保护 | `App/Secrets.cs`、`Utils/Secret/`（`EncryptHelper.cs`、`Identify.cs`）、`Utils/Encryption/`（AesGcm/AesCbc/ChaCha20 ×2 + 软件实现） | 否 | **未做** | ⚠️ 依赖 CNG/DPAPI（Windows）与 `System.Security.Cryptography.ProtectedData`、`PlainToolkit.CngProtectedData` |
+| 单实例 / 启动校验 / 崩溃上报 | `App/Essentials/SingleInstanceService.cs`、`StartupValidation.cs`、`TelemetryService.cs`（Sentry） | 否 | **未做** | |
+| RPC 服务 | `App/Essentials/RpcService.cs`、`RpcFunction.cs`、`RpcProperty.cs`、`RpcResponse.cs` | 否 | **未做** | |
+| 应用/窗口服务 | `App/Essentials/ApplicationService.cs`、`MainWindowService.cs`、`PromoteService.cs` | 否 | **部分** | UMango 在 `MainWindow.xaml.cs` 内直接实现 |
+| 命令行参数解析 | `App/Cli/`（`CommandLine.cs`、`TextArgument.cs`、`DecimalArgument.cs`、`BoolArgument.cs`、`SubcommandDefinition.cs`） | 否 | **未做** | |
+| 数据库服务 | `App/Database/`（`DatabaseService.cs`、`DatabaseEntry.cs` + README） | 否 | **未做** | `grep -ril Database src/` = 0 |
+| HTTP 客户端扩展（代理/缓存/路由/内容处理） | `IO/Net/Http/`（`HttpRequest.cs`、`HttpProxyManager.cs`、`HttpCacheHandler.cs`、`HttpRoute.cs`、`HttpServer.cs`、`HttpBasicExtension.cs` 等） | 否 | **未做** | 体量大且通用；UMango 仅 `HttpClient` 裸用 |
+| DNS 查询与加权竞速 | `IO/Net/Dns/`（`DnsQuery.cs`、`WeightedDnsRacerClient.cs`、`DnsSrvResource.cs`） | 否 | **未做** | |
+| TCP 端口转发 | `IO/Net/SocketForward/`（`TcpForwardBuilder.cs`、`TcpForwardConfig.cs`、`TcpForwardWorker.cs`） | 否 | **未做** | 给 MC 联机用，但**本身是通用 TCP 转发** |
+| 缓存服务（SQLite + 内容寻址） | `IO/Storage/Cache/`（13 文件：`CacheService.cs`、`SqliteCacheStorage.cs`、`CacheEvictionService.cs`、`CachePolicy.cs`、`SchemaManager.cs`、`Model/`） | 否 | **未做** | UMango 只有 `PackageManagerRegistry` 内一个**内存字典** `_cache`（`PackageManagerRegistry.cs`），**重启即失效** |
+| 哈希存储 | `IO/Storage/HashStorage.cs` | 否 | **未做** | |
+| 文件/目录抽象与字节流 | `IO/Files.cs`、`Directories.cs`、`ByteStream.cs` | 否 | **部分** | UMango `IO/` 有 2 个文件，未细核 |
+| 进程间管道通信 | `IO/PipeComm.cs` | 否 | **未做** | |
+| 下载抽象（NDlFactory 等） | `IO/Download/`（8 文件：`NDlFactory.cs`、`IDlConnection.cs`、`IDlResourceMapping.cs`、`IDlWriter.cs`、`NDlSourceReport.cs`） | 否 | **部分** | UMango `Download/IDownloadEngine.cs` 是**独立设计的等价抽象**（见 2.H 第一行） |
+| 验证器族 | `Utils/Validate/`（12 个 Validator + FluentValidation） | 否 | **部分** | UMango 仅在 `Configuration/` 内有 `SettingDescriptor.Validate()`；**未引入 FluentValidation**（遵守"不加新 NuGet 依赖"约束） |
+| 哈希算法族 | `Utils/Hash/`（MD5/SHA1/SHA256/SHA512/MurmurHash2 + `HashCache.cs`） | 否 | **未做** | UMango `Hash` 关键字命中仅 4 处 `HashSet`（**误命中**） |
+| 加密算法族 | `Utils/Encryption/`（AES-CBC/GCM、ChaCha20-Poly1305 + 纯软件实现） | 否 | **未做** | |
+| 二进制差分（BsDiff/ItemDiff） | `Utils/Diff/`（`BsDiff.cs`、`IBinaryDiff.cs`、`ItemDiffResult.cs`） | 否 | **未做** | 用于增量更新 |
+| 编码检测与转换 | `Utils/Codecs/`（`EncodingDetector.cs`、`EncodingUtils.cs`、`Encodings.cs`） | 否 | **未做** | |
+| 线程/并发原语 | `Utils/Threading/`（`AsyncDebounce.cs`、`AsyncManualResetEvent.cs`、`AsyncCountResetEvent.cs`、`DualThreadPool.cs`、`LimitedTaskPool.cs`、`LimitedConcurrencyLevelTaskScheduler.cs`） | 否 | **未做** | UMango `Threading` 命中 52 处**全是 `using System.Threading`（误命中）** |
+| 字符串/集合/任务扩展 | `Utils/Exts/`（8 文件：`StringExtension.cs`、`ListExtension.cs`、`TaskExtension.cs`、`UiExtension.cs`、`ConcurrentDictionaryExtension.cs`、`AsyncEnumerableExtensions.cs`、`ByteExtension.cs`、`HttpRequestExtension.cs`） | 否 | **未做** | |
+| 语义化版本与版本范围 | `Utils/SemVer.cs`、`Utils/VersionRange.cs` | 否 | **部分** | UMango 有版本比较（各适配器内自建，注释多处讨论 semver 边界），**无 SemVer/VersionRange 公共类型**（`SemVer` 命中仅为注释） |
+| 相似度搜索 | `Utils/SimilaritySearch.cs` | 否 | **未做** | PCL 用于模糊匹配 MC 版本名 |
+| 文本/正则/随机工具 | `Utils/RegexPatterns.cs`、`RandomUtils.cs`、`TimeUtils.cs`、`Result.cs`、`JsonCompat.cs`、`StringStream.cs`、`ExpandoObjectConverter.cs` | 否 | **部分** | UMango 各页自建少量工具 |
+| 系统信息与硬件 | `Utils/OS/`（`SystemInfo.cs`、`HardwareInfo.cs`、`SystemPaths.cs`、`SystemTheme.cs`、`EnvironmentInterop.cs`、`ProcessInterop.cs`、`WindowInterop.cs`、`KernelInterop.cs`、`NtInterop.cs`、`AumidHelper.cs`、`ClipboardUtils.cs`、`DragHelper.cs`、`RegistryChangeMonitor.cs`、`NetworkUtils.cs`） | 否 | **部分** | UMango `Platform/SystemInfo.cs`（`Platform:…`、`IsWindows`、`HomeDirectory`、`Describe()`，2 文件 67 行）—— **覆盖面远小于 PCL-CE** |
+| 主题/配色（NColor、色调档、系统主题跟随） | `UI/Theme/`（`ThemeService.cs`、`SystemThemeHelper.cs`、`CatColorResource.cs`、`LabColor.cs`、`ToneProfile.cs`）、`UI/NColor.cs` | 否 | **部分** | UMango 有 4 套 token 字典 + `ThemeManager`；**无** LAB 色彩空间、色调档、系统主题跟随 |
+| 动画系统（完整） | `UI/Animation/`（129 文件中的主体，含 `Animatable/`、`Clock/`、`Core/`、`Easings/`、`ValueProcessor/`、`UIAccessProvider/`） | 否 | **部分** | 见 2.A「动画引擎」 |
+| WPF 控件库 | `UI/Controls/SvgIcon/`（10 文件，自研 SVG 渲染）、`BlurBorder.cs`、`Tooltip.cs`、`WaterfallPanel.cs`、`MotdRenderer.xaml` | 否 | **部分** | UMango 用 lucide（ISC）图标 + 自绘样式；**未移植 SvgIcon 运行时解析器**（`SvgPathGeometryParser.cs` 等） |
+| 模糊/特效 | `UI/Effects/`（`AdaptiveBlurEffect.cs`、`EnhancedBlurEffect.cs`、`OptimizedBlurEffect.cs`、`SamplingBlurProcessor.cs`） | 否 | **未做** | Windows 专用（需 P/Invoke） |
+| 图像加载与转换 | `UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs`、`Utils/IconHelper.cs` | 否 | **未做** | |
+| 灰度/无障碍 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | 否 | **未做** | 哀悼日灰度模式 |
+| 后台展示器 | `UI/BackgroundPresenter.cs` | 否 | **未做** | 与视频背景配套 |
+| 图标管理 | `UI/IconManager.cs`、`IconModel.cs` | 否 | **部分** | UMango 用 lucide + simple-icons（见 `THIRD-PARTY-NOTICES.md` §2） |
+| 联机基础设施（P2P / 协议） | `Link/Scaffolding/`、`Link/EasyTier/`、`Link/Lobby/`、`Link/BroadcastLocal.cs`（59 文件 5,018 行） | 是 | **不适用** | 语义是 MC 联机（见 2.F） |
+| Natayark 账号 | `Link/Natayark/NatayarkProfileManager.cs` | 是 | **不适用** | 第三方 MC 联机平台 |
+| **下载引擎（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | UMango `Download/` 8 文件 990 行；`Aria2Engine.cs:24`（覆盖 HTTP/HTTPS/FTP/SFTP/BitTorrent/Metalink）、`Ed2kEngine.cs:22`、`BuiltinHttpEngine.cs:14`；协议推断 `DownloadModels.cs:9`（`Detect`） |
+| **安装执行器（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | `Install/InstallExecutor.cs:44`（`PlanAsync:61`、`InstallAsync:70`）、`InstallCommandBuilder.cs:11`（`BuildInstall:14`/`BuildUninstall:57`）、`InstallProgressParser.cs:16`、`StepNames.cs:10` |
+| **操作记录（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | `Records/InstallRecord.cs:8`、`InstallRecordStore.cs:16`（`Load:94`、`Save:115`、`CountBySource:66`） |
+| **终端集成桥（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | `Terminal/TerminalBridge.cs:22`（`For:53`、`LinesOfStep:114`、`DebugMode:50`）、`TerminalLine.cs:4` |
+| **平台能力门控（UMango 独有）** | —（PCL-CE 无对应抽象） | **否** | **已完成** | `PackageManagers/PackageModels.cs:36`（`SupportedPlatforms`）、`:44`（`Supports`）、`Platform/PlatformKind.cs`、`PlatformSupportTests.cs` |
+| **包源适配器 ×6（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | `Adapters/`：`NpmPackageManager.cs`(191)、`PnpmPackageManager.cs`(501)、`GitPackageManager.cs`(839)、`HomebrewPackageManager.cs`(734)、`ScoopPackageManager.cs`(706)、`WingetPackageManager.cs`(481) |
+| **已安装包列表（UMango 独有）** | — | **否** | **部分** | **Core 已实现并测试**（6 个适配器均有 `ListInstalledAsync`，见 `InstalledListTests.cs`），**但界面无消费方**（`grep -rn ListInstalled src/UMango.App` = 0）→ 只能算部分 |
+| **XAML 静态审计工具（UMango 独有）** | — | **否** | **已完成** | `tools/XamlAudit/`（5 文件 711 行）+ `scripts/xaml-audit.sh`；`docs/XAML_AUDIT.md` 记录了 4 类注入缺陷的验证 |
+
+---
+
+## 3. MC 专属功能的完整清单（供决策"是否迁移"）
+
+**合计：78 个功能条目**。按 PCL-CE 目录边界统计其**实际体积**如下表。
+
+### 3.1 MC 专属代码的体积（实测）
+
+| 归属 | 文件数 | 代码行数 | 许可 | 是否 MC 专属 |
+|------|-------:|--------:|------|------------|
+| `Plain Craft Launcher 2/Modules/Minecraft/`（含 `CrashAnalysis/`） | 50 | 23,352 | 自定义专有 | ✅ 全部 MC |
+| `Plain Craft Launcher 2/Pages/PageDownload/` | 43 | 12,690 | 自定义专有 | ✅ 全部 MC |
+| `Plain Craft Launcher 2/Pages/PageInstance/` | 30 | 16,029 | 自定义专有 | ✅ 全部 MC |
+| `Plain Craft Launcher 2/Pages/PageLaunch/` | 18 | 3,686 | 自定义专有 | ✅ 全部 MC |
+| `Plain Craft Launcher 2/Modules/ModLink.cs` | 1 | 398 | 自定义专有 | ✅ MC 联机 |
+| `PCL.Core/Minecraft/` | 108 | 6,800 | **Apache-2.0** | ✅ 全部 MC |
+| `PCL.Core/Link/`（联机/大厅/McPing/EasyTier/Natayark） | 59 | 5,018 | **Apache-2.0** | ✅ 语义是 MC 联机 |
+| `Plain Craft Launcher 2/Pages/PageSetup/`（Java/游戏/GameLink 三页，MC 部分） | 约 5 | 约 1,100 | 自定义专有 | ⚠️ 该目录 12 页**混合**，需拆分（见 3.2） |
+| **合计（估）** | **约 314** | **约 69,100** | — | — |
+
+> 说明：上表按"整个目录属 MC"的口径汇总，因此**高估了 PageSetup 的 MC 部分**（该目录含界面/语言/关于/更新/反馈/日志等非 MC 页）。
+> 更保守的纯 MC 估算：**Modules/Minecraft 23,352 + PageDownload 12,690 + PageInstance 16,029 + PageLaunch 3,686 + ModLink 398 + PCL.Core/Minecraft 6,800 + PCL.Core/Link 5,018 ≈ 67,973 行**。
+
+### 3.2 关键观察
+
+1. **MC 专属代码约占 PCL-CE 全库的 50%**（67,973 ÷ 138,447 ≈ 49%）。
+   即：即使把"全部非 MC 功能"都迁移完，也**只是迁移了 PCL-CE 的一半代码量**。
+
+2. **"迁移 MC 功能"与"后端剥离 MC 逻辑"物理上不可兼得**：
+   本清单中 MC 专属条目 **78/137 = 57%**，且这些功能**没有"去掉 MC 部分"的版本** ——
+   例如"MC 启动管线"剥离 MC 后不剩任何东西；"Java 扫描"剥离 MC 后只是"扫描 PE 文件"，
+   那已不是同一个功能。
+
+3. **许可层面的红线比架构红线更硬**：
+   架构红线（后端不含 MC 逻辑）是项目自定的、可以改；
+   《PCL 存储库合理使用指南》的 B6（改名）与 B7b（开源）是**外部约束**，
+   且 `Plain Craft Launcher 2/` 目录**根本不是 Apache-2.0**（见 `/tmp/PCL-CE/LICENSE` 尾部与 `Plain Craft Launcher 2/LICENCE` 全文）。
+   **特别注意**：即便选择"改名为 PCL XXX 并开源"这条路，
+   `PCL.Core/Minecraft/`（6,800 行）与 `PCL.Core/Link/`（5,018 行）**是 Apache-2.0**，
+   采用它们**不触发**自定义许可义务 —— 这是唯一可以"部分迁移 MC 能力"的合法缝隙。
+
+4. **4 个"部分 MC"条目**（机制通用、数据是 MC 的），它们**不是**可以简单迁移的：
+   `Modules/Network/Downloader/DownloadRequestFactory.cs`、`Modules/Network/Loaders/LoaderDownload.cs`、
+   `Modules/Base/ModBase.cs`、`Modules/ModWebServer.cs`。
+   迁移它们需要重写其中的 MC 镜像源与目录约定。
+
+### 3.3 明确建议：**不迁移**这 78 项
+
+理由按强度排序：
+
+1. **法律**：迁移即触发重度使用，强制改名（B6）+ 开源（B7b）。
+2. **架构**：与「后端完全剥离 Minecraft 逻辑」红线直接矛盾。
+3. **产品**：UMango 是包管理器 GUI，MC 启动/Mod 管理与其定位无关（THIRD-PARTY-NOTICES.md 的"实质功能零重叠"判定正是建立在此）。
+
+### 3.4 逐目录的 MC 占比实测（功能条目加权）
+
+为了不靠印象，对 `Pages/` 的 135 个文件逐个按功能条目判定归属，结果如下：
+
+| 分组 | 纯 MC | 部分 MC | 通用 | MC 占比 |
+|------|------:|-------:|-----:|-------:|
+| `Pages/PageDownload` | 全部 | — | — | **100%** |
+| `Pages/PageInstance` | 全部 | — | — | **100%** |
+| `Pages/PageLaunch` | 多数 | — | — | **85%** |
+| `Pages/PageTools` | — | — | 多数 | **46%** |
+| `Pages/PageSetup` | — | — | 多数 | **29%** |
+| **`Pages/` 全体（按功能条目加权）** | 48 | 11 | 14 | **约 73%** |
+
+**`PageSetup` 只有 29% 是 MC 的** —— 该目录 12 个子页里 **7 个是纯启动器功能**
+（界面 `SetupUI`、语言 `SetupLauncherLanguage`、杂项 `SetupLauncherMisc`、
+关于 `SetupAbout`、反馈 `SetupFeedback`、更新 `SetupUpdate`、日志 `SetupLog`），
+这与第 4 节把它们列为可迁移项一致。
+
+**功能归属的锚点**：每个 `*Left.xaml.cs` 的 `PageGet(FormMain.PageSubType)` switch 是权威映射，
+例如 `Pages/PageInstance/PageInstanceLeft.xaml.cs:201` 起，12 个子页的 case 位于 `:207-:273`。
+按此锚点可复核 2.D 表的每一行。
+
+### 3.5 "可复用"部分其实很薄 —— 以崩溃分析为例
+
+崩溃分析（`CrashAnalysis/`，28 文件 / 3,874 行）常被当成"可以剥离 MC 后复用"的候选。
+实测**逐层拆开后，真正可直接复用的只有 198 行**：
+
+| 层 | 文件 | 体积 | 可否复用 | 证据 |
+|----|------|-----:|---------|------|
+| 文本工具 | `CrashText.cs` | 74 | ✅ 纯逻辑 | MC token 计数 0 |
+| 正则工具 | `CrashRegex.cs` | 59 | ✅ 纯逻辑 | 同上 |
+| 文件 IO | `CrashFileIo.cs` | 65 | ✅ 纯逻辑 | 同上 |
+| 日志采集 | `Logs/CrashLogCollector.cs` | — | ❌ | `:35` 硬编码 `Path.Combine(versionPathIndie, "crash-reports")` |
+| 报告导出 | `Export/CrashReportExporter.cs` | — | ❌ | `:17-21` 硬编码 6 个 MC 报告文件名（`启动脚本.bat`、`游戏崩溃前的输出.txt`、`PCL CE 启动器日志.txt`、`环境与启动信息.txt`、`模组列表.txt`、`Report`） |
+| 规则判定 | `Detection/CrashRuleCatalog.cs` | — | ❌ | 26 条硬编码规则 |
+| 证据提取 | `Detection/CrashEvidenceExtractor.cs` | 713 | ❌ | 42 个 `_Extract*` 方法，全针对 MC 崩溃特征 |
+| 结果格式化 | `Presentation/CrashResultFormatter.cs` | 524 | ❌ | 面向 MC 崩溃输出 |
+
+**结论**：判定层（规则目录 + 证据提取 + 格式化）占该子系统绝大部分体积，且**完全 MC 专属**。
+即便迁移，得到的也只是 198 行文本/正则工具 —— 不值得为它承担"迁移 MC 功能"的定性与许可风险。
+
+### 3.6 反向证据：哪些"看起来 MC"的东西其实是通用的
+
+本次调研刻意做了反向验证，避免把通用能力误判成 MC 专属而漏掉可迁移项。**最典型的是下载引擎**：
+
+对整个 `Modules/Network/`（12 文件 / 1,137 行）做 MC 域名普查，**只有 2 个文件命中**：
+
+| 文件:行 | 命中内容 |
+|---------|---------|
+| `Downloader/FileDownloader.cs:216` | `parsedUri.Host is "edge.forgecdn.net" or "mediafilez.forgecdn.net" or "forgecdn.net" or "api.curseforge.com"` → 走专用 HttpClient |
+| `Http/RequestSigning.cs:25-28` | 对 `api.curseforge.com` / `edge.forgecdn.net` / `mediafilez.forgecdn.net` 注入 `x-api-key: Secrets.CurseForgeAPIKey` |
+
+其余 **10 个文件（`NetManager`、`Requester`、`LoaderDownload*`、`ModNet`、全部 Models）零 MC 域名命中** ——
+分片、重试、镜像轮换、限速、进度聚合**全部与 MC 无关**。
+
+**这正是 2.H 表把这几项标为"否（非 MC）"的实测依据**，
+也说明"下载引擎要迁移"是成立的 —— 只需把上面那 2 处 CurseForge 特判去掉。
+
+### 3.7 唯一值得单独讨论的例外
+
+`PCL.Core/Minecraft/` 与 `PCL.Core/Link/` 是 **Apache-2.0**，
+其中 `Utils/PEHeaderReader.cs`-类的算法（PE 解析）、`Saves/Parsing/` 的**版本化解析器架构**、
+`IdentityModel/` 的 **OAuth PKCE / OpenID / JWT 实现**在技术上是通用的。
+但这些属于"借鉴设计"而非"迁移功能"，应作为独立需求另行评估，**不要挂在"功能对照迁移"名下** ——
+否则会把许可边界搞模糊。
+
+---
+
+## 4. 非 MC 但尚未迁移的功能（按建议优先级排序）
+
+**作用域**：第 1 节统计的 55 条非 MC 功能中，**未做 15 条 + 部分 16 条**（部分完成的也列出，但标注"补齐"而非"新建"）。
+
+### P0 —— 高价值、低风险、UMango 已具备落点
+
+| # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
+|---|------|------|---------|------------------|-------------|
+| P0-1 | **持久化缓存服务**（SQLite + 内容寻址 + 淘汰策略） | 未做 | **中** | `IO/Storage/Cache/`（13 文件，`CacheService.cs`、`SqliteCacheStorage.cs`、`CacheEvictionService.cs`、`CachePolicy.cs`、`SchemaManager.cs`） | 否（纯 .NET）——但引入 `Microsoft.Data.Sqlite` + `SQLitePCLRaw.bundle_e_sqlite3` 两个 NuGet 包，**与"不加新依赖"约束冲突，需项目所有者裁决** |
+| P0-2 | **配置体系补齐**（多后端 + 源生成器 + 事件） | 部分（描述符驱动已有） | **中** | `App/Configuration/`（30+ 文件：`ConfigService.cs`、`Storage/` 7 种 Provider、`ConfigMigration.cs`、`ConfigObserver.cs`）+ `PCL.Core.SourceGenerators/`（5 生成器 2,039 行） | 部分（`EncryptedFileConfigStorage` 依赖 Windows DPAPI/CNG） |
+| P0-3 | **日志系统** | 未做 | **低** | `Logging/`（10 文件 849 行） | 否 |
+| P0-4 | **已安装包列表接入界面** | 部分（**Core 6 个适配器全已实现并测试，UI 未接**） | **低** | 无需迁移 —— 是 UMango 自己的 `ListInstalledAsync` + `InstalledPackage.cs` 缺 UI 消费方 | 否 |
+
+### P1 —— 高价值、中等成本
+
+| # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
+|---|------|------|---------|------------------|-------------|
+| P1-1 | **启动器自更新**（多通道抽象 + 镜像降级） | 未做 | **中** | `Modules/Updates/`（11 文件 1,020 行）—— ⚠️ **位于自定义许可目录**，只能借鉴架构、不能复制代码；或另找 Apache-2.0 的替代实现 | 否 |
+| P1-2 | **HTTP 客户端扩展层**（代理/缓存/路由/内容处理） | 未做 | **中** | `IO/Net/Http/`（约 18 文件） | 否 |
+| P1-3 | **DNS 查询 + 加权竞速** | 未做 | **低** | `IO/Net/Dns/`（3 文件） | 否 —— 引入 `Ae.Dns.Client` 包 |
+| P1-4 | **线程/并发原语**（防抖、手动复位事件、限流任务池） | 未做 | **低** | `Utils/Threading/`（6 文件） | 否 |
+| P1-5 | **哈希算法族** | 未做 | **低** | `Utils/Hash/`（7 文件） | 否 |
+| P1-6 | **编码检测与转换** | 未做 | **低** | `Utils/Codecs/`（3 文件） | 否 |
+| P1-7 | **验证器族** | 部分 | **低** | `Utils/Validate/`（12 文件，基于 FluentValidation） | 否 —— 引入 `FluentValidation` 包 |
+
+### P2 —— 中价值或形态需重新设计
+
+| # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
+|---|------|------|---------|------------------|-------------|
+| P2-1 | **多语言 i18n** | 未做 | **高** | `App/Localization/`（`Lang.cs` + 服务 + 字体配置 + 7 语言 XAML，实语言各 3,583 行） | 否（但用 WPF 资源字典） |
+| P2-2 | **动画系统补齐**（帧动画/关键帧/组合/时钟抽象/`IAnimatable`） | 部分 | **高** | `UI/Animation/`（129 文件中的主体，含 `Clock/` 3 种时钟、`Core/` 帧与组合、`ValueProcessor/` 7 种、`UIAccessProvider/`） | **是**（`WpfCompositionTargetRenderingClock`、`WinMMClock`、`DependencyObject`） |
+| P2-3 | **系统信息与硬件** | 部分 | **中** | `Utils/OS/`（14 文件） | **部分是**（注册表、`NtInterop`、`KernelInterop`、`WindowInterop`、`AumidHelper`） |
+| P2-4 | IoC / 生命周期 | 部分 | **中** | `App/IoC/`（14 文件） | 否 |
+| P2-5 | 内部事件总线 | 未做 | **低** | `App/EventBus/`（4 文件） | 否 |
+| P2-6 | 单实例运行 | 未做 | **低** | `App/Essentials/SingleInstanceService.cs` | **是**（命名互斥体/Win32） |
+| P2-7 | 命令行参数解析 | 未做 | **低** | `App/Cli/`（7 文件） | 否 |
+| P2-8 | 字符串/集合/任务扩展方法集 | 未做 | **低** | `Utils/Exts/`（8 文件） | 否 |
+| P2-9 | 二进制差分（增量更新） | 未做 | **中** | `Utils/Diff/`（4 文件） | 否 |
+| P2-10 | 加密算法族 + 密钥保护 | 未做 | **中** | `Utils/Encryption/`（5 文件）、`Utils/Secret/`（3 文件）、`App/Secrets.cs` | **部分是**（DPAPI/CNG） |
+| P2-11 | 主题体系补齐（LAB 色彩、色调档、系统主题跟随） | 部分 | **中** | `UI/Theme/`（5 文件）、`UI/NColor.cs` | **部分是**（`SystemThemeHelper`） |
+| P2-12 | 统一对话框/提示封装 | 部分 | **低** | `UI/MsgBoxWrapper.cs`、`SystemDialogs.cs`、`UI/HintWrapper.cs` | 否 |
+| P2-13 | 系统 Toast 通知 | 未做 | **中** | `UI/ToastNotification.cs` + `Utils/WinRT/`（8 文件） | **是**（WinRT 专用） |
+| P2-14 | SVG 图标运行时渲染 | 部分 | **中** | `UI/Controls/SvgIcon/`（10 文件） | **是**（WPF 几何） |
+| P2-15 | 模糊/特效 | 未做 | **中** | `UI/Effects/`（4 文件） | **是**（P/Invoke） |
+| P2-16 | 灰度（哀悼日）模式 | 未做 | **低** | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | **是**（WPF 特效） |
+| P2-17 | 位图/图像处理 | 未做 | **低** | `Modules/Base/MyBitmap.cs`、`UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs` | 部分 |
+| P2-18 | 语义化版本公共类型 | 部分 | **低** | `Utils/SemVer.cs`、`Utils/VersionRange.cs` | 否 |
+| P2-19 | 相似度搜索 | 未做 | **低** | `Utils/SimilaritySearch.cs` | 否 |
+| P2-20 | 自定义事件总线（XAML 附加事件） | 未做 | **中** | `Modules/Event/`（6 文件 741 行） | **是**（`XamlEventSanitizer`） |
+
+### P3 —— 低价值 / 对 UMango 无意义
+
+| # | 功能 | 现状 | 理由 |
+|---|------|------|------|
+| P3-1 | 主页新闻（官网公告） | 未做 | 数据源是 **PCL 官网 API**，UMango 用不上（需换源，等于新做） |
+| P3-2 | 音乐播放器 | 未做 | 与包管理器无关 |
+| P3-3 | 视频/动态背景 | 未做 | 与包管理器无关 |
+| P3-4 | 内嵌 WebServer | 未做 | PCL-CE 用它接 MC 登录回调；UMango 无此需求 |
+| P3-5 | 请求签名 | 未做 | 与 PCL 官方服务配套 |
+| P3-6 | 进程间管道通信 | 未做 | UMango 架构不需要 |
+| P3-7 | 反馈页（标签化提交） | 未做 | 需配套后端；可后置 |
+| P3-8 | 日志查看页 | 未做 | 依赖 P3 之外的日志系统（见 P0-3），做完 P0-3 再看 |
+| P3-9 | 启动器杂项设置 | 未做 | ⚠️ **未逐项确认**其中是否含 UMango 该有的项（文件 322 行未细读） |
+
+### 4.1 Windows 依赖实测汇总（迁移成本的硬约束）
+
+上表"Windows 依赖"列的依据如下（均为实测命中，非推断）：
+
+| 范围 | 实测结果 | 证据 |
+|------|---------|------|
+| **`Plain Craft Launcher 2/Pages/`（135 文件）** | **无注册表 / 无 WinRT / 无 P/Invoke** | 三关键字全目录 grep 命中数为 0 |
+| ├ 自删逻辑 | 调 `cmd.exe` + `rmdir /s /q` | `PageSetupLauncherMisc.xaml.cs:291-298`（`FileName = "cmd.exe"`, `CreateNoWindow = true`） |
+| ├ 创建快捷方式 | 生成 `.lnk` | `PageToolsTest.xaml.cs:471-481` |
+| └ 位图合成（皮肤） | 依赖 `System.Drawing` | `MySkin.xaml.cs:1-3` |
+| **`Plain Craft Launcher 2/Modules/`（92 文件）** | **13 处 `DllImport` + 3 处 `Registry.`**，全部集中在 `ModMain.cs` | `ModMain.cs:912`（`Registry.CurrentUser.OpenSubKey`）、`:923`（`CreateSubKey`）、`:930`（`SetValue`）；用于写"显卡高性能"偏好 |
+| **`PCL.Core/`（544 文件）** | `UI/` 129 文件中 40 个用 WPF 类型；`Utils/` 92 文件中 6 个 `DllImport` + 3 个 Win32/WinRT | 见 5.3；`Minecraft/` 108 文件**零 WPF 命中**（纯逻辑，但 TFM 仍是 Windows） |
+
+**一个对迁移有利的事实**：`PCL.Core.csproj` 的 TFM 是 `net10.0-windows` 且 `UseWPF=true`，
+而 UMango 的 `src/Directory.Build.props` 同样是 **`net10.0-windows` + `EnableWindowsTargeting=true`**。
+**两者 TFM 完全一致** —— 采用 PCL.Core 的代码不会有目标框架摩擦。
+但要注意 PCL.Core 拖进的 NuGet 依赖很重（`Sentry`、`LiteDB`、`Microsoft.Data.Sqlite`、
+`SQLitePCLRaw.bundle_e_sqlite3`、`fNbt`、`Stun.Net`、`Polly`、`FluentValidation`、`SharpZipLib`、
+`YamlDotNet`、`Ae.Dns.Client`、`PlainToolkit.CngProtectedData` 等），
+与 `docs/DESIGN_UI_DOTNET.md` 第 0 节第 3 条「**不得引入新的 NuGet 依赖**」直接冲突 ——
+**采用 PCL.Core 的任何一块，都要先由项目所有者重新裁决这条约束。**
+
+---
+
+## 5. 指标
+
+### 5.1 总量对比
+
+| 指标 | PCL-CE（commit `ab6e2f1`） | UMango（活跃 .NET 栈） | 比值 |
+|------|--------------------------:|---------------------:|-----:|
+| 文件总数（不含 `.git`） | 918 | **126** | 7.3× |
+| `.cs` 文件数 / 行数 | **803 / 138,447** | **111 / 11,347** | 12.2× |
+| `.xaml` 文件数 / 行数 | **100 / 24,109** | **15 / 5,340** | 4.5× |
+| C# + XAML 行数合计 | **162,556** | **16,687** | **9.7×** |
+| 测试工程 | `PCL.Core.Test`：46 文件 / 5,280 行 / 177 个 `[TestMethod]` | `UMango.Core.Tests`：23 文件 / 3,245 行 / **154 `[Fact]` + 9 `[Theory]`（含 45 条 `[InlineData]`）** | — |
+
+> **UMango 文件数口径**：`src/UMango.Core`(53) + `src/UMango.App`(35) + `src/UMango.Core.Tests`(23) + `tools/XamlAudit`(5) = 116；
+> 计入 `src/Directory.Build.props`、`src/UMango.slnx` 等工程文件与 `src/UMango.App.Tests/`（**未跟踪，仅 1 个 csproj**）共约 126。
+> 另：`src/UMango.App.Tests/` 出现在 `UMango.slnx` 中且 `git status` 显示为**新增未提交**，`App.Tests` 的测试文件**尚未编写**。
+
+### 5.2 UMango 活跃栈内部构成（实测）
+
+| 模块 | 文件数 | 行数 | 说明 |
+|------|-------:|-----:|------|
+| `src/UMango.Core/PackageManagers` | 12 | 4,146 | 6 适配器 + 基类 + 注册表 + 模型（**最大模块，占 Core 56%**） |
+| `src/UMango.Core/Configuration` | 6 | 653 | 描述符驱动设置 |
+| `src/UMango.Core/Download` | 8 | 990 | 3 引擎 + 注册表 + 会话 + 模型 |
+| `src/UMango.Core/Install` | 4 | 446 | 执行器 + 命令构造 + 进度解析 + 步骤名 |
+| `src/UMango.Core/Animation` | 4 | 386 | 规划器 + 缓动 + 规格 + 设置 |
+| `src/UMango.Core/App/Tasks` | 8 | 228 | **采用自 PCL.Core（Apache-2.0）** |
+| `src/UMango.Core/Execution` | 3 | 177 | 进程执行 3 件套 |
+| `src/UMango.Core/Records` | 2 | 160 | 操作记录 + 存储 |
+| `src/UMango.Core/Terminal` | 2 | 132 | 终端桥 + 行模型 |
+| `src/UMango.Core/Platform` | 2 | 67 | 平台/系统信息 |
+| **`src/UMango.Core` 合计** | **53** | **7,395** | |
+| `src/UMango.App`（Views + ViewModels + Themes + Animation + Services） | **35** | **7,848** | 6048 行在 `Views/` + `ViewModels/` 共 18 文件 |
+| `src/UMango.Core.Tests` | 23 | 3,245 | |
+| `tools/XamlAudit` | 5 | 711 | XAML 静态审计 |
+
+### 5.3 PCL-CE 侧按模块（实测）
+
+| 模块 | `.cs` 文件 / 行 | `.xaml` 文件 / 行 | 是否 MC 专属 |
+|------|---------------:|-----------------:|------------|
+| `PCL.Core/App` | 90 / 9,055 | 7 / 14,363（语言字典） | 否（i18n 文本为启动器专用） |
+| `PCL.Core/IO` | 51 / 6,044 | 0 | 否 |
+| `PCL.Core/Link` | 59 / 5,018 | 0 | **是**（MC 联机） |
+| `PCL.Core/Logging` | 10 / 849 | 0 | 否 |
+| `PCL.Core/Minecraft` | 108 / 6,800 | 0 | **是** |
+| `PCL.Core/Model` | 3 / 58 | 0 | 否 |
+| `PCL.Core/UI` | 129 / 9,835 | 1 / 7（`MotdRenderer`，MC 专属） | 否（除 MotdRenderer） |
+| `PCL.Core/Utils` | 92 / 7,219 | 0 | 否（除 `VarIntHelper`/`PEHeaderReader` 服务 MC） |
+| `PCL.Core/ViewModel` | 1 / 114 | 0 | 否 |
+| **`PCL.Core` 合计** | **544 / 45,005** | **8 / 14,375** | |
+| `Plain Craft Launcher 2/Modules` | 92 / 36,231 | 0 | **大部分是**（见 5.4） |
+| `Plain Craft Launcher 2/Pages` | 135 / 44,708 | — | **大部分是** |
+| `Plain Craft Launcher 2/Controls` | 64 / 11,342 | — | 否（通用控件） |
+| **`Plain Craft Launcher 2` 合计** | **205 / 86,123** | **92 / 9,734** | |
+| `PCL.Core.Test` | 46 / 5,280 | 0 | 否 |
+| `PCL.Core.SourceGenerators` | 8 / 2,039 | 0 | 否 |
+
+### 5.4 `Plain Craft Launcher 2/Modules` 细分（92 文件 / 36,231 行）
+
+| 子目录 | 文件数 | 行数 | MC 归属 |
+|--------|-------:|-----:|--------|
+| `Modules/Minecraft`（含 `CrashAnalysis/`） | 50 | 23,352 | **全部 MC** |
+| `Modules/Base` | 5 | 7,216 | 混合（`ModBase.cs` 3,759 行为上游通用基础设施；`ModAnimation`/`MyBitmap`/`ModLoader`/`ModSetup` 通用） |
+| `Modules/Network` | 12 | 1,137 | **大部分通用**（仅 `DownloadRequestFactory` 含 MC 镜像源） |
+| `Modules/Updates` | 11 | 1,020 | 通用 |
+| `Modules/Event` | 6 | 741 | 通用（依赖 WPF） |
+| `Modules/UI` | 3 | 244 | 通用（`HintService`/`HintType`/`Theme/ThemeManager`） |
+| `Modules/` 根（`ModMain` 1134 / `ModMusic` 472 / `ModLink` 398 / `ModWebServer` 345 / `ModVideoBack` 172） | 5 | 2,521 | `ModLink` 是 MC；其余通用 |
+| **其中 `CrashAnalysis/`** | **28** | **3,874** | **全部 MC** |
+
+### 5.5 一个刺眼的对比
+
+| | 数值 |
+|---|---:|
+| PCL-CE 的 **MC 专属**代码（第 3.1 节保守估） | **≈ 67,973 行** |
+| UMango **全部**活跃代码（C# + XAML） | **≈ 16,687 行** |
+| 比值 | **4.1×** |
+
+即：**"完整迁移 PCL-CE 全部功能"意味着要写一个比现在大 4 倍以上的项目，其中一半代码在 UMango 的红线之外。**
+
+---
+
+## 6. 不确定处与未能确定的项
+
+以下各项**本次未能确定**，列出原因，避免误导决策：
+
+1. **`PageSetupLauncherMisc.xaml.cs`（322 行）的具体设置项未逐项展开**。
+   只确认它是非 MC 的启动器杂项设置页，未确认其中哪些项 UMango 应当有。→ 影响 P3-9 的判定。
+2. **`Modules/Base/ModBase.cs`（3,759 行）内部的通用/专用比例未逐行分类**。
+   该文件是上游继承的基础设施大杂烩，本次只确认了它的体积与角色，未做行级归属统计。
+3. **PCL-CE 的 `Controls/`（64 文件 11,342 行）未纳入功能清单**。
+   本次按任务给定的范围（Pages / Modules / PCL.Core）调研；`Controls/` 是被 Pages 引用的通用控件库，
+   其中 `MyListItem`、`MyCompItem`、`MyButton` 等的**设计数值已被 UMango 提取**（见 `docs/DESIGN_PCL_CE.md`），
+   但**功能级对照未做**。
+4. **PCL-CE 的 `Resources/` 目录（1 文件 151 行）与 `Images/`、捆绑 jar/exe 未调研**。
+   既有分析报告指出该目录含内置二进制（含确证为 Microsoft 专有的 `linkd.exe`），但对"功能对照"无影响。
+5. **`PCL.Core/Utils/OS/`（14 文件）与 `PCL.Core/UI/`（129 文件）的内部文件级分类未逐项完成**。
+   只做了目录级与关键字级（WPF / P/Invoke / Win32）的统计，未逐个文件判定 —— 因此 5.3 表中这两行的"否"是**目录级判断**。
+6. **UMango 的 `git status` 显示两项未提交改动**（`src/UMango.App/ViewModels/DownloaderViewModel.cs` 已修改、
+   `src/UMango.App.Tests/` 未跟踪且只有 csproj）。**这两个可能是其他并行任务正在进行的工作**，
+   本清单按"当前工作副本可见状态"判定，未跟踪的测试工程**不计入完成度**。
+7. **`ui/`、`core/`、`native/`（Flutter 废弃栈，共 74 文件 / 25,875 行）的归属**：
+   `docs/DESIGN_UI_DOTNET.md` 明确写"已废弃……不要碰"，故本次不计入 UMango 完成度，
+   但它们**仍在仓库中且 `README.md` 仍以它们为主体**，是否需要清理/归档应由项目所有者决定。
+8. **PCL-CE 的自定义许可义务判定依赖"善意合理使用"**，指南自述"本指南仅作为说明，不是法律文件或协议"。
+   本清单引用其原文作为**事实依据**，但**不构成法律意见**；最终是否触发 B6/B7 应咨询专业人士。
+9. **"部分 MC"的 4 个条目归入 MC 侧计数**（第 1 节已声明口径），若按"机制通用即可迁移"的另一种口径，
+   非 MC 侧会 +4 条。两种口径的差异已在此显式说明。
+10. **UMango 的 154 个 `[Fact]` / 9 个 `[Theory]`（45 条 `[InlineData]`）是静态计数**，
+    不是测试运行结果 —— 按任务硬性要求，本次**未运行 `dotnet test`**（避免与主控进程争锁）。
+    因此"测试通过"这一结论**未经本次复核**，仅有源码与文档自述。
+
+---
+
+## 附录 A：状态判定所依据的 UMango 源码证据索引
+
+| 能力 | UMango 证据文件（行号） |
+|------|----------------------|
+| 包源适配器 ×6 | `src/UMango.Core/PackageManagers/Adapters/{Npm,Pnpm,Git,Homebrew,Scoop,Winget}PackageManager.cs` |
+| 包源注册与可用性缓存 | `src/UMango.Core/PackageManagers/PackageManagerRegistry.cs`、`PackageManagerFactory.cs` |
+| 平台门控（唯一事实来源） | `src/UMango.Core/PackageManagers/PackageModels.cs:36,44` |
+| 设置体系 | `src/UMango.Core/Configuration/SettingsService.cs:15`、`SettingDescriptor.cs:25`、`UiSettings.cs:13` |
+| 主题运行时切换 | `src/UMango.App/Themes/ThemeManager.cs:34,113,167` |
+| 动画 | `src/UMango.Core/Animation/AnimationPlanner.cs:19`、`Easing.cs:10`、`src/UMango.App/Animation/AnimationPlayer.cs:16` |
+| 任务中心（采用自 PCL.Core） | `src/UMango.Core/App/Tasks/TaskCenter.cs:1`（头部 SPDX 声明） |
+| 安装执行 | `src/UMango.Core/Install/InstallExecutor.cs:44`、`InstallCommandBuilder.cs:11` |
+| 终端桥 | `src/UMango.Core/Terminal/TerminalBridge.cs:22` |
+| 操作记录 | `src/UMango.Core/Records/InstallRecordStore.cs:16,94,115` |
+| 下载引擎 | `src/UMango.Core/Download/Engines/{Aria2,BuiltinHttp,Ed2k}Engine.cs`、`DownloadEngineRegistry.cs:17` |
+| 进程执行 | `src/UMango.Core/Execution/ProcessRunner.cs`、`ProcessSpec.cs` |
+| 界面外壳 | `src/UMango.App/MainWindow.xaml:143-209`、`ViewModels/ShellViewModel.cs` |
+| 六个视图 | `src/UMango.App/Views/{Home,Download,Progress,Settings,Tools,Downloader}View.xaml` |
+| 服务定位 | `src/UMango.App/Services/AppServices.cs:32` |
+| 合规声明 | `src/UMango.App/Views/ToolsView.xaml:217-274` + `THIRD-PARTY-NOTICES.md` |
+| XAML 审计 | `tools/XamlAudit/` + `docs/XAML_AUDIT.md` |
+
+## 附录 B：调研方法
+
+- **PCL-CE 侧**：以其自身的枚举定义作为权威索引 —— `FormMain.xaml.cs:1361`（`PageType`）、
+  `:1425`（`PageSubType`），辅以各 `Page*Left.xaml` 的菜单项与 `Lang` 资源键，
+  再用 `find` / `wc -l` / `grep -n` 取实测数字。这样比"逐个文件猜功能"更完备、更少遗漏。
+- **UMango 侧**：**只读源码**判定，不采信文档自述。凡文档与源码不符，以源码为准并把不符点写进报告（见 1.3）。
+- **反向验证**：对 8 个容易误判的关键字（`Update`/`Hash`/`Language`/`Java`/`Cache`/`Proxy`/`SemVer`/`Validate`），
+  逐个打印命中上下文，确认其中多数是 `UpdateSourceTrigger`、`HashSet`、`JavaScriptEncoder`、`System.Threading` 之类的**误命中**，
+  避免把"没做过"写成"做过了"。
+- **硬性约束遵守**：本次**未运行** `dotnet build` / `dotnet test` / `cargo` / `cmake`；**未修改** `/tmp/PCL-CE` 任何文件；仅创建本文件。

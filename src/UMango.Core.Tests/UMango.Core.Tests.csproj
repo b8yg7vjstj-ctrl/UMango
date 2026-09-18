@@ -13,17 +13,20 @@
     <IsTestProject>true</IsTestProject>
 
     <!--
-      关键：UMango.Core 是 UseWPF=true 的工程，ProjectReference 会把它对
-      Microsoft.WindowsDesktop.App 的框架引用**传递**过来（NuGet 记在 assets 文件里，
-      SDK 由 ResolvePackageAssets 输出为 TransitiveFrameworkReference 再变成 FrameworkReference），
-      结果就是测试主机的 runtimeconfig.json 会要求 WindowsDesktop 运行时 ——
-      而该运行时只存在于 Windows，macOS 上 `dotnet test` 连测试主机都起不来。
-      本测试工程只用 UMango.Core 里与 WPF 无关的代码，因此显式关闭"传递框架引用"，
-      测试主机只需 Microsoft.NETCore.App，可在 macOS 上直接跑；在 Windows 上同样成立。
-      （若日后测试需要引用 WPF 类型，删掉这一行并改用 Windows/CrossOver 运行。）
+      关键：关闭"传递框架引用"。
+
+      历史与现状（注释曾经过期，这里更正）：
+        · 原先 UMango.Core 标了 UseWPF=true（移植 PCL-CE TaskModel 时的残留），
+          引用它就会把 Microsoft.WindowsDesktop.App 的框架引用传递过来，
+          测试主机的 runtimeconfig 因此要求该运行时 —— 而它只存在于 Windows。
+        · 现在 Core 已去掉 UseWPF，并改为多目标（net10.0 + net10.0-windows），
+          因此**理论上这一行已不再必需**。
+        · 但仍**刻意保留**：它是"测试主机不依赖任何 Windows 专有框架"的显式约束，
+          将来若有工程重新引入 WPF 依赖，测试会立刻因宿主起不来而失败，
+          而不是等到有人在 Windows 上跑才发现。
     -->
     <DisableTransitiveFrameworkReferences>true</DisableTransitiveFrameworkReferences>
-    </PropertyGroup>
+  </PropertyGroup>
 
   <ItemGroup>
     <!-- 版本均为较新的稳定版；除测试框架外不引入任何第三方依赖（不新增 NuGet 依赖是硬性要求） -->

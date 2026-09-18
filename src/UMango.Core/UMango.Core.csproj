@@ -1,8 +1,40 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    **刻意不设 UseWPF。**
+
+    历史：本工程最初移植 PCL-CE 的 TaskModel 时用了 WPF 的 ObservableObject，因此标了 UseWPF=true。
+    后来 TaskModel 已改用 CommunityToolkit.Mvvm 的 ObservableObject（不依赖 WPF），
+    这个标记就成了残留 —— 而它的代价不小：
+      · 引用本工程的任何工程（含测试工程）都会**传递**地对
+        Microsoft.WindowsDesktop.App 提出框架引用，于是只能在 Windows 上运行；
+      · 它把"Core 是否真的可跨平台"这件事变得无法验证。
+    去掉后 Core 是一个纯粹的托管库，可在任何平台（含未来的 Avalonia 移植）直接复用。
+
+    有一条测试守着这个决定：XamlAudit 之外，UMango.Core.Tests 与 UMango.App.Tests
+    都能在 macOS 上跑 —— 若有人重新引入 WPF 依赖，测试会立刻失败。
+  -->
   <PropertyGroup>
-    <UseWPF>true</UseWPF>
+    <IsPackable>false</IsPackable>
+
+    <!--
+      **多目标：net10.0 + net10.0-windows。**
+
+      为什么要多这一个 net10.0：
+        · 它是"Core 真的与平台无关"的**编译期证明** —— 不是靠声明，而是靠能编过；
+        · 将来做 Avalonia 移植时，Avalonia 工程直接消费 net10.0 这一支；
+        · 它能在编译期拦住"有人往 Core 里塞 Windows 专用 API"这类退化：
+          一旦引入 System.Windows / Registry / DllImport(win32)，net10.0 这一支立刻编译失败，
+          而不是等到跨平台重构时才发现。
+      （注意：Directory.Build.props 里的 TargetFramework 单数是给 App/Tests 用的；
+        这里用复数 TargetFrameworks，SDK 会优先按复数的多目标处理 Core。）
+    -->
+    <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
   </PropertyGroup>
+
   <ItemGroup>
+    <!-- 唯一依赖：MVVM 基础设施（ObservableObject / RelayCommand），跨平台 -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   </ItemGroup>
+
 </Project>
