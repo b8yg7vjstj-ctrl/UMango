@@ -21,3 +21,10 @@
 # ---- 本地覆盖 ----
 local.properties
 *.local
+
+# ---- .NET / WPF（新版 src/）----
+src/**/bin/
+src/**/obj/
+*.user
+*.suo
+.vs/

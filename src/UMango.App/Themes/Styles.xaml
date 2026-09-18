@@ -1,0 +1,138 @@
+<!-- 控件样式：banner 选项卡、三大金刚键、任务/子项进度模板 -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- 顶部 banner 选项卡：高度 27、选中态白色文字 + 底部 2px 白色指示条 -->
+  <Style x:Key="BannerTab" TargetType="RadioButton">
+    <Setter Property="Foreground" Value="#B3FFFFFF"/>
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="RadioButton">
+          <Grid Background="Transparent" Height="27" Margin="5,0">
+            <Border x:Name="Bg" CornerRadius="4" Background="Transparent"/>
+            <TextBlock x:Name="Txt" Text="{TemplateBinding Content}" Margin="10,0"
+                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Foreground="{TemplateBinding Foreground}"/>
+            <!-- 选中指示条 -->
+            <Border x:Name="Bar" Height="2" Width="20" CornerRadius="1" Background="White"
+                    VerticalAlignment="Bottom" Visibility="Collapsed"/>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Txt" Property="Foreground" Value="White"/>
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Txt" Property="Foreground" Value="White"/>
+              <Setter TargetName="Bg" Property="Background" Value="#26FFFFFF"/>
+              <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- 三大金刚键：Windows 原生尺寸 46x32，hover 高亮，关闭按钮 hover 变红 -->
+  <Style x:Key="CaptionButton" TargetType="Button">
+    <Setter Property="Width" Value="46"/>
+    <Setter Property="Height" Value="32"/>
+    <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+    <Setter Property="FontSize" Value="10"/>
+    <Setter Property="Foreground" Value="White"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Bd" Background="{TemplateBinding Background}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bd" Property="Background" Value="#33FFFFFF"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Bd" Property="Background" Value="#55FFFFFF"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="CaptionButtonClose" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="Bd" Background="{TemplateBinding Background}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Bd" Property="Background" Value="#C42B1C"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Bd" Property="Background" Value="#A02316"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!--
+    任务项模板：**父任务一行 + 子项各自一行进度**。
+    这就是「下载进度界面按不同下载方式列明子项进度」的界面载体。
+  -->
+  <DataTemplate x:Key="TaskItemTemplate">
+    <Border Margin="0,0,0,6" Padding="12,10" CornerRadius="6"
+            Background="White" BorderBrush="{StaticResource BrG6}" BorderThickness="1">
+      <StackPanel>
+        <!-- 父任务 -->
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                     Foreground="{StaticResource BrC1}" TextTrimming="CharacterEllipsis"/>
+          <TextBlock Grid.Column="1" Text="{Binding StateMessage}" FontSize="12"
+                     Foreground="{StaticResource BrG3}" Margin="10,0,0,0"/>
+        </Grid>
+        <ProgressBar Height="4" Margin="0,7,0,0" Minimum="0" Maximum="1"
+                     Value="{Binding Progress}" Foreground="{StaticResource BrC3}"
+                     Background="{StaticResource BrG6}" BorderThickness="0"
+                     Visibility="{Binding SupportProgress, Converter={StaticResource BoolToVis}}"/>
+
+        <!-- 子项：按下载方式/阶段各自一行进度 -->
+        <ItemsControl ItemsSource="{Binding Children}" Margin="0,8,0,0"
+                      Visibility="{Binding IsGroup, Converter={StaticResource BoolToVis}}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="0,3,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="150"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="120"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12"
+                           Foreground="{StaticResource BrG2}" TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center"/>
+                <ProgressBar Grid.Column="1" Height="3" Margin="8,0" Minimum="0" Maximum="1"
+                             Value="{Binding Progress}" Foreground="{StaticResource BrC5}"
+                             Background="{StaticResource BrG6}" BorderThickness="0"
+                             VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" FontSize="11" Foreground="{StaticResource BrG4}"
+                           Text="{Binding StateMessage}" HorizontalAlignment="Right"
+                           VerticalAlignment="Center"/>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+  </DataTemplate>
+</ResourceDictionary>

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="UMango.Core/UMango.Core.csproj" Type="C#" />
+  <Project Path="UMango.App/UMango.App.csproj" Type="C#" />
+</Solution>

@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <!-- 关键：让 macOS/Linux 主机也能编译 Windows 目标（WPF）。
+         本机 .NET 10.0.401 已验证可编译成功；产物用 CrossOver 运行。 -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Version>0.1.0</Version>
+    <Company>UMango</Company>
+    <Product>UMango</Product>
+  </PropertyGroup>
+</Project>
