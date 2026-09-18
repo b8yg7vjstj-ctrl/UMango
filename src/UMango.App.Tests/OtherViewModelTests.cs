@@ -276,6 +276,37 @@ public class InstalledListUiTests
         Assert.False(string.IsNullOrWhiteSpace(vm.ErrorMessage) && string.IsNullOrWhiteSpace(vm.ErrorAdvice));
     }
 
+    /// <summary>
+    /// 并发加载的回归测试：切到"已安装"模式会触发一次加载，
+    /// 紧接着点「重新读取」又会触发一次 —— 两次加载若都写回结果，
+    /// 就会交错改写 Installed，表现为**枚举中途集合被改写**（实测抛 IndexOutOfRangeException）。
+    /// 真机上的对应场景：用户点了「已安装」又马上点「重新读取」。
+    /// </summary>
+    [Fact]
+    public async Task 连续触发两次已安装加载不会交错改写集合_真机()
+    {
+        var vm = new DownloadViewModel();
+        await vm.InitializeAsync();
+
+        var category = vm.VisibleCategories.FirstOrDefault(c => c.Available);
+        if (category is null) return;   // 没有可用包源就跳过（Windows/macOS 都至少有一个）
+
+        vm.SelectedCategory = category;
+
+        // 不 await 第一次：模拟"切模式触发的后台加载"仍在进行时用户又点了一次
+        vm.IsInstalledMode = true;
+        await vm.ReloadInstalledCommand.ExecuteAsync(null);
+
+        // 枚举结果不得抛异常（修复前这里会因集合被并发改写而 IndexOutOfRange）
+        var names = vm.Installed.Select(p => p.Name).ToList();
+        Assert.All(names, n => Assert.False(string.IsNullOrWhiteSpace(n)));
+        Assert.Equal(names.Count, vm.Installed.Count);   // 集合与快照一致
+
+        // 再连续触发几次，确认不会累积出不一致状态
+        for (var i = 0; i < 3; i++) await vm.ReloadInstalledCommand.ExecuteAsync(null);
+        Assert.Equal(vm.Installed.Count, vm.Installed.Select(p => p.Name).Count());
+    }
+
     [Fact]
     public void 没选包源时已安装摘要不崩()
     {

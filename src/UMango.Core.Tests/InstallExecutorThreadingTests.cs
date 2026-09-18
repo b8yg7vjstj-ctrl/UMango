@@ -85,6 +85,8 @@ public class InstallExecutorThreadingTests
         public Task<IReadOnlyList<InstalledPackage>> ListInstalledAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<InstalledPackage>>([]);
 
+        public void SeedResolvedInstallDirectory(string? directory) { /* 测试替身无需补种 */ }
+
         // ★ 关键：真正异步，让 await 产生真实让出
         public async Task<IReadOnlyList<InstallStep>> PlanInstallAsync(string n, string? v, CancellationToken ct = default)
         {

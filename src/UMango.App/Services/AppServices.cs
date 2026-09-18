@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Threading;
 using UMango.Core.Install;
 using UMango.Core.Animation;
+using UMango.Core.Caching;
 using UMango.Core.Configuration;
 using UMango.Core.Download;
 using UMango.Core.Logging;
@@ -127,11 +128,21 @@ public static class AppServices
         AppSettings.Load();
     }
 
+    /// <summary>
+    /// 包源可用性缓存的持久化路径。
+    /// 与设置/记录同目录，便于一起备份，也便于"清空配置"时一并清掉。
+    /// </summary>
+    public static string AvailabilityCachePath { get; } = Path.Combine(
+        Path.GetDirectoryName(InstallRecordStore.DefaultStorePath) ?? ".",
+        "source-availability.json");
+
     private static PackageManagerRegistry CreateRegistry()
     {
         try
         {
-            return PackageManagerFactory.CreateDefault();
+            // 传入持久化缓存：没有它的话，每次启动都要重新探测全部六个包源
+            // （最多 12 次进程启动），而可用性一天内几乎不变。
+            return PackageManagerFactory.CreateDefault(new JsonAvailabilityCache(AvailabilityCachePath));
         }
         catch (Exception ex)
         {

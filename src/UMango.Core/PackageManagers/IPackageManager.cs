@@ -46,6 +46,12 @@ public interface IPackageManager
     /// <summary>探测可用性（是否装了 CLI、能否应答）</summary>
     Task<SourceAvailability> ProbeAsync(CancellationToken ct = default);
 
+    /// <summary>
+    /// 用缓存里已解析的安装目录补种，避免跳过探测时 <see cref="InstallDirectory"/> 退回平台默认值
+    /// （需求要求左栏子标题显示**真实**安装目录）。
+    /// </summary>
+    void SeedResolvedInstallDirectory(string? directory);
+
     /// <summary>搜索包</summary>
     Task<IReadOnlyList<PackageInfo>> SearchAsync(string query, int limit, CancellationToken ct = default);
 

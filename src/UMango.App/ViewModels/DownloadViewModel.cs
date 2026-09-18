@@ -81,6 +81,18 @@ public partial class DownloadViewModel : ObservableObject
     private bool _isInstalledMode;
     private bool _loadingInstalled;
 
+    /// <summary>
+    /// 已安装列表的**加载版本号**，用来丢弃过期的加载结果。
+    ///
+    /// 为什么必须有：切换模式（IsInstalledMode 的 setter）会触发一次加载，
+    /// 用户点「重新读取」或切换包源又会触发一次 ——
+    /// 两个加载并发时都会对 <see cref="Installed"/> 做 Clear/Add，
+    /// 交错执行会导致集合在枚举中途被改写（真机上表现为列表内容错乱或直接抛异常，
+    /// 单元测试里表现为 IndexOutOfRangeException）。
+    /// 这是被测试真实暴露出来的，不是假想问题。
+    /// </summary>
+    private int _installedLoadVersion;
+
     public ObservableCollection<InstalledPackage> Installed { get; } = [];
 
     /// <summary>
@@ -240,13 +252,17 @@ public partial class DownloadViewModel : ObservableObject
         ErrorMessage = null;
         ErrorAdvice = null;
 
+        // 领一个版本号：本次加载只有在"期间没有发起更新的加载"时才允许写回结果。
+        var version = ++_installedLoadVersion;
+
         try
         {
             var list = await manager.ListInstalledAsync();
 
-            // 读的过程中用户可能已经切了包源/退了模式：那时不能再把旧结果写进去。
-            // 这是异步界面最常见的错位来源（请求返回晚于用户的下一次操作）。
-            if (!ReferenceEquals(SelectedCategory, category)) return;
+            // 两道守卫：
+            //   ① 包源没被切走（换了源的结果不该挂到新源名下）；
+            //   ② 期间没有更新的加载发起（否则两个加载会交错改写 Installed）。
+            if (!IsCurrentLoad(version, category)) return;
 
             Installed.Clear();
             foreach (var item in list) Installed.Add(item);
@@ -254,15 +270,23 @@ public partial class DownloadViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            if (ReferenceEquals(SelectedCategory, category)) ApplyError(ex, category);
+            if (IsCurrentLoad(version, category)) ApplyError(ex, category);
         }
         finally
         {
-            _loadingInstalled = false;
-            IsBusy = false;
-            OnPropertyChanged(nameof(InstalledSummary));
+            // 只有最新那次加载才复位忙碌标记：否则先结束的旧加载会把新加载的忙碌态清掉
+            if (version == _installedLoadVersion)
+            {
+                _loadingInstalled = false;
+                IsBusy = false;
+                OnPropertyChanged(nameof(InstalledSummary));
+            }
         }
     }
+
+    /// <summary>本次加载是否仍是最新的、且包源未被切走。</summary>
+    private bool IsCurrentLoad(int version, PackageSourceCategory category)
+        => version == _installedLoadVersion && ReferenceEquals(SelectedCategory, category);
 
     /// <summary>在选中的包源里搜索。</summary>
     [RelayCommand]

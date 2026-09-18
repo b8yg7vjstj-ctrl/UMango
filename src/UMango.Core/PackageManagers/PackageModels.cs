@@ -152,6 +152,12 @@ public sealed class SourceAvailability
     /// <summary>该适配器的解析逻辑是否已在真机验证过（未验证的如实告知用户）</summary>
     public string? VerificationNote { get; init; }
 
+    /// <summary>
+    /// 探测时解析出的**真实**安装目录（例如 `npm root -g` 的输出）。
+    /// 单独带出来是为了能持久化 —— 否则缓存命中时左栏分类的子标题会退回平台默认值。
+    /// </summary>
+    public string? ResolvedInstallDirectory { get; init; }
+
     public bool IsUsable => State is AvailabilityState.Available or AvailabilityState.Degraded;
 }
 

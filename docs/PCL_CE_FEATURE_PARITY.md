@@ -25,8 +25,13 @@
 > - **P0-2 配置体系**已按描述符驱动实现（`Core/Configuration/`，含迁移与容错）
 > - 附加：`UMango.Core` 去掉残留 UseWPF 并多目标编译 `net10.0`（平台中立成为编译期证明）
 >
-> 仍待裁决：**P0-1 持久化缓存**（需引入 `Microsoft.Data.Sqlite` +
-> `SQLitePCLRaw.bundle_e_sqlite3`，与"不新增依赖"约束冲突）。
+> - **P0-1 持久化缓存**：**已完成，且无需裁决** —— 用 JSON 文件实现同一套
+>   `IAvailabilityCache` 抽象（数据量极小：六个包源、每天一次），
+>   因此**不必引入 `Microsoft.Data.Sqlite`**，那个依赖冲突自然消解。
+>   将来若缓存内容变复杂，只需替换实现，接口已经隔离好。
+>
+> 本清单在第 11 轮交付它的当天就被当作工单使用：P0-3 → 日志系统与诊断包（`f2cc0b9`），
+> P0-1 → 持久化缓存（本轮）。这正是"逐项实测清单"的价值所在。
 
 ## 0. 先说结论：冲突的真实形状
 
@@ -354,7 +359,7 @@
 
 | 功能 | PCL.Core 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
 |------|----------------------|------------|-----------|------|
-| **配置体系**（多存储后端 + 迁移 + 观察者 + 源生成器） | `App/Configuration/`（`ConfigService.cs`、`Storage/`：`JsonFileProvider`、`YamlFileProvider`、`CatIniFileProvider`、`EncryptedFileConfigStorage`、`DynamicCacheConfigStorage`、`ConfigMigration.cs` + `PCL.Core.SourceGenerators/` 5 生成器） | 否 | **部分** | UMango `src/UMango.Core/Configuration/`（6 文件 653 行）：`SettingsService.cs:15`（`SchemaVersion:18`、`Descriptors:39`、`Sections:47`）+ `SettingDescriptor.cs:25` + `JsonFileSettingsStore.cs:13`（含 `LoadRawWithMigration:79`）+ `UiSettings.cs`（10 个描述符，4 分区）。**描述符驱动的思路已具备**，但**只支持 JSON 一种后端**，无源生成器、无加密存储、无配置事件注册表 |
+| **配置体系**（多存储后端 + 迁移 + 观察者 + 源生成器） | `App/Configuration/`（**28 文件 / 2,478 行**：`ConfigService.cs:19`、`Storage/` 5 种后端 `JsonFileProvider:32`/`YamlFileProvider:45`/`CatIniFileProvider:16`/`EncryptedFileConfigStorage:12`/`DynamicCacheConfigStorage:7`、`ConfigStorage.cs:24`、`ConfigMigration.cs` + `PCL.Core.SourceGenerators/` 5 生成器） | 否 | **部分** | UMango `src/UMango.Core/Configuration/`（6 文件 653 行）：`SettingsService.cs:15`（`SchemaVersion:18`、`Descriptors:39`、`Sections:47`）+ `SettingDescriptor.cs:25` + `JsonFileSettingsStore.cs:13`（含 `LoadRawWithMigration:79`）+ `UiSettings.cs`（10 个描述符，4 分区）。**描述符驱动的思路已具备**，但**只支持 JSON 一种后端**，无源生成器、无加密存储、无配置事件注册表 |
 | **任务中心** | `App/Tasks/`（8 文件） | 否 | **已完成** | UMango `App/Tasks/` 8 文件，**已按 Apache-2.0 逐文件采用并标注**（见 `THIRD-PARTY-NOTICES.md` §1 表格：`TaskState`/`ITask`/`ITaskProgressive`/`ITaskCancelable`/`ITaskPausable`/`ITaskGroup`/`TaskModel`/`TaskCenter`）；`TaskModel` 新增 `IsGroup`/`Children` |
 | 日志系统（分级/包装/适配器） | `Logging/`（10 文件 849 行：`Logger.cs`、`LogService.cs`、`LogLevel.cs`、`LoggerAdapter.cs`、`LoggerFactoryAdapter.cs`） | 否 | **已完成** | ⚠️ **判定在调研期间变化了两次**：初判「未做」（当时 `grep -ril Logging src/` = 0）→ 中间改为「部分（进行中）」→ 现已**已完成**（commit `f2cc0b9`）。实测 `src/UMango.Core/Logging/`（5 文件 **429 行**：`Log.cs`、`ILogSink.cs`、`LogModels.cs`、`MemoryLogSink.cs`、`FileLogSink.cs`）+ 已接入 `Execution/ProcessRunner.cs`。
 ⚠️ **该 commit 的信息里直接写着「功能对照表 P0-3」** —— 即本报告的条目编号被当作工单使用了 |
@@ -371,12 +376,12 @@
 | HTTP 客户端扩展（代理/缓存/路由/内容处理） | `IO/Net/Http/`（`HttpRequest.cs`、`HttpProxyManager.cs`、`HttpCacheHandler.cs`、`HttpRoute.cs`、`HttpServer.cs`、`HttpBasicExtension.cs` 等） | 否 | **未做** | 体量大且通用；UMango 仅 `HttpClient` 裸用 |
 | DNS 查询与加权竞速 | `IO/Net/Dns/`（`DnsQuery.cs`、`WeightedDnsRacerClient.cs`、`DnsSrvResource.cs`） | 否 | **未做** | |
 | TCP 端口转发 | `IO/Net/SocketForward/`（`TcpForwardBuilder.cs`、`TcpForwardConfig.cs`、`TcpForwardWorker.cs`） | 否 | **未做** | 给 MC 联机用，但**本身是通用 TCP 转发** |
-| 缓存服务（SQLite + 内容寻址） | `IO/Storage/Cache/`（13 文件：`CacheService.cs`、`SqliteCacheStorage.cs`、`CacheEvictionService.cs`、`CachePolicy.cs`、`SchemaManager.cs`、`Model/`） | 否 | **未做** | UMango 只有 `PackageManagerRegistry` 内一个**内存字典** `_cache`（`PackageManagerRegistry.cs`），**重启即失效** |
+| 缓存服务（SQLite + 内容寻址） | `IO/Storage/Cache/`（12 文件 **1,839 行** + `Model/` 3 文件 154 行：`CacheService.cs:23`、`SqliteCacheStorage.cs:9`、`CacheEvictionService.cs`、`CachePolicy.cs`、`SchemaManager.cs` 209 行） | 否（**但含 MC 行模型**） | **未做** | UMango 只有 `PackageManagerRegistry` 内一个**内存字典** `_cache`，**重启即失效**。⚠️ **迁移注意**：这套通用缓存服务上挂着**两张 MC 专用的行模型** —— `Model/ComponentCacheRow.cs:8`（`CompType // mods/rp/shader/saves/datapack`）、`:22`（`ModLoader`）、`Model/InstanceCacheRow.cs:19`（`VanillaVersion`）、`:28`（`LoaderJson`）。迁移时应**只取 CacheService/SqliteCacheStorage/SchemaManager 等 12 个通用文件，丢掉 `Model/` 的这两张表** |
 | 哈希存储 | `IO/Storage/HashStorage.cs` | 否 | **未做** | |
 | 文件/目录抽象与字节流 | `IO/Files.cs`、`Directories.cs`、`ByteStream.cs` | 否 | **部分** | UMango `IO/` 有 2 个文件，未细核 |
 | 进程间管道通信 | `IO/PipeComm.cs` | 否 | **未做** | |
 | 下载抽象（NDlFactory 等） | `IO/Download/`（**6 文件**：`NDlFactory.cs`、`IDlConnection.cs`、`IDlResourceMapping.cs`、`IDlWriter.cs`、`NDlConnectionInfo.cs`、`NDlSourceReport.cs`） | 否 | **不适用（死代码）** | ⚠️ **本表首轮把它列为可迁移项，是错的**。实测：`NDlFactory`/`IDlConnection`/`IDlWriter`/`IDlResourceMapping`/`NDlSourceReport` 在 `IO/Download/` 之外的引用数为 **0** —— **没有任何实现、没有任何调用点**，是废弃骨架。**不应列为迁移项** |
-| 验证器族 | `Utils/Validate/`（12 个 Validator + FluentValidation） | 否 | **部分** | UMango 仅在 `Configuration/` 内有 `SettingDescriptor.Validate()`；**未引入 FluentValidation**（遵守"不加新 NuGet 依赖"约束） |
+| 验证器族 | `Utils/Validate/`（12 个 Validator **457 行** + FluentValidation） | 否（**有一处 MC 开关**） | **部分** | UMango 仅在 `Configuration/` 内有 `SettingDescriptor.Validate()`；**未引入 FluentValidation**（遵守"不加新 NuGet 依赖"约束）。⚠️ 迁移注意：`FileNameValidator.cs:13`/`FolderNameValidator.cs:12`/`FolderPathValidator.cs:9` 各有 `useMinecraftCharCheck = true` 开关（额外禁 `!;`），迁移时置 `false` 即可 |
 | 哈希算法族 | `Utils/Hash/`（MD5/SHA1/SHA256/SHA512/MurmurHash2 + `HashCache.cs`） | 否 | **未做** | UMango `Hash` 关键字命中仅 4 处 `HashSet`（**误命中**） |
 | 加密算法族 | `Utils/Encryption/`（AES-CBC/GCM、ChaCha20-Poly1305 + 纯软件实现） | 否 | **未做** | |
 | 二进制差分（BsDiff/ItemDiff） | `Utils/Diff/`（`BsDiff.cs`、`IBinaryDiff.cs`、`ItemDiffResult.cs`） | 否 | **未做** | 用于增量更新 |
@@ -385,10 +390,10 @@
 | 字符串/集合/任务扩展 | `Utils/Exts/`（8 文件：`StringExtension.cs`、`ListExtension.cs`、`TaskExtension.cs`、`UiExtension.cs`、`ConcurrentDictionaryExtension.cs`、`AsyncEnumerableExtensions.cs`、`ByteExtension.cs`、`HttpRequestExtension.cs`） | 否 | **未做** | |
 | 语义化版本与版本范围 | `Utils/SemVer.cs`、`Utils/VersionRange.cs` | 否 | **部分** | UMango 有版本比较（各适配器内自建，注释多处讨论 semver 边界），**无 SemVer/VersionRange 公共类型**（`SemVer` 命中仅为注释） |
 | 相似度搜索 | `Utils/SimilaritySearch.cs` | 否 | **未做** | PCL 用于模糊匹配 MC 版本名 |
-| 文本/正则/随机工具 | `Utils/RegexPatterns.cs`、`RandomUtils.cs`、`TimeUtils.cs`、`Result.cs`、`JsonCompat.cs`、`StringStream.cs`、`ExpandoObjectConverter.cs` | 否 | **部分** | UMango 各页自建少量工具 |
+| 文本/正则/随机工具 | `Utils/RegexPatterns.cs`（**246 行**）、`RandomUtils.cs`、`TimeUtils.cs`、`Result.cs`（149 行）、`JsonCompat.cs`（236 行）、`StringStream.cs`、`ExpandoObjectConverter.cs` | 否（**`RegexPatterns` 大部分是 MC 正则**） | **部分** | UMango 各页自建少量工具。⚠️ **`RegexPatterns.cs` 不宜整文件迁移**：实测 `:78`/`:85`/`:101-122`/`:160`/`:215`/`:219` 是 MC 颜色代码、MOTD 格式码、MC 版本号（正式/快照/Indev/Infdev）、MC 实例解析等**MC 专属正则**；而 `Result`/`JsonCompat`/`SemVer`/`SimilaritySearch` 才是干净可用的 |
 | 系统信息与硬件 | `Utils/OS/`（`SystemInfo.cs`、`HardwareInfo.cs`、`SystemPaths.cs`、`SystemTheme.cs`、`EnvironmentInterop.cs`、`ProcessInterop.cs`、`WindowInterop.cs`、`KernelInterop.cs`、`NtInterop.cs`、`AumidHelper.cs`、`ClipboardUtils.cs`、`DragHelper.cs`、`RegistryChangeMonitor.cs`、`NetworkUtils.cs`） | 否 | **部分** | UMango `Platform/SystemInfo.cs`（`Platform:…`、`IsWindows`、`HomeDirectory`、`Describe()`，2 文件 67 行）—— **覆盖面远小于 PCL-CE** |
 | 主题/配色（NColor、色调档、系统主题跟随） | `UI/Theme/`（`ThemeService.cs`、`SystemThemeHelper.cs`、`CatColorResource.cs`、`LabColor.cs`、`ToneProfile.cs`）、`UI/NColor.cs` | 否 | **部分** | UMango 有 4 套 token 字典 + `ThemeManager`；**无** LAB 色彩空间、色调档、系统主题跟随 |
-| 动画系统（完整） | `UI/Animation/`（129 文件中的主体，含 `Animatable/`、`Clock/`、`Core/`、`Easings/`、`ValueProcessor/`、`UIAccessProvider/`） | 否 | **部分** | 见 2.A「动画引擎」 |
+| 动画系统（完整） | `UI/Animation/`（**87 文件 / 2,742 行**：`Animatable/` 4、`Clock/` 5、`Core/` 21、`Easings/` 39、`ValueProcessor/` 9、`UIAccessProvider/` 2、根 7） | 否 | **部分** | 见 2.A「动画引擎」与 §4.6「第 2.5 层」。**仅 14/87 文件触及 WPF，且零使用 WPF 的 `DoubleAnimation`/`Storyboard`/`Timeline`** —— 自研帧驱动引擎，可移植性远高于初判 |
 | WPF 控件库 | `UI/Controls/SvgIcon/`（10 文件，自研 SVG 渲染）、`BlurBorder.cs`、`Tooltip.cs`、`WaterfallPanel.cs`、`MotdRenderer.xaml` | 否 | **部分** | UMango 用 lucide（ISC）图标 + 自绘样式；**未移植 SvgIcon 运行时解析器**（`SvgPathGeometryParser.cs` 等） |
 | 模糊/特效 | `UI/Effects/`（`AdaptiveBlurEffect.cs`、`EnhancedBlurEffect.cs`、`OptimizedBlurEffect.cs`、`SamplingBlurProcessor.cs`） | 否 | **未做** | Windows 专用（需 P/Invoke） |
 | 图像加载与转换 | `UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs`、`Utils/IconHelper.cs` | 否 | **未做** | |
@@ -554,7 +559,7 @@
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
 | P0-1 | **持久化缓存服务**（SQLite + 内容寻址 + 淘汰策略） | 未做 | **中** | `IO/Storage/Cache/`（13 文件，`CacheService.cs`、`SqliteCacheStorage.cs`、`CacheEvictionService.cs`、`CachePolicy.cs`、`SchemaManager.cs`） | 否（纯 .NET）——但引入 `Microsoft.Data.Sqlite` + `SQLitePCLRaw.bundle_e_sqlite3` 两个 NuGet 包，**与"不加新依赖"约束冲突，需项目所有者裁决** |
-| P0-2 | **配置体系补齐**（多后端 + 源生成器 + 事件） | 部分（描述符驱动已有） | **中** | `App/Configuration/`（30+ 文件：`ConfigService.cs`、`Storage/` 7 种 Provider、`ConfigMigration.cs`、`ConfigObserver.cs`）+ `PCL.Core.SourceGenerators/`（5 生成器 2,039 行） | 部分（`EncryptedFileConfigStorage` 依赖 Windows DPAPI/CNG） |
+| P0-2 | **配置体系补齐**（多后端 + 源生成器 + 事件） | 部分（描述符驱动已有） | **中** | `App/Configuration/`（**28 文件 / 2,478 行**：`ConfigService.cs:19`、`Storage/` 5 种后端（JSON/YAML/CatIni/加密/动态缓存）、`ConfigStorage.cs:24`、`ConfigMigration.cs`）+ `PCL.Core.SourceGenerators/`（5 生成器 2,039 行） | 部分（`EncryptedFileConfigStorage` → `Utils/Secret/EncryptHelper` 走 Windows DPAPI/CNG；其余零 Windows 依赖） |
 | P0-3 | **日志系统** | ✅ **已完成**（commit `f2cc0b9`，Core 5 文件 429 行 + LogView 404 行） | — | 已由并发任务实现，**该 commit 明确引用本报告的条目编号「P0-3」** | 否 |
 | P0-4 | **已安装包列表接入界面** | **已完成**（commit `39f5259`，`DownloadViewModel.cs:84,245`） | — | 无需迁移 —— 是 UMango 自己的能力 | 否 |
 
@@ -575,7 +580,7 @@
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
 | P2-1 | **多语言 i18n** | 未做 | **高** | `App/Localization/`（`Lang.cs` + 服务 + 字体配置 + 7 语言 XAML，实语言各 3,583 行） | 否（但用 WPF 资源字典） |
-| P2-2 | **动画系统补齐**（帧动画/关键帧/组合/时钟抽象/`IAnimatable`） | 部分 | **高** | `UI/Animation/`（129 文件中的主体，含 `Clock/` 3 种时钟、`Core/` 帧与组合、`ValueProcessor/` 7 种、`UIAccessProvider/`） | **是**（`WpfCompositionTargetRenderingClock`、`WinMMClock`、`DependencyObject`） |
+| P2-2 | **动画系统补齐**（帧动画/关键帧/组合/时钟抽象/`IAnimatable`） | 部分 | **中**（⚠️ 由「高」下调） | `UI/Animation/`（**87 文件 / 2,742 行**） | **部分**（仅 14/87 文件触及 WPF，且 UMango 也是 WPF，故这类文件**可直接用**） |
 | P2-3 | **系统信息与硬件** | 部分 | **中** | `Utils/OS/`（14 文件） | **部分是**（注册表、`NtInterop`、`KernelInterop`、`WindowInterop`、`AumidHelper`） |
 | P2-4 | IoC / 生命周期 | 部分 | **中** | `App/IoC/`（14 文件） | 否 |
 | P2-5 | 内部事件总线 | 未做 | **低** | `App/EventBus/`（4 文件） | 否 |
@@ -673,18 +678,27 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 | `App/EventBus/` | 内部事件总线（4 文件） |
 | `App/Tasks/` | 任务中心 —— **UMango 已采用**（Apache-2.0，逐文件标注） |
 | `App/Cli/` | 命令行参数解析（7 文件） |
-| `App/Configuration/` | **整个目录零 WPF 命中** —— 最值得优先迁移的一块 |
+| `App/Configuration/`（**28 文件 / 2,478 行**：根 14 / 1,283 + `Storage/` 14 / 1,195） | **整个目录零 WPF 命中**（对 `System.Windows`/`Microsoft.Win32`/`DllImport`/`System.Drawing`/`IsWindows` 全 grep 均零命中）—— 最值得优先迁移的一块。唯一要注意：`EncryptedFileConfigStorage` 的加密后端走 `Utils/Secret/EncryptHelper`（Windows DPAPI/CNG），跨平台需替换 |
 | `App/IoC/` | 13 个文件中仅 1 个触及 WPF |
 | `Utils/Threading/`、`Utils/Encryption/`、`Utils/Hash/`、`Utils/Codecs/`、`Utils/Diff/` | 纯算法工具 |
 | `IO/Net/Http/` | 15 个文件中 13 个无 WPF 命中 |
 | `IO/Storage/Cache/` | SQLite 缓存（取决于 NuGet 裁决） |
-| `UI/Animation/Easings/` | **39 个文件、0 个 `System.Windows` 命中** —— 纯数学，最干净的一块 |
+| `UI/Animation/Easings/` | **39 文件 / 660 行、0 个 `System.Windows` 命中** —— 纯数学，最干净的一块 |
+| `UI/Animation/` 的**其余 73 个文件** | ⚠️ **本项是复核后的重要上调**：整个 `UI/Animation/`（87 文件 / 2,742 行）**只有 14 个文件触及 `System.Windows`**，且实测 `DoubleAnimation` / `System.Windows.Media.Animation` / `Storyboard` / `Timeline` **命中数全为 0** —— 它是**自研帧驱动引擎**（`IAnimation.ComputeNextFrame` + `IClock.Tick`），**没有用 WPF 的动画体系**。抽象层显式为跨框架设计：`IAnimatable.cs:5`（`object? GetValue()` / `void SetValue(object)`，零框架依赖）、`IClock.cs`、`IUIAccessProvider.cs`（注释原文「跨框架的 UI 线程访问接口」）。13 个 WPF 触点**全部是实现类而非抽象层**（`WpfAnimatable`、`WpfCompositionTargetRenderingClock`、`WpfUIAccessProvider`、`AnimationBase : DependencyObject`、`RunAnimationAction : TriggerAction<DependencyObject>`、`AnimationGroup` / `AnimationExtensions` / `IAnimationFrame`、`Matrix`/`Point`/`Thickness` 三组值处理器与动画类型）。**因为 UMango 也是 WPF，这些实现类可直接工作** |
 
 **第 2 层：可借鉴设计，但不宜整体迁移**
 
 - `Minecraft/IdentityModel/`（22 文件 1,613 行）里约 **990 行**是通用的 OAuth2 / OpenID / PKCE / JWT 实现。
   技术上通用，但**位于 MC 命名空间下**，且 4.5 的闸门要求逐文件审查（`JsonWebToken.cs`、`OpenIdClient.cs` 等确实不依赖 WPF）。
   按 3.7 的结论：应当作独立需求评估，**不要挂在"功能对照迁移"名下**。
+
+**第 2.5 层：`UI/Animation/` 的 14 个 WPF 实现类 —— 不能进 Core 的 `net10.0` 支，但因 UMango 是 WPF，可用于 App**
+
+实测触及 `System.Windows` 的 14 个文件（可逐一对照）：`Animatable/WpfAnimatable.cs`、`Clock/WpfCompositionTargetRenderingClock.cs`、`Core/{AnimationBase,AnimationExtensions,AnimationGroup,IAnimationFrame,RunAnimation}.cs`、`MatrixFromToAnimation.cs`、`PointFromToAnimation.cs`、`ThicknessFromToAnimation.cs`、`UIAccessProvider/WpfUIAccessProvider.cs`、`ValueProcessor/{Matrix,Point,Thickness}ValueProcessor.cs`。
+另 `Clock/WinMMClock.cs` 走 `winmm.dll`（Windows 专属；跨平台应换用 `StopwatchClock.cs`，后者纯 BCL）。
+
+**结论**：动画系统可整体迁入 `UMango.App`（WPF 侧），而**其抽象层与 Easings 还能进 `UMango.Core` 的 `net10.0` 支** ——
+这正是 P2-2 成本由「高」下调为「中」的依据。
 
 **第 3 层：硬阻塞项 —— 明确不能进 Core**
 
@@ -857,6 +871,9 @@ UMango 现有的 `Download/`（8 文件 990 行，aria2/内置 HTTP/eD2k 三引�
 14. **`Modules/Minecraft/CrashAnalysis/Detection/CrashStackAnalyzer.cs` 是 `partial` 类**，
     其另一半不在 `Modules/` 范围内，本次未定位（因此 3.5 表对该文件的行数记为"—"）。
 16. **`Modules/Updates/UpdatesMinioModel.cs` 的增量补丁应用逻辑未逐行确认** —— 仅确认数据模型内存在 `Patches` 字段（`:263`），其应用（打补丁）流程未验证；这会影响 P1-1 的成本估算（若含增量更新则成本更高）。
+18. **`PCL.Core/Model/Homepage/News/` 的命名空间与目录不一致** —— 目录是 `Model/Homepage/News/`，而 `ApiResponse.cs:3`/`NewsItem.cs:4`/`Result.cs:4` 声明的是 `PCL.Core.Model.Tools.News`。原因未查（不影响 MC 归属判定）。
+19. **`IO/Download/` 的文件数**：本报告实测 **6 文件 / 163 行**；PCL.Core 子任务报告称 7 文件。以实测 6 为准（`ls` 可直接核对，见 4.5 的脚注与 2.K 表）。
+20. **"约 6 成代码可移植"是一个粗估**：我按目录逐一核查了 WPF/Windows 耦合（§4.6 三层分类），但**未做行级精确统计**，因此 §4.6 的"第 1 层"清单是**文件级判断**，不是按行加权得出的百分比。若需要精确比例，应按每个文件是否有 WPF/Windows 命中来逐行加总（本次未做）。
 17. **`Modules/Network/Facade/ModNet.cs` 的 `NetTaskSpeedLimitLow`/`Left` 在 `Modules/` 内无消费点**（见第 13 条），其实际使用可能在 `PCL.Core/`；本次未追到，故 2.H 表中该条目的"部分"判定依据是**架构对照**而非调用链证据。
 15. **PCL-CE 侧无法用 git 交叉核验**：该克隆是**部分克隆（promisor remote）**，
     `git status` / `git diff` 在离线时不可用（会向 github.com 拉取缺失对象并超时 75 秒）。
@@ -888,6 +905,9 @@ UMango 现有的 `Download/`（8 文件 990 行，aria2/内置 HTTP/eD2k 三引�
 | P/Invoke 数量 | 37 处（`Utils/OS/` 30 处） | **33 处**（`Utils/OS/` 25 处） | `grep -rc "DllImport\|LibraryImport"` 逐文件统计 |
 | `Modules/` 的 P/Invoke 数量 | 13 处 | **11 处** | `grep -rn DllImport Modules/` → ModMain 3 + ModWatcher 6 + ModLink 1 + ModBase 1 |
 | 动画引擎状态 | 「已完成」 | **下调为「部分」** | 初稿只比对了 `AnimationPlayer`，忽略了 `ModAnimation.cs` 是 **1,517 行**的完整补间引擎（20+ 属性工厂 + 14 缓动 + 帧率控制） |
+| 动画系统的**可移植性** | 归入「高成本、WPF 绑死」（P2-2 成本＝高） | **上调为「成本＝中」** | 实测 `UI/Animation/` 87 文件仅 14 个触 WPF，`DoubleAnimation`/`System.Windows.Media.Animation`/`Storyboard`/`Timeline` 命中**全为 0**；UMango 也是 WPF，故实现类可直接用（详见 §4.6 第 2.5 层） |
+| `App/Configuration/` 体积 | 「30+ 文件」 | **28 文件 / 2,478 行** | 实测根 14 / 1,283 + `Storage/` 14 / 1,195 |
+| `PCL.Core/README.md` 的定位 | 任务书假设其「被设计成可复用库」 | **README 无此声明** | 该文件仅 6 行，原文只说「为 PCL CE 版本特别开发的核心库」；真正的定位证据是 `PCL.Core.csproj` 的 `net10.0-windows` + `UseWPF=true`（本报告 §4.5 已按此判定） |
 | §4 候选的许可证标注 | P1/P2 表未逐项标注许可来源 | **已集中更正**（新增 §4.7 二分表 + §4 开头警示） | 初稿把 `Modules/Updates/`、`Modules/Event/`、`Modules/Base/MyBitmap.cs` 列为迁移候选，却只标注了其中一条的许可问题；`Modules/` 整体在自定义许可目录下 |
 | 功能普查完整性 | 漏掉「启动器自定义主页」（初稿未收录） | **已补入**（`PageLaunchRight.xaml.cs`，898 行，**非 MC**） | 子任务完整报告收尾送达后比对发现；该功能挂在 `PageLaunch/` 目录下，容易被误当 MC 页面而跳过 |
 

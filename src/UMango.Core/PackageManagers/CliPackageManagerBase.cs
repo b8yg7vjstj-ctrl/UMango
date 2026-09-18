@@ -44,6 +44,16 @@ public abstract class CliPackageManagerBase : IPackageManager
     /// </summary>
     public string InstallDirectory => _resolvedInstallDir ?? DefaultInstallDirectory;
 
+    /// <summary>
+    /// 用缓存补种已解析的安装目录。
+    /// 只在还没有真实值时补 —— 已经探测出来的值不该被旧缓存覆盖。
+    /// </summary>
+    public void SeedResolvedInstallDirectory(string? directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory)) return;
+        _resolvedInstallDir ??= directory;
+    }
+
     /// <summary>默认超时。包管理器首次调用可能要更新索引，给足时间。</summary>
     protected virtual int DefaultTimeoutMs => 120_000;
 
@@ -107,7 +117,8 @@ public abstract class CliPackageManagerBase : IPackageManager
                 CliPath = path,
                 CliVersion = firstLine,
                 Detail = output.Success ? null : Truncate(output.StdErr, 200),
-                VerificationNote = VerificationNote
+                VerificationNote = VerificationNote,
+                ResolvedInstallDirectory = _resolvedInstallDir
             };
         }
         catch (Exception ex)

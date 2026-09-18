@@ -1,3 +1,4 @@
+using UMango.Core.Caching;
 using UMango.Core.PackageManagers.Adapters;
 
 namespace UMango.Core.PackageManagers;
@@ -14,8 +15,15 @@ namespace UMango.Core.PackageManagers;
 /// </summary>
 public static class PackageManagerFactory
 {
-    /// <summary>创建注册了全部六个适配器的默认注册表。</summary>
-    public static PackageManagerRegistry CreateDefault() => new(
+    /// <summary>
+    /// 创建注册了全部六个适配器的默认注册表。
+    /// </summary>
+    /// <param name="cache">
+    /// 可用性缓存。**强烈建议传入持久化实现** ——
+    /// 不传的话可用性只保存在内存里，每次启动应用都要重新探测全部六个包源
+    /// （最多 12 次进程启动）。
+    /// </param>
+    public static PackageManagerRegistry CreateDefault(IAvailabilityCache? cache = null) => new(
     [
         new NpmPackageManager(),
         new PnpmPackageManager(),
@@ -23,5 +31,5 @@ public static class PackageManagerFactory
         new WingetPackageManager(),
         new ScoopPackageManager(),
         new HomebrewPackageManager(),
-    ]);
+    ], cache);
 }
