@@ -2,6 +2,7 @@ using System.Windows;
 using UMango.App.Services;
 using UMango.App.Themes;
 using UMango.Core.Configuration;
+using UMango.Core.Logging;
 
 namespace UMango.App;
 
@@ -20,11 +21,65 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         SeedServices();
+        HookGlobalExceptionHandlers();
         ApplySavedTheme();
 
         // 放在最后：基类负责触发 Startup 事件，StartupUri 指向的主窗口在其之后创建，
         // 因此上面两步都先于首帧完成（主题不会"先用默认色画一帧再变"）。
         base.OnStartup(e);
+    }
+
+    /// <summary>
+    /// 接管全局未处理异常，把它们写进日志。
+    ///
+    /// **这是本项目最需要的诊断能力**：应用主要在 Windows 上运行，而开发发生在 macOS ——
+    /// 一旦真机崩溃，唯一的定位材料就是这份日志。
+    /// 未接管的异常在 WPF 里表现为"窗口直接消失"，什么线索都不留。
+    ///
+    /// 注意：**不阻止**未处理异常（不设 e.Handled = true 去掩盖崩溃），
+    /// 只是把它记录下来。掩盖会让应用带着坏状态继续跑，问题更难查。
+    /// </summary>
+    private void HookGlobalExceptionHandlers()
+    {
+        DispatcherUnhandledException += (_, args) =>
+        {
+            Log.ErrorAt("App", args.Exception, member: "DispatcherUnhandledException");
+            Log.Flush();   // 崩溃前必须刷盘，否则最后几行（最关键）会丢
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            if (args.ExceptionObject is Exception ex)
+                Log.ErrorAt("App", ex, member: "AppDomainUnhandled");
+            else
+                Log.Error("App", $"未处理的非异常错误：{args.ExceptionObject}");
+
+            Log.Flush();
+        };
+
+        // 后台 Task 的异常不会冒到上面两个处理器，必须单独接：
+        // 否则一个 fire-and-forget 的任务失败会静默消失，只表现为"某个功能没反应"。
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            Log.ErrorAt("App", args.Exception, member: "UnobservedTask");
+            args.SetObserved();   // 这条只记录不上报（已记录，且无其它处理者）
+        };
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        try
+        {
+            Log.Info("App", $"UMango 退出（代码 {e.ApplicationExitCode}）");
+            Log.Flush();
+            AppServices.LogFile?.Close();
+        }
+        catch (Exception)
+        {
+            // 退出路径同样不能抛
+        }
+
+        base.OnExit(e);
     }
 
     /// <summary>

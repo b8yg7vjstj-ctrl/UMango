@@ -10,7 +10,11 @@
 > **UMango 侧**：本次实际读取源码确认状态，**不采信文档自述**。凡文档与源码不一致处，以源码为准并单独注明。
 >
 > **调研日期**：基于本地工作副本的实测（`find` / `wc -l` / `grep -n`）。
-> **重要限制**：`/tmp/PCL-CE` 是 `--depth 1` 浅克隆，git 历史不可用，"上游继承 vs CE 新增"的判断依赖代码内容证据。
+> **重要限制**：`/tmp/PCL-CE` 是 `--depth 1` 的**部分克隆（partial clone，带 promisor remote）** ——
+> `git log` 只有 1 个 commit，且 **`git status` / `git diff` 在离线时无法工作**（会尝试向 github.com 拉取缺失对象并超时）。
+> 因此："上游继承 vs CE 新增"的判断只能依赖代码内容证据，不能靠 git blame；
+> 而"PCL-CE 未被本次调研修改"这一点的证据是**文件数与行数与初始实测完全一致**（918 文件、138,447 行 `.cs`），
+> 而不是 `git status` 的干净输出。
 
 ---
 
@@ -54,14 +58,6 @@
    THIRD-PARTY-NOTICES.md 的判定链是对的：软件与 PCL「实质功能零重叠」→ 只需署名 + 不混淆命名。
    **所以这条红线不是架构洁癖，它承担着合规功能。**
 
-**因此本清单给出的结论是**：两条需求**不能同时按字面满足**。可行的做法是把 PCL-CE 功能切成三类：
-
-| 类别 | 处置 | 依据 |
-|------|------|------|
-| **非 MC 功能** | **应当迁移**（这是"完整迁移"的可满足部分） | 多数位于 `PCL.Core/`（Apache-2.0），无许可负担 |
-| **MC 专属功能** | **迁移即触发重度使用义务**（改名 + 开源） | 《合理使用指南》原文点名的情形 |
-| **MC 专属但算法通用**（如崩溃分析、NBT、Java 扫描） | **可迁移，但只有剥离 MC 语义后才有意义** —— 剥离后就已不是"迁移该功能"，而是"借其思路另做一个" | 需逐项判定，见第 3 节 |
-
 5. **还有第三条约束，比前两条更硬，而且它是"红线"的真正来源**：
    调研期间 UMango 把 `UMango.Core` 改为多目标 **`net10.0;net10.0-windows`**（commit `2f900b1`），
    而 `PCL.Core.csproj` 是 **`net10.0-windows` + `UseWPF=true`**。
@@ -72,6 +68,14 @@
    这意味着 **"部分 MC 功能可以合法迁移"（Apache-2.0）这条缝隙，在工程上多半也走不通** ——
    `PCL.Core/Minecraft/` 那 6,800 行虽然许可证允许，但连 `PCL.Core` 这个程序集都进不了 `net10.0`。
    详见 §4.5。
+
+**因此本清单给出的结论是**：两条需求**不能同时按字面满足**。可行的做法是把 PCL-CE 功能切成三类：
+
+| 类别 | 处置 | 依据 |
+|------|------|------|
+| **非 MC 功能** | **应当迁移**（这是"完整迁移"的可满足部分） | 多数位于 `PCL.Core/`（Apache-2.0），无许可负担 |
+| **MC 专属功能** | **迁移即触发重度使用义务**（改名 + 开源） | 《合理使用指南》原文点名的情形 |
+| **MC 专属但算法通用**（如崩溃分析、NBT、Java 扫描） | **可迁移，但只有剥离 MC 语义后才有意义** —— 剥离后就已不是"迁移该功能"，而是"借其思路另做一个" | 需逐项判定，见第 3 节 |
 
 **给项目所有者的决策**：要么接受 B6+B7（改名 + 开源）**并放弃跨平台**换取全量迁移，
 要么维持"非 MC + 跨平台"红线和把"完整迁移"重新定义为"**PCL-CE 全部非 MC 功能**"。
@@ -91,9 +95,9 @@
 | 其中 **MC 专属**（列值「是」） | **81** | 见第 3 节完整清单 |
 | 其中 **"部分 MC"**（列值「部分」：机制通用、数据/语义是 MC 的） | **3** | `DownloadRequestFactory`、`LoaderDownload`、`ModBase` |
 | 其中 **非 MC**（列值「否」） | **87** | ← 这是"完整迁移"需求的真实作用域 |
-| — 已完成 | **18** | 全部在非 MC 侧 |
+| — 已完成 | **19** | 全部在非 MC 侧 |
 | — 部分完成 | **29** | 27 条非 MC + 2 条「部分 MC」 |
-| — 未做 | **42** | 41 条非 MC + 1 条「部分 MC」 |
+| — 未做 | **41** | 40 条非 MC + 1 条「部分 MC」 |
 | — 不适用 | **82** | 81 条 MC 专属 + 1 条废弃死代码 |
 
 > **计数口径与自纠**：
@@ -101,32 +105,41 @@
 >    MC 专属的 81 条 + 「部分 MC」的 3 条 = **84 条在红线之外**，其状态一律记「不适用」或按其机制记为未做/部分。
 > 2. **本表是修正后的版本。** 本报告初稿曾写"总数 137 / MC 78 / 非 MC 55"，但 **78+55=133≠137**，
 >    内部即不自洽 —— 那是手工累加出的错。现已改为**脚本统计**（`grep` + 逐行解析 Markdown 表），
->    并复核 `18+29+42+82 = 171`、`81+3+87 = 171` 两式均成立。
+>    并复核 `19+29+41+82 = 171`、`81+3+87 = 171` 两式均成立。
+>    （注：`19/29/41` 是**核对到最后**的值 —— 调研期间并发任务把「已安装包列表」由部分升为已完成、
+>    把「日志系统」由未做升为部分，故比首次统计的 `18/29/42` 各有 1 项位移。）
 > 3. **"完整迁移 PCL-CE 全部功能"的可迁移作用域 = 87 条非 MC 条目**，
->    其中已完成 18、部分 27、未做 41、废弃死代码 1。
+>    其中已完成 19、部分 27、未做 40、废弃死代码 1。
 
 ### 1.2 一句话概览
 
-- UMango 已完成的 **18** 项，**全部集中在"包管理业务主干 + 外壳"**上：
+- UMango 已完成的 **19** 项，**全部集中在"包管理业务主干 + 外壳"**上：
   六个包源适配器、平台门控、搜索/版本/依赖树、安装执行、任务与子项进度、终端桥、操作记录、
   下载引擎、设置体系、主题系统、动画系统、合规声明页。全部有源码证据（见第 2 节各行）。
-- **未做的 42 项里，体积最大、最通用的三块**是：**多语言 i18n**、**启动器自更新**、**HTTP 客户端扩展层与持久化缓存**。
+- **未做的 41 项里，体积最大、最通用的三块**是：**多语言 i18n**、**启动器自更新**、**HTTP 客户端扩展层与持久化缓存**。
 - **MC 专属的 81 项**（+3 条部分 MC）占据了 PCL-CE 代码量的约一半（第 3 节），
   但按红线与许可证**都不应迁入** —— 且第 4.5 节给出了比"红线"更硬的技术理由（`net10.0` 编译期闸门）。
 
-### 1.3 一个必须先纠正的文档问题
+### 1.3 一个曾必须先纠正的文档问题（调研期间已被修复）
 
-UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`docs/PROGRESS.md`
-**描述的仍然是已废弃的 Flutter + Rust + C++ 三层架构**（阶段1 "202 项测试"）。
-
-而实际技术路线已在 commit `d01f071`（"技术路线切换：废弃 Flutter 版，改用 .NET 10 + WPF 并采用 PCL-CE 代码"）改为 **.NET 10 + WPF**，
-`docs/DESIGN_UI_DOTNET.md` 明确写明：
+调研开始时，UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`docs/PROGRESS.md`
+**描述的仍是已废弃的 Flutter + Rust + C++ 三层架构**（阶段1 "202 项测试"），
+而实际技术路线早在 commit `d01f071`（"技术路线切换：废弃 Flutter 版，改用 .NET 10 + WPF 并采用 PCL-CE 代码"）
+就已改为 **.NET 10 + WPF**。`docs/DESIGN_UI_DOTNET.md` 写明：
 
 > 已废弃的 Flutter 版在 `$P/ui`、`$P/core`、`$P/native`，**不要碰**
 
+**⚠️ 该问题在本次调研期间已被并发任务修复**（commit `602f003`"修正文档债：README 重写，四份过期文档加作废横幅"）：
+
+- `README.md` 已重写为 .NET/WPF 现状；
+- `docs/ARCHITECTURE.md`、`docs/PROGRESS.md`、`docs/ROADMAP.md`（及 `docs/SCREENSHOT_CHECK.md`）顶部已加 **"⚠️ 本文档已作废"** 横幅。
+
 **本清单的 UMango 状态一律以 `src/UMango.Core/`、`src/UMango.App/`（活跃 .NET 栈）为准**，
 `ui/`（49 文件 / 16,979 行 Dart）、`core/`（17 文件 / 7,001 行 Rust）、`native/`（8 文件 / 1,895 行 C++）视为**废弃代码，不计入完成度**。
-凡引用这四份过期文档的结论，本清单会标注 ⚠️。
+
+> 一个值得记录的巧合：重写后的 `README.md` 第 6-10 行**独立得出了与本报告 §0 相同的合规结论** ——
+> "后端完全不含 Minecraft 逻辑。这不只是架构取向 —— 它同时承担合规功能……软件与 PCL「实质功能零重叠」
+> 是项目留在「轻度使用」的基石"。两条独立路径得到同一结论，互为旁证。
 
 ---
 
@@ -322,7 +335,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 |------|----------------------|------------|-----------|------|
 | **配置体系**（多存储后端 + 迁移 + 观察者 + 源生成器） | `App/Configuration/`（`ConfigService.cs`、`Storage/`：`JsonFileProvider`、`YamlFileProvider`、`CatIniFileProvider`、`EncryptedFileConfigStorage`、`DynamicCacheConfigStorage`、`ConfigMigration.cs` + `PCL.Core.SourceGenerators/` 5 生成器） | 否 | **部分** | UMango `src/UMango.Core/Configuration/`（6 文件 653 行）：`SettingsService.cs:15`（`SchemaVersion:18`、`Descriptors:39`、`Sections:47`）+ `SettingDescriptor.cs:25` + `JsonFileSettingsStore.cs:13`（含 `LoadRawWithMigration:79`）+ `UiSettings.cs`（10 个描述符，4 分区）。**描述符驱动的思路已具备**，但**只支持 JSON 一种后端**，无源生成器、无加密存储、无配置事件注册表 |
 | **任务中心** | `App/Tasks/`（8 文件） | 否 | **已完成** | UMango `App/Tasks/` 8 文件，**已按 Apache-2.0 逐文件采用并标注**（见 `THIRD-PARTY-NOTICES.md` §1 表格：`TaskState`/`ITask`/`ITaskProgressive`/`ITaskCancelable`/`ITaskPausable`/`ITaskGroup`/`TaskModel`/`TaskCenter`）；`TaskModel` 新增 `IsGroup`/`Children` |
-| 日志系统（分级/包装/适配器） | `Logging/`（10 文件 849 行：`Logger.cs`、`LogService.cs`、`LogLevel.cs`、`LoggerAdapter.cs`、`LoggerFactoryAdapter.cs`） | 否 | **未做** | UMango 无日志（`grep -ril Logging src/` = 0） |
+| 日志系统（分级/包装/适配器） | `Logging/`（10 文件 849 行：`Logger.cs`、`LogService.cs`、`LogLevel.cs`、`LoggerAdapter.cs`、`LoggerFactoryAdapter.cs`） | 否 | **部分（进行中）** | ⚠️ **判定在调研期间发生变化**：初判「未做」（当时 `grep -ril Logging src/` = 0）；随后并发任务新增 `src/UMango.Core/Logging/`（5 文件 426 行：`Log.cs`、`ILogSink.cs`、`FileLogSink.cs`、`MemoryLogSink.cs`、`LogModels.cs`），并已接入 `Execution/ProcessRunner.cs:73,109,113`。**截至本次核对该模块尚未提交**，故记「部分」而非「已完成」—— 尚无日志查看界面（见 P3-8） |
 | 内部事件总线 | `App/EventBus/`（`EventBusService.cs`、`EventDataBase.cs`、`IEventHandler.cs`、`IResponsibleEventHandler.cs`） | 否 | **未做** | |
 | IoC / 生命周期 | `App/IoC/`（`LifecycleService.cs`、`DependencyGroup.cs`、`LifecycleFlow.cs`、`PropertyAccessor.cs` 等） | 否 | **部分** | UMango 用 `AppServices.cs:32` 的 `Lazy<T>` 静态服务定位，**无容器、无生命周期阶段** |
 | 本地化服务 | `App/Localization/`（`Lang.cs`、`LocalizationService.cs`、`LocalizationFontService.cs` + 7 个语言 XAML） | 否 | **未做** | 见 2.A |
@@ -368,7 +381,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 | **终端集成桥（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | `Terminal/TerminalBridge.cs:22`（`For:53`、`LinesOfStep:114`、`DebugMode:50`）、`TerminalLine.cs:4` |
 | **平台能力门控（UMango 独有）** | —（PCL-CE 无对应抽象） | **否** | **已完成** | `PackageManagers/PackageModels.cs:36`（`SupportedPlatforms`）、`:44`（`Supports`）、`Platform/PlatformKind.cs`、`PlatformSupportTests.cs` |
 | **包源适配器 ×6（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | `Adapters/`：`NpmPackageManager.cs`(191)、`PnpmPackageManager.cs`(501)、`GitPackageManager.cs`(839)、`HomebrewPackageManager.cs`(734)、`ScoopPackageManager.cs`(706)、`WingetPackageManager.cs`(481) |
-| **已安装包列表（UMango 独有）** | — | **否** | **部分** | **Core 已实现并测试**（6 个适配器均有 `ListInstalledAsync`，见 `InstalledListTests.cs`），**但界面无消费方**（`grep -rn ListInstalled src/UMango.App` = 0）→ 只能算部分 |
+| **已安装包列表（UMango 独有）** | — | **否** | **已完成** | ⚠️ **判定在调研期间由「部分」升级为「已完成」**：初判时 Core 的 6 个适配器均已实现 `ListInstalledAsync`（见 `InstalledListTests.cs`）但界面无消费方；随后并发任务提交 `39f5259`（已安装包列表接入界面）补齐了另一半 —— 实测 `ViewModels/DownloadViewModel.cs:84`（`Installed` 集合）与 `:245`（调用 `ListInstalledAsync()`） |
 | **XAML 静态审计工具（UMango 独有）** | — | **否** | **已完成** | `tools/XamlAudit/`（5 文件 711 行）+ `scripts/xaml-audit.sh`；`docs/XAML_AUDIT.md` 记录了 4 类注入缺陷的验证 |
 
 ---
@@ -497,7 +510,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 
 ## 4. 非 MC 但尚未迁移的功能（按建议优先级排序）
 
-**作用域**：第 1 节统计的 **87 条非 MC 功能**中，**未做 41 条 + 部分 27 条**（部分完成的也列出，但语义是"补齐"而非"新建"）。
+**作用域**：第 1 节统计的 **87 条非 MC 功能**中，**未做 40 条 + 部分 27 条**（部分完成的也列出，但语义是"补齐"而非"新建"）。
 本节把它们归并成 **40 个可执行条目**（P0 四项 / P1 七项 / P2 二十项 / P3 九项）—— 少于 68，因为多条功能被合并为一项
 （例如整个 `Utils/Threading/` 的 6 个文件算一项，`Utils/Hash/` 的 7 个文件算一项）。
 
@@ -507,8 +520,8 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 |---|------|------|---------|------------------|-------------|
 | P0-1 | **持久化缓存服务**（SQLite + 内容寻址 + 淘汰策略） | 未做 | **中** | `IO/Storage/Cache/`（13 文件，`CacheService.cs`、`SqliteCacheStorage.cs`、`CacheEvictionService.cs`、`CachePolicy.cs`、`SchemaManager.cs`） | 否（纯 .NET）——但引入 `Microsoft.Data.Sqlite` + `SQLitePCLRaw.bundle_e_sqlite3` 两个 NuGet 包，**与"不加新依赖"约束冲突，需项目所有者裁决** |
 | P0-2 | **配置体系补齐**（多后端 + 源生成器 + 事件） | 部分（描述符驱动已有） | **中** | `App/Configuration/`（30+ 文件：`ConfigService.cs`、`Storage/` 7 种 Provider、`ConfigMigration.cs`、`ConfigObserver.cs`）+ `PCL.Core.SourceGenerators/`（5 生成器 2,039 行） | 部分（`EncryptedFileConfigStorage` 依赖 Windows DPAPI/CNG） |
-| P0-3 | **日志系统** | 未做 | **低** | `Logging/`（10 文件 849 行） | 否 |
-| P0-4 | **已安装包列表接入界面** | 部分（**Core 6 个适配器全已实现并测试，UI 未接**） | **低** | 无需迁移 —— 是 UMango 自己的 `ListInstalledAsync` + `InstalledPackage.cs` 缺 UI 消费方 | 否 |
+| P0-3 | **日志系统** | **部分（进行中）** —— 并发任务已在 `src/UMango.Core/Logging/` 落地 5 文件 426 行并接入 `ProcessRunner`，尚未提交 | **低** | `Logging/`（10 文件 849 行）—— 可对照其分级与包装设计补齐 | 否 |
+| P0-4 | **已安装包列表接入界面** | **已完成**（commit `39f5259`，`DownloadViewModel.cs:84,245`） | — | 无需迁移 —— 是 UMango 自己的能力 | 否 |
 
 ### 4.2 P1 —— 高价值、中等成本
 
@@ -663,24 +676,24 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 
 ### 5.1 总量对比
 
-| 指标 | PCL-CE（commit `ab6e2f1`） | UMango（活跃 .NET 栈，commit `2f900b1`） | 比值 |
+| 指标 | PCL-CE（commit `ab6e2f1`） | UMango（活跃 .NET 栈，commit `602f003`） | 比值 |
 |------|--------------------------:|-------------------------------------:|-----:|
-| 文件总数（不含 `.git`） | 918 | 约 **130** | 7.1× |
-| `.cs` 文件数 / 行数 | **803 / 138,447** | **102 / 16,529** | 8.4× |
-| `.xaml` 文件数 / 行数 | **100 / 24,109** | **14 / 3,330** | 7.2× |
-| C# + XAML 行数合计 | **162,556** | **19,859** | **8.2×** |
-| 测试用例数 | `PCL.Core.Test`：46 文件 / 5,280 行 / 177 个 `[TestMethod]` | `UMango.Core.Tests` 199（154 `[Fact]` + 45 条 `[InlineData]`）+ `UMango.App.Tests` 46（41 `[Fact]` + 5 条 `[InlineData]`）= **245** | — |
+| 文件总数（不含 `.git`） | 918 | 约 **136** | 6.8× |
+| `.cs` 文件数 / 行数 | **803 / 138,447** | **108 / 17,539** | 7.9× |
+| `.xaml` 文件数 / 行数 | **100 / 24,109** | **14 / 3,423** | 7.0× |
+| C# + XAML 行数合计 | **162,556** | **20,962** | **7.8×** |
+| 测试用例数 | `PCL.Core.Test`：46 文件 / 5,280 行 / 177 个 `[TestMethod]` | `UMango.Core.Tests` 199（154 `[Fact]` + 45 条 `[InlineData]`）+ `UMango.App.Tests` 52（47 `[Fact]` + 5 条 `[InlineData]`）= **251** | — |
 
 > **UMango 文件数口径**（逐目录实测，`-not -path '*/obj/*' -not -path '*/bin/*'`）：
-> `.cs` 102 = Core 52 + App 20 + Core.Tests 22 + **App.Tests 4** + XamlAudit 4；
+> `.cs` 108 = Core 57（含新增 `Logging/` 5 个）+ App 20 + Core.Tests 22 + App.Tests 4 + XamlAudit 4；
 > `.xaml` 14 全部在 `App`；另有 5 个 `.csproj` + 1 个 `Directory.Build.props` + 1 个 `UMango.slnx` + `app.manifest` 等工程文件。
 >
 > ⚠️ **本表是"某一时刻"的快照**：本次调研期间有另一个任务在**并发提交**（详见 6.2），
-> 数字取 commit `2f900b1` 时刻。若与本文件之外的数字不一致，以更新时刻为准。
+> 数字取 commit `602f003` 时刻。若与本文件之外的数字不一致，以更新时刻为准。
 >
 > ⚠️ **测试用例数是静态计数**（`grep -c '\[Fact\]'` / `\[InlineData\]`），
-> 不是运行结果。commit `2f900b1` 自述"测试 245/245（Core 199 + App 46）"，
-> 与静态计数**完全吻合**（154+45=199、41+5=46），但按任务硬性要求本次**未运行 `dotnet test`**，
+> 不是运行结果。commit `2f900b1` 自述"测试 245/245"、`39f5259` 自述"App 测试 46 → 52"，
+> 与静态计数**完全吻合**（154+45=199；47+5=52），但按任务硬性要求本次**未运行 `dotnet test`**，
 > 因此"全部通过"未经本次独立复核。
 
 ### 5.2 UMango 活跃栈内部构成（实测）
@@ -693,11 +706,12 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 | `src/UMango.Core/Install` | 4 | 446 | 执行器 + 命令构造 + 进度解析 + 步骤名 |
 | `src/UMango.Core/Animation` | 4 | 386 | 规划器 + 缓动 + 规格 + 设置 |
 | `src/UMango.Core/App/Tasks` | 8 | 228 | **采用自 PCL.Core（Apache-2.0）** |
-| `src/UMango.Core/Execution` | 3 | 177 | 进程执行 3 件套 |
+| `src/UMango.Core/Execution` | 3 | 212 | 进程执行 3 件套（已接入日志） |
 | `src/UMango.Core/Records` | 2 | 160 | 操作记录 + 存储 |
 | `src/UMango.Core/Terminal` | 2 | 132 | 终端桥 + 行模型 |
 | `src/UMango.Core/Platform` | 2 | 67 | 平台/系统信息 |
-| **`src/UMango.Core` 合计** | **53** | **7,395** | |
+| `src/UMango.Core/Logging` | 5 | 426 | **调研期间新增**（未提交）：`Log.cs`/`ILogSink.cs`/`FileLogSink.cs`/`MemoryLogSink.cs`/`LogModels.cs` |
+| **`src/UMango.Core` 合计** | **57** | **7,849** | |
 | `src/UMango.App`（Views + ViewModels + Themes + Animation + Services） | **35** | **7,848** | 6048 行在 `Views/` + `ViewModels/` 共 18 文件 |
 | `src/UMango.Core.Tests` | 23 | 3,245 | |
 | `tools/XamlAudit` | 5 | 711 | XAML 静态审计 |
@@ -741,10 +755,11 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 | | 数值 |
 |---|---:|
 | PCL-CE 的 **MC 专属**代码（第 3.1 节保守估） | **≈ 67,973 行** |
-| UMango **全部**活跃代码（C# + XAML） | **≈ 16,687 行** |
-| 比值 | **4.1×** |
+| UMango **全部**活跃代码（C# + XAML） | **≈ 20,962 行** |
+| 比值 | **3.2×** |
 
-即：**"完整迁移 PCL-CE 全部功能"意味着要写一个比现在大 4 倍以上的项目，其中一半代码在 UMango 的红线之外。**
+即：**"完整迁移 PCL-CE 全部功能"意味着项目规模要再放大 3 倍以上，而其中约一半代码落在 UMango 的红线之外** ——
+且那部分代码与项目既定的跨平台方向直接冲突（§4.5）。
 
 ---
 
@@ -826,7 +841,10 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 | 调研开始 | `git log -1` = `f060293`（"新增 XAML 静态审计工具"） |
 | 调研中 | `git status` 出现 `?? src/UMango.App.Tests/`（未跟踪，**只有 1 个 csproj**） |
 | 调研中 | `src/UMango.App.Tests/` 陆续出现 4 个测试文件（`DownloaderViewModelTests`、`OtherViewModelTests`、`SharedSettingConsistencyTests`、`ShellViewModelTests`，共 604 行），并被提交 |
-| 调研后期 | `git log -1` = **`2f900b1`**（"Core 去掉残留的 UseWPF 并改为多目标"）—— `UMango.Core` 改为 `net10.0;net10.0-windows` |
+| 调研后期 | `2f900b1`（"Core 去掉残留的 UseWPF 并改为多目标"）—— `UMango.Core` 改为 `net10.0;net10.0-windows` |
+| 调研末段 | `39f5259`（"已安装包列表接入界面"，App 测试 46 → 52）—— **本报告 P0-4 由「部分」变「已完成」** |
+| 调研末段 | `602f003`（"修正文档债：README 重写，四份过期文档加作废横幅"）—— **本报告 §1.3 指出的过期文档问题被修复**；本报告文件本身也被该 commit 一并提交 |
+| 核对结束时 | 工作区出现未跟踪的 `src/UMango.Core/Logging/`（5 文件 426 行）与 `ProcessRunner.cs` 改动 —— **本报告 P0-3 由「未做」变「部分（进行中）」** |
 
 **影响**：
 
@@ -836,6 +854,9 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
    说明其它改动都已由那个任务提交；本报告未修改任何其他文件。
 4. **`UMango.Core` 的 `net10.0` 多目标这一变化，直接改变了本报告的迁移成本结论**（§4.5），
    它是本次调研中影响最大的发现 —— 若非并发提交，本报告会漏掉这个决定性约束。
+5. **有三项判定在调研期间发生了变化**（已安装包列表 → 已完成；日志系统 → 部分进行中；过期文档 → 已修复），
+   报告已逐处标注「⚠️ 判定在调研期间发生变化」并给出新证据。
+   **这恰恰说明"功能对照清单"这类文档必须带时间戳与 commit 号** —— 否则一周后它会静默失真。
 
 ### 6.3 一条方法学教训
 

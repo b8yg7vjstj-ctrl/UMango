@@ -59,6 +59,10 @@ public static class ProcessRunner
             onLine?.Invoke(true, e.Data);
         };
 
+        // 记录调用（Debug 级）：排查"到底跑没跑、跑的什么"时这是第一手证据。
+        // 刻意**不记录输出内容** —— 输出由终端桥负责，且可能是几万行。
+        Logging.Log.Debug("CLI", $"执行 {spec.CommandLine}");
+
         try
         {
             proc.Start();
@@ -66,6 +70,7 @@ public static class ProcessRunner
         catch (Exception ex)
         {
             // 命令不存在 / 不可执行 → 归一化成 cli_missing，界面据此提示"安装 CLI"
+            Logging.Log.Error("CLI", ex, $"无法启动 {spec.Program}");
             throw new ProcessException(
                 $"无法启动 {spec.Program}：{ex.Message}", "cli_missing", ex.Message, -1);
         }
@@ -89,7 +94,7 @@ public static class ProcessRunner
         // 等待输出流排空，避免丢掉尾部内容
         try { proc.WaitForExit(2000); } catch { /* ignore */ }
 
-        return new ProcessOutput
+        var result = new ProcessOutput
         {
             ExitCode = proc.HasExited ? proc.ExitCode : -1,
             StdOut = stdout.ToString(),
@@ -97,6 +102,36 @@ public static class ProcessRunner
             TimedOut = timedOut,
             DurationMs = sw.ElapsedMilliseconds,
         };
+
+        // 结果摘要。失败的记录里带 stderr 片段 —— 真机上用户发回来的日志就靠这一段定位。
+        if (result.TimedOut)
+        {
+            Logging.Log.Warn("CLI", $"{spec.CommandLine} 超时（{result.DurationMs} ms）");
+        }
+        else if (!result.Success)
+        {
+            Logging.Log.Warn("CLI",
+                $"{spec.CommandLine} 失败（退出码 {result.ExitCode}，{result.DurationMs} ms）：{FirstLines(result.StdErr, 3)}");
+        }
+        else
+        {
+            Logging.Log.Debug("CLI", $"{spec.CommandLine} 完成（{result.DurationMs} ms）");
+        }
+
+        return result;
+    }
+
+    /// <summary>取文本的前若干非空行（日志里只放摘要，不放整份输出）。</summary>
+    private static string FirstLines(string text, int count)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "(无 stderr)";
+        var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(l => l.Trim())
+                        .Where(l => l.Length > 0)
+                        .Take(count)
+                        .ToList();
+        var joined = string.Join(" | ", lines);
+        return joined.Length > 300 ? joined[..300] + "…" : joined;
     }
 
     /// <summary>在 PATH 中查找可执行文件（包源可用性探测用）。</summary>

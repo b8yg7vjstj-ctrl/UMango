@@ -7,6 +7,8 @@ using UMango.Core.Install;
 using UMango.Core.Animation;
 using UMango.Core.Configuration;
 using UMango.Core.Download;
+using UMango.Core.Logging;
+using UMango.Core.Platform;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
@@ -46,6 +48,22 @@ public static class AppServices
     public static InstallExecutor Executor => LazyExecutor.Value;
 
     /// <summary>
+    /// 内存日志（界面"日志"页直接读它，不必解析文件）。
+    /// 由 <see cref="Initialize"/> 初始化；未初始化时为 null。
+    /// </summary>
+    public static MemoryLogSink? Logs { get; private set; }
+
+    /// <summary>文件日志（"导出日志"与"打开日志目录"用）。未初始化时为 null。</summary>
+    public static FileLogSink? LogFile { get; private set; }
+
+    /// <summary>
+    /// 日志目录（连同设置与记录文件一起放在用户配置目录下，便于一次性收集）。
+    /// </summary>
+    public static string LogDirectory { get; } = Path.Combine(
+        Path.GetDirectoryName(InstallRecordStore.DefaultStorePath) ?? ".",
+        "logs");
+
+    /// <summary>
     /// 下载引擎注册表（aria2 / eD2k / 内置 HttpClient）。
     /// 独立于包管理器适配器：下载器是通用能力，任何链接都能下，不只是安装包。
     /// </summary>
@@ -61,13 +79,48 @@ public static class AppServices
     /// </summary>
     public static string? LastError { get; private set; }
 
+    /// <summary>记录一次初始化失败（同时写日志 —— LastError 重启就没了，日志不会）。</summary>
+    internal static void ReportInitError(string what, Exception ex)
+    {
+        LastError = $"{what}：{ex.Message}";
+        Log.Error("Startup", ex, what);
+    }
+
     /// <summary>
     /// 预热服务并恢复界面设置。**幂等**，可在启动时无脑调用。
     /// 主动摸一次懒加载属性，把首次访问的代价（构造适配器、读记录文件）挪到启动阶段，
     /// 避免用户第一次切页时卡一下。
     /// </summary>
+    /// <summary>
+    /// 初始化日志。
+    ///
+    /// **必须在其它初始化之前调用** —— 否则前面那些步骤出的问题不会留下任何痕迹，
+    /// 而这正是最需要日志的地方（"启动就崩"往往发生在组合根构造期间）。
+    /// </summary>
+    private static void InitializeLogging()
+    {
+        try
+        {
+            var memory = new MemoryLogSink(capacity: 3000);
+            var file = new FileLogSink(LogDirectory);
+            Log.Initialize(memory, file);
+
+            Logs = memory;
+            LogFile = file;
+
+            Log.Info("App", $"UMango 启动；日志目录 {LogDirectory}");
+            Log.Info("App", SystemInfo.Describe());
+        }
+        catch (Exception)
+        {
+            // 日志系统起不来也必须能继续启动 —— 宁可不记日志，也不能打不开应用
+        }
+    }
+
     public static void Initialize()
     {
+        InitializeLogging();
+
         _ = Registry;
         _ = Records;
         _ = Executor;
@@ -84,7 +137,7 @@ public static class AppServices
         {
             // 某个适配器构造抛异常（例如 Windows 专有路径解析）时不让应用起不来：
             // 退化成"一个包源都没有"的空注册表，界面显示空分类列表而不是直接崩溃。
-            LastError = $"包源注册表创建失败：{ex.Message}";
+            ReportInitError("包源注册表创建失败", ex);
             return new PackageManagerRegistry(Array.Empty<IPackageManager>());
         }
     }
@@ -99,7 +152,7 @@ public static class AppServices
         catch (Exception ex)
         {
             // 连存储对象都建不起来时退到临时目录：历史记录可以丢，界面不能不显示。
-            LastError = $"记录存储创建失败：{ex.Message}";
+            ReportInitError("记录存储创建失败", ex);
             return new InstallRecordStore(Path.Combine(Path.GetTempPath(), "umango-records.json"));
         }
 
@@ -112,7 +165,7 @@ public static class AppServices
         }
         catch (Exception ex)
         {
-            LastError = $"管理记录加载失败（已按空记录继续）：{ex.Message}";
+            ReportInitError("管理记录加载失败（已按空记录继续）", ex);
         }
 
         return store;

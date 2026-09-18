@@ -176,7 +176,7 @@ public partial class MainWindow : Window
     private FrameworkElement? CurrentVisibleView()
     {
         foreach (var candidate in new FrameworkElement?[]
-                 { ViewHome, ViewDownload, ViewProgress, ViewSettings, ViewTools, ViewDownloader })
+                 { ViewHome, ViewDownload, ViewProgress, ViewSettings, ViewTools, ViewDownloader, ViewLog })
         {
             if (candidate?.Visibility == Visibility.Visible) return candidate;
         }
@@ -195,20 +195,15 @@ public partial class MainWindow : Window
     /// </summary>
     private void ApplyNavOverride()
     {
-        var downloaderSelected = _shell.CurrentTab == AppTab.Tools
-                                 && _shell.CurrentNavKey == "downloader";
+        var onTools = _shell.CurrentTab == AppTab.Tools;
+        var downloaderSelected = onTools && _shell.CurrentNavKey == "downloader";
+        var logSelected = onTools && _shell.CurrentNavKey == "logs";
 
         ViewDownloader.Visibility = VisibleIf(downloaderSelected);
+        ViewLog.Visibility = VisibleIf(logSelected);
 
-        // 选中下载器时把 ToolsView 收起，否则两个页面会叠在一起
-        if (downloaderSelected)
-        {
-            ViewTools.Visibility = Visibility.Collapsed;
-        }
-        else if (_shell.CurrentTab == AppTab.Tools)
-        {
-            ViewTools.Visibility = Visibility.Visible;
-        }
+        // 选中了这两个独立页面之一时把 ToolsView 收起，否则两层内容会叠在一起
+        ViewTools.Visibility = VisibleIf(onTools && !downloaderSelected && !logSelected);
     }
 
     // ================= 左栏菜单 =================

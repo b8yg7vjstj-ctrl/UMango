@@ -207,6 +207,8 @@
           <views:ToolsView x:Name="ViewTools" Visibility="Collapsed"/>
           <!-- 下载器：工具页左栏选「下载器」时显示（见 MainWindow.xaml.cs 的 ApplyNavOverride） -->
           <views:DownloaderView x:Name="ViewDownloader" Visibility="Collapsed"/>
+          <!-- 日志页：工具页左栏选「日志」时显示 -->
+          <views:LogView x:Name="ViewLog" Visibility="Collapsed"/>
         </Grid>
       </Grid>
     </Grid>

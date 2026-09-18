@@ -1,6 +1,7 @@
 using UMango.Core.App.Tasks;
 using UMango.Core.Execution;
 using UMango.Core.PackageManagers;
+using UMango.Core.Logging;
 using UMango.Core.Platform;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
@@ -85,6 +86,8 @@ public sealed class InstallExecutor
 
         var startedAt = DateTimeOffset.Now;
         var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        Logging.Log.Info("Install", $"开始：{title}，版本 {request.Version ?? "(最新)"}，全局 {request.Global}");
 
         // 1) 建立子项（按下载方式划分）
         // 注意：这里刻意不写 ConfigureAwait(false) —— 见类注释的线程约定
@@ -173,6 +176,7 @@ public sealed class InstallExecutor
         }
         catch (ProcessException ex)
         {
+            Logging.Log.Error("Install", ex, $"{title} 抛出 {ex.Code}");
             task.State = TaskState.Failed;
             task.StateMessage = ex.Message;
             bridge.Write(true, ex.Message);
@@ -193,6 +197,16 @@ public sealed class InstallExecutor
         AggregateWeighted(task, children);
 
         var ok = output.Success;
+        if (ok)
+        {
+            Logging.Log.Info("Install", $"{title} 完成（{output.DurationMs} ms）");
+        }
+        else
+        {
+            Logging.Log.Warn("Install",
+                $"{title} 失败（退出码 {output.ExitCode}，{output.DurationMs} ms）：{Truncate(output.StdErr, 300)}");
+        }
+
         task.State = ok ? TaskState.Success : TaskState.Failed;
         task.StateMessage = ok ? "安装完成" : $"失败（退出码 {output.ExitCode}）";
         bridge.Write(!ok, $"—— 退出码 {output.ExitCode}，耗时 {output.DurationMs} ms ——");
