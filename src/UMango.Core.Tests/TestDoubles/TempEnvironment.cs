@@ -3,7 +3,7 @@ namespace UMango.Core.Tests.TestDoubles;
 /// <summary>
 /// 把「用户配置目录」临时改到进程私有临时目录的作用域。
 ///
-/// 为什么需要它：<see cref="InstallRecordStore.StorePath"/> 是**静态只读**属性，
+/// 为什么需要它：<see cref="InstallRecordStore.DefaultStorePath"/> 是**静态只读**属性，
 /// 路径由 SystemInfo（Windows 取 %APPDATA%，macOS/Linux 取 $HOME）算出，无法注入；
 /// 而 Add() 内部会自动落盘 —— 若不重定向，测试里的临时记录会覆盖用户真实的管理记录文件。
 /// 因此这里同时改 HOME / USERPROFILE / APPDATA 三个环境变量（覆盖三大平台），
@@ -37,7 +37,7 @@ public sealed class TempHomeScope : IDisposable
     public string? RealHome { get; }
 
     /// <summary>重定向是否真的生效（记录文件确实落在临时目录下）</summary>
-    public bool IsEffective => InstallRecordStore.StorePath.StartsWith(Root, StringComparison.Ordinal);
+    public bool IsEffective => InstallRecordStore.DefaultStorePath.StartsWith(Root, StringComparison.Ordinal);
 
     public static TempHomeScope Create()
     {

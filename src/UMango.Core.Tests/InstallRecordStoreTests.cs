@@ -3,7 +3,7 @@ namespace UMango.Core.Tests;
 /// <summary>
 /// 需求 5：**InstallRecordStore 的统计与排序**。
 ///
-/// 注意 <see cref="InstallRecordStore.StorePath"/> 是静态只读属性、不支持注入路径，
+/// 注意 <see cref="InstallRecordStore.DefaultStorePath"/> 是静态只读属性、不支持注入路径，
 /// 而 Add() 内部会自动落盘 —— 因此每个用例都先用 <see cref="TempHomeScope"/> 把
 /// HOME/USERPROFILE/APPDATA 指向临时目录，并在调用 Add() **之前**校验重定向已生效
 /// （见 AssertRedirected）：万一重定向失败就直接判失败，绝不在真实用户目录上写记录文件。
@@ -28,7 +28,7 @@ public sealed class InstallRecordStoreTests
     private static void AssertRedirected(TempHomeScope home)
         => Assert.True(
             home.IsEffective,
-            $"无法把 InstallRecordStore.StorePath 重定向到临时目录（当前实际路径：{InstallRecordStore.StorePath}）；"
+            $"无法把 InstallRecordStore.DefaultStorePath 重定向到临时目录（当前实际路径：{InstallRecordStore.DefaultStorePath}）；"
             + "为避免覆盖真实用户目录里的记录文件，本用例在此终止。");
 
     [Fact]
@@ -90,7 +90,7 @@ public sealed class InstallRecordStoreTests
         var store = new InstallRecordStore();
         store.Add(Rec(PackageSourceKind.Git, DateTimeOffset.Now, true));
 
-        Assert.True(File.Exists(InstallRecordStore.StorePath), "Add 之后应自动落盘");
+        Assert.True(File.Exists(InstallRecordStore.DefaultStorePath), "Add 之后应自动落盘");
 
         var reloaded = new InstallRecordStore();
         reloaded.Load();
@@ -109,10 +109,10 @@ public sealed class InstallRecordStoreTests
         AssertRedirected(home);
 
         // 断言记录文件确实在临时目录下，且不在重定向前的真实用户目录下
-        Assert.StartsWith(home.Root, InstallRecordStore.StorePath);
+        Assert.StartsWith(home.Root, InstallRecordStore.DefaultStorePath);
         if (!string.IsNullOrEmpty(home.RealHome))
             Assert.False(
-                InstallRecordStore.StorePath.StartsWith(home.RealHome!, StringComparison.Ordinal),
+                InstallRecordStore.DefaultStorePath.StartsWith(home.RealHome!, StringComparison.Ordinal),
                 "记录文件不应写在真实用户目录下");
     }
 

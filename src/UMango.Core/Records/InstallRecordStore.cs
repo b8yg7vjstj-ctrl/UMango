@@ -27,8 +27,17 @@ public sealed class InstallRecordStore
         Converters = { new JsonStringEnumConverter() }
     };
 
-    /// <summary>记录文件路径</summary>
-    public static string StorePath
+    private readonly string? _overridePath;
+
+    /// <summary>
+    /// 构造记录存储。
+    /// <paramref name="storePath"/> 仅用于测试注入 —— 不传时用平台默认路径，
+    /// 避免单元测试往真实用户目录里写文件。
+    /// </summary>
+    public InstallRecordStore(string? storePath = null) => _overridePath = storePath;
+
+    /// <summary>记录文件路径（平台默认）</summary>
+    public static string DefaultStorePath
     {
         get
         {
@@ -38,6 +47,9 @@ public sealed class InstallRecordStore
             return Path.Combine(dir, "install-records.json");
         }
     }
+
+    /// <summary>本实例实际使用的记录文件路径。</summary>
+    public string StorePath => _overridePath ?? DefaultStorePath;
 
     /// <summary>全部记录（最近在前）</summary>
     public IReadOnlyList<InstallRecord> Records
