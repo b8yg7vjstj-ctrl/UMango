@@ -31,7 +31,7 @@ public sealed class DownloaderViewModel : INotifyPropertyChanged
 
         _session.RefreshEngines();
 
-        StartCommand = new RelayCommand(async () => await _session.StartAsync(), () => _session.CanStart);
+        StartCommand = new RelayCommand(async () => await StartAsync(), () => _session.CanStart);
         CancelCommand = new RelayCommand(_session.Cancel, () => _session.IsBusy);
         ClearTerminalCommand = new RelayCommand(() => { TerminalLines.Clear(); _session.ClearTerminal(); });
         RefreshEnginesCommand = new RelayCommand(() => { _session.RefreshEngines(); });
@@ -75,18 +75,27 @@ public sealed class DownloaderViewModel : INotifyPropertyChanged
     public ICommand ClearTerminalCommand { get; }
     public ICommand RefreshEnginesCommand { get; }
 
+    /// <summary>
+    /// 开始下载（可等待）。
+    ///
+    /// 除了给命令用，也公开出来是为了两个实际用途：
+    ///   · URL 输入框回车、或外部触发时可以直接 await 拿到结果；
+    ///   · 单元测试需要一个**可等待**的入口 —— RelayCommand 是即发即忘的，
+    ///     测试里 await 不到完成时刻，只能靠 sleep 猜，那是不可靠的做法。
+    /// </summary>
+    public Task<DownloadResult> StartAsync() => _session.StartAsync();
+
     // ---------- 线程编组 ----------
 
     /// <summary>
     /// 把动作编组到 UI 线程。
-    /// 没有 Application（例如单测环境）时直接执行 —— 无界面时也就无所谓线程亲和性。
+    ///
+    /// 复用 <see cref="Services.UiDispatch"/> 而不是自己判 Application.Current：
+    /// 那里已经有完整的容错（无头宿主下 Application.Current 直接抛异常、Dispatcher 已关闭），
+    /// 而且它把唯一的 WPF 类型引用收在一处 —— 本类因此完全不依赖 WPF，
+    /// 可以在 macOS 上被单元测试直接构造与驱动。
     /// </summary>
-    private static void OnUi(Action action)
-    {
-        var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess()) { action(); return; }
-        dispatcher.Invoke(action);
-    }
+    private static void OnUi(Action action) => Services.UiDispatch.Post(action);
 
     private void OnSessionChanged() => OnUi(() =>
     {

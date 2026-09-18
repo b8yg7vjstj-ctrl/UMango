@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    App 层（ViewModel）测试工程。
+
+    **为什么能跑在 macOS 上**：App 是 WinExe + UseWPF，直接引用它会把
+    Microsoft.WindowsDesktop.App 的框架引用传递过来，测试主机的 runtimeconfig 就会要求
+    该运行时 —— 而它只存在于 Windows，`dotnet test` 连宿主都起不来。
+    解法是关闭传递框架引用（<DisableTransitiveFrameworkReferences>），
+    于是测试主机只需 Microsoft.NETCore.App。本工程只测**不碰 WPF 类型**的 ViewModel 逻辑，
+    因此运行期也不需要 WindowsDesktop。
+
+    这条经验其实早就写在 UMango.Core.Tests.csproj 里了 —— 我先前没读到它，
+    于是错误地得出了"WPF 的 ViewModel 在 macOS 上无法测"的结论。
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <DisableTransitiveFrameworkReferences>true</DisableTransitiveFrameworkReferences>
+
+    <!--
+      MSB3277：引用一个 WPF exe 时，WindowsBase 等程序集的版本会被统一，MSBuild 会警告。
+      这里**知情并接受**：本工程只在编译期引用 UMango.dll 的类型元数据，
+      运行期不会加载任何 WPF 程序集（测的都是纯 ViewModel 逻辑）。
+      在 Windows 上跑时该统一也无害。因此降级为消息而不是压制掉真实问题。
+    -->
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UMango.App\UMango.App.csproj" />
+  </ItemGroup>
+
+</Project>

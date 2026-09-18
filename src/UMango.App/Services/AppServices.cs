@@ -227,31 +227,34 @@ public static class AppSettings
 /// <summary>
 /// 把动作切回 UI 线程。
 ///
-/// 为什么必须有：Core 的终端桥在线程池线程（CLI 的 stdout/stderr 回调）上触发
-/// <see cref="TerminalBridge.LineAppended"/>，而 WPF 的 ObservableCollection 只能在
-/// 拥有它的 UI 线程上修改，否则绑定会抛
+/// 为什么必须有：Core 的终端桥/下载会话在线程池线程（CLI 的 stdout/stderr 回调）上触发事件，
+/// 而 WPF 的 ObservableCollection 只能在拥有它的 UI 线程上修改，否则绑定会抛
 /// "This type of CollectionView does not support changes from a different thread"。
 /// 因此凡是"订阅 Core 事件 → 改界面集合"的地方，都要经过这里。
+///
+/// **★ 为什么用反射而不是直接写 System.Windows.Application.Current ★**
+/// 直接写会在**编译期**产生对 PresentationFramework/WindowsBase 的类型引用。
+/// 后果是：在没有 WPF 运行时的宿主里（macOS 上跑单元测试、设计器），
+/// 一旦这个方法被 JIT，就会抛 FileNotFoundException 而**方法体内的 try/catch 根本来不及生效** ——
+/// JIT 失败发生在方法能执行之前。实测就是这样崩的：
+///   Could not load file or assembly 'WindowsBase, Version=10.0.0.0'
+///     at UMango.App.Services.UiDispatch.Post(...)
+/// 改用反射后不存在编译期引用，取不到就退化为"直接执行"，
+/// 于是这个助手在任何宿主下都是安全的，App 层的 ViewModel 也就能在 macOS 上被单测覆盖。
 /// </summary>
 internal static class UiDispatch
 {
+    /// <summary>是否已确认过取不到 WPF 调度器（取不到就不再反复反射）。</summary>
+    private static bool _wpfUnavailable;
+
     /// <summary>已在 UI 线程则直接执行，否则投递到 Dispatcher 异步执行（调用方不等待）。</summary>
     public static void Post(Action action)
     {
-        System.Windows.Threading.Dispatcher? dispatcher = null;
-        try
-        {
-            dispatcher = System.Windows.Application.Current?.Dispatcher;
-        }
-        catch (Exception)
-        {
-            // 宿主没有 WPF（无头测试、设计器）时 Application.Current 可能直接抛（缺 WindowsBase 等）。
-            // 这里必须吞掉：本方法处在 Core 事件回调的调用栈上（CLI 的输出线程），
-            // 抛回去会让整个进程崩掉，而"少一次线程切换"远比崩溃轻。
-        }
+        var dispatcher = TryGetDispatcher();
 
-        // 没有 WPF 应用上下文时直接执行，界面集合由调用线程修改（无绑定时无害）。
-        if (dispatcher is null || dispatcher.CheckAccess())
+        // 没有 WPF 应用上下文（无头测试、设计器、macOS 开发机）时直接执行：
+        // 此时不存在"界面集合的线程亲和性"约束，直接跑是安全的。
+        if (dispatcher is null)
         {
             action();
             return;
@@ -259,13 +262,56 @@ internal static class UiDispatch
 
         try
         {
-            dispatcher.InvokeAsync(action);
+            // Dispatcher.CheckAccess / InvokeAsync 也走反射，避免引入类型引用
+            var checkAccess = dispatcher.GetType().GetMethod("CheckAccess");
+            if (checkAccess?.Invoke(dispatcher, null) is true)
+            {
+                action();
+                return;
+            }
+
+            var invokeAsync = dispatcher.GetType().GetMethod("InvokeAsync", [typeof(Action)]);
+            if (invokeAsync is not null)
+            {
+                invokeAsync.Invoke(dispatcher, [action]);
+                return;
+            }
+
+            action();   // 拿不到 InvokeAsync：退化为直接执行，至少不丢事件
         }
         catch (Exception)
         {
             // Dispatcher 已关闭（应用退出中）时投递必然失败：退化为直接执行，
             // 保证最后一个任务的收尾输出不会因为窗口正在关闭而丢掉。
             action();
+        }
+    }
+
+    /// <summary>
+    /// 反射取 WPF 的当前 Dispatcher；宿主没有 WPF 时返回 null。
+    /// 一旦确认取不到就缓存结论，避免每次回调都做一轮反射。
+    /// </summary>
+    private static object? TryGetDispatcher()
+    {
+        if (_wpfUnavailable) return null;
+
+        try
+        {
+            var appType = Type.GetType("System.Windows.Application, PresentationFramework");
+            if (appType is null) { _wpfUnavailable = true; return null; }
+
+            var current = appType.GetProperty("Current", System.Reflection.BindingFlags.Public
+                                                              | System.Reflection.BindingFlags.Static);
+            var app = current?.GetValue(null);
+            if (app is null) return null;
+
+            return app.GetType().GetProperty("Dispatcher")?.GetValue(app);
+        }
+        catch (Exception)
+        {
+            // 宿主缺 WindowsBase/PresentationFramework：记下结论，后续直接走"直接执行"路径
+            _wpfUnavailable = true;
+            return null;
         }
     }
 }
