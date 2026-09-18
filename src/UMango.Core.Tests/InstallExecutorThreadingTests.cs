@@ -119,10 +119,6 @@ public class InstallExecutorThreadingTests
             //   2) task.Children   —— **这才是真正的风险点**：它在 await PlanAsync 之后才被填充，
             //      而 WPF 对"集合变更"不会自动编组到 UI 线程（属性变更会），
             //      所以一旦 PlanAsync 那处 await 带上 ConfigureAwait(false)，这里就会在线程池线程上改集合。
-            void WatchChildren(object? sender, NotifyCollectionChangedEventArgs e)
-            {
-                if (sender is TaskModel tm) tm.Children.CollectionChanged += OnChildrenChanged;
-            }
             void OnChildrenChanged(object? s, NotifyCollectionChangedEventArgs e)
                 => mutationThreads.Add(Environment.CurrentManagedThreadId);
             void OnChanged(object? s, NotifyCollectionChangedEventArgs e)
