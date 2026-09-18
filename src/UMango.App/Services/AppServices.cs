@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Threading;
 using UMango.Core.Install;
+using UMango.Core.Animation;
 using UMango.Core.Download;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
@@ -154,6 +155,24 @@ public static class AppSettings
         }
     }
 
+    /// <summary>
+    /// 全局动画设置（唯一权威是 Core 的 <see cref="AnimationSettings"/> 实例）。
+    /// 与 DebugMode 同样处理：读写真实对象、写入时落盘，避免内存镜像与真实状态不一致。
+    /// </summary>
+    public static AnimationSettings Animation
+    {
+        get
+        {
+            EnsureLoaded();
+            return _animation;
+        }
+    }
+
+    private static readonly AnimationSettings _animation = new();
+
+    /// <summary>改完动画设置后调用，落盘。</summary>
+    public static void SaveAnimation() => Save();
+
     /// <summary>从磁盘恢复设置。幂等，供 <see cref="AppServices.Initialize"/> 调用。</summary>
     public static void Load()
     {
@@ -165,11 +184,26 @@ public static class AppSettings
             try
             {
                 if (!File.Exists(SettingsPath)) return;
-                if (JsonNode.Parse(File.ReadAllText(SettingsPath)) is JsonObject root
-                    && root["debugMode"] is JsonValue value
-                    && value.TryGetValue<bool>(out var flag))
+                if (JsonNode.Parse(File.ReadAllText(SettingsPath)) is not JsonObject root) return;
+
+                if (root["debugMode"] is JsonValue value && value.TryGetValue<bool>(out var flag))
                 {
                     TerminalBridge.DebugMode = flag;
+                }
+
+                if (root["animationEnabled"] is JsonValue ae && ae.TryGetValue<bool>(out var enabled))
+                {
+                    _animation.Enabled = enabled;
+                }
+                if (root["animationDirection"] is JsonValue ad && ad.TryGetValue<int>(out var dir)
+                    && Enum.IsDefined(typeof(AnimationDirectionMode), dir))
+                {
+                    _animation.Direction = (AnimationDirectionMode)dir;
+                }
+                if (root["animationSpeedFactor"] is JsonValue asf && asf.TryGetValue<double>(out var speed)
+                    && speed > 0)
+                {
+                    _animation.SpeedFactor = speed;
                 }
             }
             catch (Exception)
@@ -196,7 +230,13 @@ public static class AppSettings
         {
             var dir = Path.GetDirectoryName(SettingsPath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-            var node = new JsonObject { ["debugMode"] = TerminalBridge.DebugMode };
+            var node = new JsonObject
+            {
+                ["debugMode"] = TerminalBridge.DebugMode,
+                ["animationEnabled"] = _animation.Enabled,
+                ["animationDirection"] = (int)_animation.Direction,
+                ["animationSpeedFactor"] = _animation.SpeedFactor,
+            };
             File.WriteAllText(SettingsPath, node.ToJsonString(JsonOpts));
         }
         catch (Exception)

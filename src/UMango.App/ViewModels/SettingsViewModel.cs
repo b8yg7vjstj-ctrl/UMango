@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UMango.App.Services;
 using UMango.App.Themes;
+using UMango.Core.Animation;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
@@ -10,6 +11,10 @@ namespace UMango.App.ViewModels;
 
 /// <summary>设置页里一个可选项：主题族（深浅由独立开关决定）。</summary>
 public sealed record ThemeOption(ThemeKind Kind, string Title, string Description);
+
+/// <summary>动画方向选项（需求要求两种矢量都可选，所以两个都列出来）</summary>
+public sealed record AnimationDirectionOption(
+    AnimationDirectionMode Mode, string Title, string Description);
 
 /// <summary>
 /// 设置页：主题与外观（PCL 经典 / Windows 10 Fluent × 浅/深）、调试模式、记录管理。
@@ -33,6 +38,63 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private ThemeOption _selectedTheme;
+
+    /// <summary>动画方向选项：UMango 自有矢量 / 与 PCL-CE 一致</summary>
+    public IReadOnlyList<AnimationDirectionOption> AnimationDirections { get; } =
+    [
+        new AnimationDirectionOption(AnimationDirectionMode.Mirrored, "UMango 矢量（默认）",
+            "列表项垂直进入、对话框向右滑入 —— 与 PCL-CE 刻意镜像"),
+        new AnimationDirectionOption(AnimationDirectionMode.PclCompatible, "与 PCL-CE 一致",
+            "列表项水平进入、对话框向左滑入 —— 还原 PCL-CE 的观感")
+    ];
+
+    /// <summary>
+    /// 是否启用动画。刻意手写而不是 [ObservableProperty]：
+    /// 要把值写回 AppSettings（唯一权威）并落盘，不能只改一份内存副本。
+    /// </summary>
+    public bool AnimationEnabled
+    {
+        get => AppSettings.Animation.Enabled;
+        set
+        {
+            if (AppSettings.Animation.Enabled == value) return;
+            AppSettings.Animation.Enabled = value;
+            AppSettings.SaveAnimation();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>动画方向（切换后全局生效，对应需求"暴露为全局可切换设置"）</summary>
+    public AnimationDirectionOption SelectedAnimationDirection
+    {
+        get => AnimationDirections.FirstOrDefault(o => o.Mode == AppSettings.Animation.Direction)
+               ?? AnimationDirections[0];
+        set
+        {
+            if (value is null || AppSettings.Animation.Direction == value.Mode) return;
+            AppSettings.Animation.Direction = value.Mode;
+            AppSettings.SaveAnimation();
+            OnPropertyChanged();
+            AnimationDirectionChanged?.Invoke();
+        }
+    }
+
+    /// <summary>方向切换后触发，供页面重放一次动画让用户立刻看到效果</summary>
+    public event Action? AnimationDirectionChanged;
+
+    /// <summary>动画速度倍率（0.5 慢放 ~ 2.0 加速）</summary>
+    public double AnimationSpeedFactor
+    {
+        get => AppSettings.Animation.SpeedFactor;
+        set
+        {
+            var clamped = Math.Clamp(value, 0.5, 2.0);
+            if (Math.Abs(AppSettings.Animation.SpeedFactor - clamped) < 0.001) return;
+            AppSettings.Animation.SpeedFactor = clamped;
+            AppSettings.SaveAnimation();
+            OnPropertyChanged();
+        }
+    }
 
     [ObservableProperty]
     private bool _isDark;

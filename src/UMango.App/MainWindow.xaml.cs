@@ -2,7 +2,9 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using UMango.App.Animation;
 using UMango.App.ViewModels;
+using UMango.Core.Animation;
 
 namespace UMango.App;
 
@@ -150,6 +152,35 @@ public partial class MainWindow : Window
 
         // 二级导航可能仍停在"下载器"上，切完选项卡要重新裁决一次显示的是谁
         ApplyNavOverride();
+
+        // 页面切换动画：方向矢量由全局设置决定（UMango 垂直 / PCL 兼容水平）。
+        // 放在最后播，避免动画目标元素随后又被 ApplyNavOverride 隐藏掉。
+        PlayContentAnimation();
+    }
+
+    /// <summary>
+    /// 给当前可见的页面播一次入场动画。
+    /// 位移方向、时长、缓动全部来自 Core 的 AnimationPlanner ——
+    /// 这里不写任何"往哪个方向动"的判断，否则全局切换方向时会有页面漏改。
+    /// </summary>
+    private void PlayContentAnimation()
+    {
+        var visible = CurrentVisibleView();
+        if (visible is null) return;
+
+        // 关掉动画时 AnimationPlanner 会给出零时长规格，PlayEntrance 会直接复位到终态，
+        // 因此这里不需要额外判断 AppSettings.Animation.Enabled。
+        AnimationPlayer.PlayEntrance(visible, ElementMotion.PageContent);
+    }
+
+    private FrameworkElement? CurrentVisibleView()
+    {
+        foreach (var candidate in new FrameworkElement?[]
+                 { ViewHome, ViewDownload, ViewProgress, ViewSettings, ViewTools, ViewDownloader })
+        {
+            if (candidate?.Visibility == Visibility.Visible) return candidate;
+        }
+        return null;
     }
 
     private static Visibility VisibleIf(bool visible) => visible ? Visibility.Visible : Visibility.Collapsed;
