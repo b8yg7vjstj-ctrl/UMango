@@ -72,29 +72,36 @@
 
 ### 1.1 计数
 
-| 指标 | 数量 |
-|------|------|
-| **本清单收录功能条目总数** | **137** |
-| 其中 **MC 专属** | **78** |
-| 其中 **非 MC**（含"部分"归入非 MC 主体） | **55** |
-| 其中 **"部分 MC"**（机制通用、数据/语义是 MC 的） | 4（计入 MC 侧的 78 内，另单列） |
-| — 已完成 | **24** |
-| — 部分完成 | **16** |
-| — 未做 | **19** |
-| — 不适用（MC 专属，按红线不应迁移） | **78** |
+下表数字**由脚本对第 2 节全部功能表逐行统计得出**（不是估算）：
 
-> 计数口径说明：「不适用」在本清单中**专指**"MC 专属 → 按「后端剥离 MC」红线不迁移"，
-> 它不是"做完了"也不是"做不了"。MC 专属条目共 78 条，其状态一律记为「不适用」。
-> 因此 **非 MC 的 55 条**才是"完整迁移"这条需求真正的作用域：
-> 其中已完成 24、部分 16、未做 15（另 0 条因平台原因不计）。
+| 指标 | 数量 | 口径 |
+|------|------|------|
+| **本清单收录功能条目总数** | **171** | 第 2.A–2.K 共 11 张功能表的全部数据行 |
+| 其中 **MC 专属**（列值「是」） | **81** | 见第 3 节完整清单 |
+| 其中 **"部分 MC"**（列值「部分」：机制通用、数据/语义是 MC 的） | **3** | `DownloadRequestFactory`、`LoaderDownload`、`ModBase` |
+| 其中 **非 MC**（列值「否」） | **87** | ← 这是"完整迁移"需求的真实作用域 |
+| — 已完成 | **18** | 全部在非 MC 侧 |
+| — 部分完成 | **29** | 27 条非 MC + 2 条「部分 MC」 |
+| — 未做 | **42** | 41 条非 MC + 1 条「部分 MC」 |
+| — 不适用 | **82** | 81 条 MC 专属 + 1 条废弃死代码 |
+
+> **计数口径与自纠**：
+> 1. 「不适用」**专指**"按「后端剥离 MC」红线不迁移"，不是"做完了"也不是"做不了"。
+>    MC 专属的 81 条 + 「部分 MC」的 3 条 = **84 条在红线之外**，其状态一律记「不适用」或按其机制记为未做/部分。
+> 2. **本表是修正后的版本。** 本报告初稿曾写"总数 137 / MC 78 / 非 MC 55"，但 **78+55=133≠137**，
+>    内部即不自洽 —— 那是手工累加出的错。现已改为**脚本统计**（`grep` + 逐行解析 Markdown 表），
+>    并复核 `18+29+42+82 = 171`、`81+3+87 = 171` 两式均成立。
+> 3. **"完整迁移 PCL-CE 全部功能"的可迁移作用域 = 87 条非 MC 条目**，
+>    其中已完成 18、部分 27、未做 41、废弃死代码 1。
 
 ### 1.2 一句话概览
 
-- UMango 已完成的 24 项，**全部集中在"包管理业务主干 + 外壳"**上：
+- UMango 已完成的 **18** 项，**全部集中在"包管理业务主干 + 外壳"**上：
   六个包源适配器、平台门控、搜索/版本/依赖树、安装执行、任务与子项进度、终端桥、操作记录、
-  下载引擎、设置体系、主题系统、动画系统、合规声明页。这些全部有源码与测试证据（见第 2 节各行）。
-- **未做的 19 项里，体积最大、最通用的三块**是：**多语言 i18n**、**配置/日志基础设施的完整版**、**启动器自更新**。
-- **MC 专属的 78 项**占据了 PCL-CE 代码量的绝大部分（详见第 3 节），但按红线与许可证都不应迁入。
+  下载引擎、设置体系、主题系统、动画系统、合规声明页。全部有源码证据（见第 2 节各行）。
+- **未做的 42 项里，体积最大、最通用的三块**是：**多语言 i18n**、**启动器自更新**、**HTTP 客户端扩展层与持久化缓存**。
+- **MC 专属的 81 项**（+3 条部分 MC）占据了 PCL-CE 代码量的约一半（第 3 节），
+  但按红线与许可证**都不应迁入** —— 且第 4.1 节给出了比"红线"更硬的技术理由（`net10.0` 编译期闸门）。
 
 ### 1.3 一个必须先纠正的文档问题
 
@@ -134,7 +141,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 | 任务管理页面 | `FormMain.xaml.cs:1391`（`PageType.TaskManager = 6`） | 否 | **已完成** | `Views/ProgressView.xaml`（620 行）+ `ViewModels/ProgressViewModel.cs`（334 行）；能力**强于** PCL-CE（子项进度 + 内联终端） |
 | 日志查看页 | `Pages/PageLogLeft.xaml.cs`、`Pages/PageLogRight.xaml.cs` | 否 | **未做** | UMango 全库无日志系统（`grep -ril Logging` = 0）；只有内存态 `TerminalBridge` |
 | 实例选择副页面 | `FormMain.xaml.cs:1386`（`InstanceSelect = 5`） | 是 | **不适用** | 选择 MC 实例 |
-| 主页新闻（官网公告） | `Pages/PageHomepage/PageHomepageNewsView.xaml.cs` + `PCL.Core/Model/Homepage/News/`（3 文件 58 行）+ `PCL.Core/ViewModel/Homepage/NewsViewModel.cs`（114 行） | 否 | **未做** | 机制通用，但**数据源是 PCL 官网 API**，对 UMango 无意义（需换成自己的源） |
+| 主页新闻（Minecraft 官方资讯流） | `Pages/PageHomepage/PageHomepageNewsView.xaml.cs` + `PCL.Core/Model/Homepage/News/`（3 文件 58 行）+ `PCL.Core/ViewModel/Homepage/NewsViewModel.cs`（114 行） | **是** | **不适用** | ⚠️ **本表首轮曾把它判为"非 MC"并说数据源是"PCL 官网 API"，两处都错**。实测 `NewsViewModel.cs:16`：`BaseApiUrl = "https://net-secondary.web.minecraft-services.net/api/v1.0/zh-cn/search"`，并在 `:20-22` 用 `minecraft.net` / `minecraft-services.net` / `microsoft.com` 做链接白名单 —— 它拉的是 **Minecraft 官方资讯**，**是 MC 专属** |
 | 音乐播放器 | `Modules/ModMusic.cs:11`（472 行，NAudio `WaveOutEvent`） | 否 | **未做** | PCL-CE 内置播放器（`MusicControlPause:282`、`MusicControlNext:312`） |
 | 视频/动态背景 | `Modules/ModVideoBack.cs:3`（172 行） | 否 | **未做** | 依赖 WPF MediaElement + 游戏中状态判定（`IsGaming:7`） |
 | 内嵌 WebServer | `Modules/ModWebServer.cs:10`（345 行） | 部分 | **未做** | `StartWebServer:20` / `NaidCallbackServer:112`；是个通用 HTTP 服务器，但 PCL-CE 用它接 **MC 登录 OAuth 回调** |
@@ -322,7 +329,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 | 哈希存储 | `IO/Storage/HashStorage.cs` | 否 | **未做** | |
 | 文件/目录抽象与字节流 | `IO/Files.cs`、`Directories.cs`、`ByteStream.cs` | 否 | **部分** | UMango `IO/` 有 2 个文件，未细核 |
 | 进程间管道通信 | `IO/PipeComm.cs` | 否 | **未做** | |
-| 下载抽象（NDlFactory 等） | `IO/Download/`（8 文件：`NDlFactory.cs`、`IDlConnection.cs`、`IDlResourceMapping.cs`、`IDlWriter.cs`、`NDlSourceReport.cs`） | 否 | **部分** | UMango `Download/IDownloadEngine.cs` 是**独立设计的等价抽象**（见 2.H 第一行） |
+| 下载抽象（NDlFactory 等） | `IO/Download/`（**6 文件**：`NDlFactory.cs`、`IDlConnection.cs`、`IDlResourceMapping.cs`、`IDlWriter.cs`、`NDlConnectionInfo.cs`、`NDlSourceReport.cs`） | 否 | **不适用（死代码）** | ⚠️ **本表首轮把它列为可迁移项，是错的**。实测：`NDlFactory`/`IDlConnection`/`IDlWriter`/`IDlResourceMapping`/`NDlSourceReport` 在 `IO/Download/` 之外的引用数为 **0** —— **没有任何实现、没有任何调用点**，是废弃骨架。**不应列为迁移项** |
 | 验证器族 | `Utils/Validate/`（12 个 Validator + FluentValidation） | 否 | **部分** | UMango 仅在 `Configuration/` 内有 `SettingDescriptor.Validate()`；**未引入 FluentValidation**（遵守"不加新 NuGet 依赖"约束） |
 | 哈希算法族 | `Utils/Hash/`（MD5/SHA1/SHA256/SHA512/MurmurHash2 + `HashCache.cs`） | 否 | **未做** | UMango `Hash` 关键字命中仅 4 处 `HashSet`（**误命中**） |
 | 加密算法族 | `Utils/Encryption/`（AES-CBC/GCM、ChaCha20-Poly1305 + 纯软件实现） | 否 | **未做** | |
@@ -357,7 +364,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 
 ## 3. MC 专属功能的完整清单（供决策"是否迁移"）
 
-**合计：78 个功能条目**。按 PCL-CE 目录边界统计其**实际体积**如下表。
+**合计：81 个 MC 专属条目（另 3 条「部分 MC」）**。按 PCL-CE 目录边界统计其**实际体积**如下表。
 
 ### 3.1 MC 专属代码的体积（实测）
 
@@ -382,7 +389,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
    即：即使把"全部非 MC 功能"都迁移完，也**只是迁移了 PCL-CE 的一半代码量**。
 
 2. **"迁移 MC 功能"与"后端剥离 MC 逻辑"物理上不可兼得**：
-   本清单中 MC 专属条目 **78/137 = 57%**，且这些功能**没有"去掉 MC 部分"的版本** ——
+   本清单中 MC 侧条目（81 专属 + 3 部分）**84/171 = 49%**，且这些功能**没有"去掉 MC 部分"的版本** ——
    例如"MC 启动管线"剥离 MC 后不剩任何东西；"Java 扫描"剥离 MC 后只是"扫描 PE 文件"，
    那已不是同一个功能。
 
@@ -394,12 +401,14 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
    `PCL.Core/Minecraft/`（6,800 行）与 `PCL.Core/Link/`（5,018 行）**是 Apache-2.0**，
    采用它们**不触发**自定义许可义务 —— 这是唯一可以"部分迁移 MC 能力"的合法缝隙。
 
-4. **4 个"部分 MC"条目**（机制通用、数据是 MC 的），它们**不是**可以简单迁移的：
+4. **3 个"部分 MC"条目**（机制通用、数据是 MC 的），它们**不是**可以简单迁移的：
    `Modules/Network/Downloader/DownloadRequestFactory.cs`、`Modules/Network/Loaders/LoaderDownload.cs`、
-   `Modules/Base/ModBase.cs`、`Modules/ModWebServer.cs`。
+   `Modules/Base/ModBase.cs`。
    迁移它们需要重写其中的 MC 镜像源与目录约定。
+   （初稿曾把 `Modules/ModWebServer.cs` 也算进来，共 4 个；复核后改判为**否** ——
+   它是通用 HTTP 服务器，MC 登录回调只是其用法之一，见 2.A 表。）
 
-### 3.3 明确建议：**不迁移**这 78 项
+### 3.3 明确建议：**不迁移**这 84 项（81 条 MC 专属 + 3 条部分 MC）
 
 理由按强度排序：
 
@@ -477,7 +486,9 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 
 ## 4. 非 MC 但尚未迁移的功能（按建议优先级排序）
 
-**作用域**：第 1 节统计的 55 条非 MC 功能中，**未做 15 条 + 部分 16 条**（部分完成的也列出，但标注"补齐"而非"新建"）。
+**作用域**：第 1 节统计的 **87 条非 MC 功能**中，**未做 41 条 + 部分 27 条**（部分完成的也列出，但语义是"补齐"而非"新建"）。
+本节把它们归并成可执行条目 —— **条目数少于 68**，因为多条功能被合并为一项
+（例如整个 `Utils/Threading/` 的 6 个文件算一项，`Utils/Hash/` 的 7 个文件算一项）。
 
 ### P0 —— 高价值、低风险、UMango 已具备落点
 
@@ -552,14 +563,43 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 | **`Plain Craft Launcher 2/Modules/`（92 文件）** | **13 处 `DllImport` + 3 处 `Registry.`**，全部集中在 `ModMain.cs` | `ModMain.cs:912`（`Registry.CurrentUser.OpenSubKey`）、`:923`（`CreateSubKey`）、`:930`（`SetValue`）；用于写"显卡高性能"偏好 |
 | **`PCL.Core/`（544 文件）** | `UI/` 129 文件中 40 个用 WPF 类型；`Utils/` 92 文件中 6 个 `DllImport` + 3 个 Win32/WinRT | 见 5.3；`Minecraft/` 108 文件**零 WPF 命中**（纯逻辑，但 TFM 仍是 Windows） |
 
-**一个对迁移有利的事实**：`PCL.Core.csproj` 的 TFM 是 `net10.0-windows` 且 `UseWPF=true`，
-而 UMango 的 `src/Directory.Build.props` 同样是 **`net10.0-windows` + `EnableWindowsTargeting=true`**。
-**两者 TFM 完全一致** —— 采用 PCL.Core 的代码不会有目标框架摩擦。
-但要注意 PCL.Core 拖进的 NuGet 依赖很重（`Sentry`、`LiteDB`、`Microsoft.Data.Sqlite`、
+**⚠️ 一个决定性的发现（比"Windows 依赖"更硬）**：调查过程中 UMango 落地了 commit `2f900b1`
+（"Core 去掉残留的 UseWPF 并改为多目标：平台中立从'声明'变成'编译期证明'"），把 `UMango.Core` 改成：
+
+```xml
+<TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>   <!-- 刻意不设 UseWPF -->
+```
+
+而 `PCL.Core.csproj` 是：
+
+```xml
+<TargetFramework>net10.0-windows</TargetFramework>
+<UseWPF>true</UseWPF>
+```
+
+**两者不再"TFM 一致"，而是被一道编译期闸门隔开**：
+
+- `net10.0` 这一支的存在，按该 commit 的原文，是"**一旦有人往 Core 里塞 `System.Windows` / `Registry` /
+  `DllImport(win32)` 之类，net10.0 这一支立刻编译失败**"——即它是一道**主动设置的反退化闸门**。
+- 因此 **PCL.Core 的代码无法进入 `UMango.Core` 的 `net10.0` 分支**：
+  即便某个文件本身"零 WPF 命中"（如 `Minecraft/` 108 文件），只要它 `using System.Windows` 就编不过；
+  而 `PCL.Core` 是**程序集级** `UseWPF=true` + `net10.0-windows`，直接 `ProjectReference` 会传递
+  `Microsoft.WindowsDesktop.App` 引用，把 Core 重新绑回 Windows。
+- **可行的方式只有"逐文件复制、不要工程引用"，且复制进来的文件必须真的零 Windows 依赖。**
+  这正是"迁移成本"里最容易被低估的一项：**它不是抄代码，而是逐文件做平台中立性审查。**
+
+**这同时回答了"红线为什么存在"**：`README.md` 第 3 行写"**跨平台**包管理器图形界面"，
+commit `2f900b1` 提到目标是"**Avalonia 跨平台重建**"。
+所以「后端完全剥离 MC 逻辑」的真实动因**不只是产品定位，更是跨平台** ——
+PCL-CE 是 **Windows 专用 WPF** 应用（`net10.0-windows` + `UseWPF`），
+把它的任何 UI/MC 层搬进来，都会把 UMango 从"将来能跑在 macOS/Linux"退回到"只能跑 Windows"。
+
+**NuGet 依赖的二次冲突**：PCL.Core 拖进的包很重（`Sentry`、`LiteDB`、`Microsoft.Data.Sqlite`、
 `SQLitePCLRaw.bundle_e_sqlite3`、`fNbt`、`Stun.Net`、`Polly`、`FluentValidation`、`SharpZipLib`、
 `YamlDotNet`、`Ae.Dns.Client`、`PlainToolkit.CngProtectedData` 等），
-与 `docs/DESIGN_UI_DOTNET.md` 第 0 节第 3 条「**不得引入新的 NuGet 依赖**」直接冲突 ——
-**采用 PCL.Core 的任何一块，都要先由项目所有者重新裁决这条约束。**
+与 `docs/DESIGN_UI_DOTNET.md` 第 0 节第 3 条「**不得引入新的 NuGet 依赖**」冲突。
+UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
+**采用 PCL.Core 的任何一块，都要先由项目所有者重新裁决这条约束，并逐个检查该依赖是否支持 `net10.0`（非 Windows）。**
 
 ---
 
@@ -567,17 +607,25 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 
 ### 5.1 总量对比
 
-| 指标 | PCL-CE（commit `ab6e2f1`） | UMango（活跃 .NET 栈） | 比值 |
-|------|--------------------------:|---------------------:|-----:|
-| 文件总数（不含 `.git`） | 918 | **126** | 7.3× |
-| `.cs` 文件数 / 行数 | **803 / 138,447** | **111 / 11,347** | 12.2× |
-| `.xaml` 文件数 / 行数 | **100 / 24,109** | **15 / 5,340** | 4.5× |
-| C# + XAML 行数合计 | **162,556** | **16,687** | **9.7×** |
-| 测试工程 | `PCL.Core.Test`：46 文件 / 5,280 行 / 177 个 `[TestMethod]` | `UMango.Core.Tests`：23 文件 / 3,245 行 / **154 `[Fact]` + 9 `[Theory]`（含 45 条 `[InlineData]`）** | — |
+| 指标 | PCL-CE（commit `ab6e2f1`） | UMango（活跃 .NET 栈，commit `2f900b1`） | 比值 |
+|------|--------------------------:|-------------------------------------:|-----:|
+| 文件总数（不含 `.git`） | 918 | 约 **130** | 7.1× |
+| `.cs` 文件数 / 行数 | **803 / 138,447** | **102 / 16,529** | 8.4× |
+| `.xaml` 文件数 / 行数 | **100 / 24,109** | **14 / 3,330** | 7.2× |
+| C# + XAML 行数合计 | **162,556** | **19,859** | **8.2×** |
+| 测试用例数 | `PCL.Core.Test`：46 文件 / 5,280 行 / 177 个 `[TestMethod]` | `UMango.Core.Tests` 199（154 `[Fact]` + 45 条 `[InlineData]`）+ `UMango.App.Tests` 46（41 `[Fact]` + 5 条 `[InlineData]`）= **245** | — |
 
-> **UMango 文件数口径**：`src/UMango.Core`(53) + `src/UMango.App`(35) + `src/UMango.Core.Tests`(23) + `tools/XamlAudit`(5) = 116；
-> 计入 `src/Directory.Build.props`、`src/UMango.slnx` 等工程文件与 `src/UMango.App.Tests/`（**未跟踪，仅 1 个 csproj**）共约 126。
-> 另：`src/UMango.App.Tests/` 出现在 `UMango.slnx` 中且 `git status` 显示为**新增未提交**，`App.Tests` 的测试文件**尚未编写**。
+> **UMango 文件数口径**（逐目录实测，`-not -path '*/obj/*' -not -path '*/bin/*'`）：
+> `.cs` 102 = Core 52 + App 20 + Core.Tests 22 + **App.Tests 4** + XamlAudit 4；
+> `.xaml` 14 全部在 `App`；另有 5 个 `.csproj` + 1 个 `Directory.Build.props` + 1 个 `UMango.slnx` + `app.manifest` 等工程文件。
+>
+> ⚠️ **本表是"某一时刻"的快照**：本次调研期间有另一个任务在**并发提交**（详见 6.2），
+> 数字取 commit `2f900b1` 时刻。若与本文件之外的数字不一致，以更新时刻为准。
+>
+> ⚠️ **测试用例数是静态计数**（`grep -c '\[Fact\]'` / `\[InlineData\]`），
+> 不是运行结果。commit `2f900b1` 自述"测试 245/245（Core 199 + App 46）"，
+> 与静态计数**完全吻合**（154+45=199、41+5=46），但按任务硬性要求本次**未运行 `dotnet test`**，
+> 因此"全部通过"未经本次独立复核。
 
 ### 5.2 UMango 活跃栈内部构成（实测）
 
@@ -673,6 +721,33 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 10. **UMango 的 154 个 `[Fact]` / 9 个 `[Theory]`（45 条 `[InlineData]`）是静态计数**，
     不是测试运行结果 —— 按任务硬性要求，本次**未运行 `dotnet test`**（避免与主控进程争锁）。
     因此"测试通过"这一结论**未经本次复核**，仅有源码与文档自述。
+11. **`Plain Craft Launcher 2/Pages/PageHomepage/PageHomepageNewsView` 的逻辑部分在 `PCL.Core` 内**，
+    本目录只有视图；其完整行为未在本次确认（不影响"未做"的判定）。
+12. **`Pages/PageTools/PageToolsTest.xaml` 引用的服务器查询控件在本目录无 code-behind**，
+    该控件的实现位置未确认。
+13. **`Modules/Network/Facade/ModNet.cs` 的 `NetTaskSpeedLimitLow/High` 在 `Modules/` 范围内无消费点**，
+    推测由 `PCL.Core` 的下载实现读取；本次未追到消费方。
+14. **`Modules/Minecraft/CrashAnalysis/Detection/CrashStackAnalyzer.cs` 是 `partial` 类**，
+    其另一半不在 `Modules/` 范围内，本次未定位（因此 3.5 表对该文件的行数记为"—"）。
+
+### 6.1 关于本次调研方法的说明
+
+`Pages/`、`Modules/`、`PCL.Core/` 三个范围的逐文件普查由三个并行子任务完成，
+主控（本报告作者）独立完成了：UMango 侧全部源码判定、两棵源码树的规模实测、
+导航枚举（`PageType`/`PageSubType`）的权威索引提取、许可证原文核验，以及 §3.4–3.6 的交叉验证。
+
+**子任务结论的抽检**：主控对子任务给出的 6 处关键断言做了原始文件复核（`sed -n` 打印上下文），
+**全部命中、无一虚构**：
+`PageInstanceLeft.xaml.cs:201` 的 `PageGet` switch、
+`PageSetupLauncherMisc.xaml.cs:291-298` 的 `cmd.exe` 自删、
+`FileDownloader.cs:216` 的 CurseForge host 特判、
+`RequestSigning.cs:25-28` 的 API Key 注入、
+`ModMain.cs:912/923/930` 的注册表写入、
+`CrashLogCollector.cs:35` 与 `CrashReportExporter.cs:17-21` 的 MC 硬编码。
+
+**主控自身的一处错误已修正**：首轮统计 `Modules/UI` 时使用了 `-maxdepth 1`，
+漏掉子目录 `Theme/ThemeManager.cs`，得到"2 文件 / 113 行"；
+实测应为 **3 文件 / 244 行**，`ThemeManager.cs` 为 131 行。报告中相关两处已改正。
 
 ---
 

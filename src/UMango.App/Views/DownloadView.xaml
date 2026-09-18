@@ -44,6 +44,7 @@
     <views:CategorySelectedConverter x:Key="CategorySelected"/>
     <!-- 非空字符串 → Visible：用于错误条/建议/摘要/验证说明的可选显示 -->
     <views:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis"/>
+    <views:JoinToTextConverter x:Key="JoinToText"/>
     <!-- 空集合 → Visible：左栏"一个包源都没探测到"时的提示 -->
     <views:EmptyCollectionToVisibilityConverter x:Key="EmptyToVis"/>
     <!-- 元信息文案：版本/许可证/下载量（下载量无数据时必须写"暂无数据"） -->
@@ -527,14 +528,37 @@
         </Grid>
       </Border>
 
-      <!-- 中性提示（搜索到几条、安装完成等） -->
-      <TextBlock Grid.Row="3" Margin="0,10,0,0" FontSize="11" TextWrapping="Wrap"
-                 Text="{Binding StatusMessage}"
-                 Foreground="{DynamicResource BrG2}"
-                 Visibility="{Binding StatusMessage, Converter={StaticResource NotEmptyToVis}}"/>
+      <!-- 状态行：左侧是中性提示（搜索到几条、安装完成等），右侧是视图模式开关。
+           开关放在这里而不是另起一行：右栏的行都用满了，插行要整体改 Grid.Row 索引、容易错位。 -->
+      <Grid Grid.Row="3" Margin="0,10,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
 
-      <!-- 结果列表 -->
+        <TextBlock Grid.Column="0" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
+                   Text="{Binding StatusMessage}"
+                   Foreground="{DynamicResource BrG2}"
+                   Visibility="{Binding StatusMessage, Converter={StaticResource NotEmptyToVis}}"/>
+
+        <!-- 视图模式：搜索结果 ↔ 已安装。
+             需求「应用列表读取参考 UnigetUI」在 Core 侧早已实现并有测试，
+             此前缺的就是这里的入口。 -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <Button Content="搜索结果" Height="24" Padding="10,0" FontSize="11"
+                  Style="{DynamicResource DownloadSecondaryButton}"
+                  Command="{Binding ShowSearchResultsCommand}"
+                  ToolTip="显示当前包源的搜索结果"/>
+          <Button Content="已安装" Height="24" Padding="10,0" FontSize="11" Margin="6,0,0,0"
+                  Style="{DynamicResource DownloadSecondaryButton}"
+                  Command="{Binding ShowInstalledCommand}"
+                  ToolTip="读取当前包源已安装的包（Git 源读的是本地仓库）"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- 结果列表（仅搜索结果模式） -->
       <ScrollViewer Grid.Row="4" Margin="0,12,0,0" Focusable="False"
+                    Visibility="{Binding ShowResultsPane, Converter={StaticResource BoolToVis}}"
                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <ItemsControl ItemsSource="{Binding Results}"
                       ItemTemplate="{DynamicResource PackageResultItemTemplate}">
@@ -554,6 +578,75 @@
         <TextBlock Text="换一个关键词，或在左栏切换其它包源后再搜一次。" FontSize="11" Margin="0,4,0,0"
                    Foreground="{DynamicResource BrG4}" HorizontalAlignment="Center"/>
       </StackPanel>
+
+      <!-- ===== 已安装列表（仅已安装模式） =====
+           各包管理器的"已安装"语义不同，标题与空态文案由 ViewModel 的 InstalledSummary 区分：
+           npm/pnpm 是全局包、Homebrew 是 formula（可能多版本）、**git 是本地仓库**。 -->
+      <ScrollViewer Grid.Row="4" Margin="0,12,0,0" Focusable="False"
+                    Visibility="{Binding ShowInstalledPane, Converter={StaticResource BoolToVis}}"
+                    VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Installed}">
+          <ItemsControl.ItemContainerStyle>
+            <Style TargetType="ContentPresenter">
+              <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            </Style>
+          </ItemsControl.ItemContainerStyle>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Style="{DynamicResource PclCard}" Padding="12,10" Margin="0,0,0,8">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis"/>
+                    <!-- 安装位置（拿不到就整行收起，不留空行） -->
+                    <TextBlock Text="{Binding InstallPath}" FontSize="11" Margin="0,3,0,0"
+                               Foreground="{DynamicResource BrG4}" TextTrimming="CharacterEllipsis"
+                               Visibility="{Binding InstallPath, Converter={StaticResource NotEmptyToVis}}"/>
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Version}" FontSize="12"
+                               Foreground="{DynamicResource BrG3}"
+                               Visibility="{Binding Version, Converter={StaticResource NotEmptyToVis}}"/>
+                    <!-- 同包多版本（Homebrew 实测会出现 brotli 1.1.0 1.2.0） -->
+                    <TextBlock Text="{Binding OtherVersions, Converter={StaticResource JoinToText}}"
+                               FontSize="11" Margin="8,0,0,0"
+                               Foreground="{DynamicResource BrG4}" VerticalAlignment="Center"
+                               Visibility="{Binding OtherVersions, Converter={StaticResource NotEmptyToVis}}"/>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- 已安装模式的空态：说明为什么是空的（而不是留一片白） -->
+      <TextBlock Grid.Row="4" Margin="0,40,0,0" FontSize="12" TextWrapping="Wrap"
+                 HorizontalAlignment="Center" VerticalAlignment="Top" TextAlignment="Center"
+                 Foreground="{DynamicResource BrG3}"
+                 Text="{Binding InstalledSummary}">
+        <TextBlock.Style>
+          <Style TargetType="TextBlock">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+              <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                  <Condition Binding="{Binding ShowInstalledPane}" Value="True"/>
+                  <Condition Binding="{Binding Installed.Count}" Value="0"/>
+                  <Condition Binding="{Binding IsBusy}" Value="False"/>
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Visibility" Value="Visible"/>
+              </MultiDataTrigger>
+            </Style.Triggers>
+          </Style>
+        </TextBlock.Style>
+      </TextBlock>
 
       <!-- 初始提示：还没搜过（否则右栏一片空白） -->
       <StackPanel x:Name="IdleHint" Grid.Row="4" Margin="0,40,0,0"

@@ -143,14 +143,19 @@ public partial class DownloadView : UserControl
     {
         var noResults = ViewModel.Results.Count == 0;
 
-        EmptyState.Visibility = noResults
+        // 这两个空态只属于"搜索结果"模式：切到已安装列表后必须收起，
+        // 否则会出现"已安装列表是空的，却叠着『没有找到匹配的包』"的错位提示。
+        var searchMode = !ViewModel.IsInstalledMode;
+
+        EmptyState.Visibility = searchMode
+                                && noResults
                                 && _searchAttempted
                                 && !ViewModel.IsBusy
                                 && string.IsNullOrWhiteSpace(ViewModel.ErrorMessage)
             ? Visibility.Visible
             : Visibility.Collapsed;
 
-        IdleHint.Visibility = noResults && !_searchAttempted
+        IdleHint.Visibility = searchMode && noResults && !_searchAttempted
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
@@ -183,8 +188,56 @@ public sealed class CategorySelectedConverter : IMultiValueConverter
 /// <summary>非空字符串 → Visible；空串/null → Collapsed（用于可选文案行）。</summary>
 public sealed class NotEmptyToVisibilityConverter : IValueConverter
 {
+    /// <summary>
+    /// 非空 → Visible。
+    ///
+    /// **同时支持字符串与集合**：原先只判 `value as string`，于是绑到集合（例如
+    /// Homebrew 同一 formula 的其它版本 OtherVersions）时**永远返回 Collapsed** ——
+    /// 表现为"那段信息静默不显示"，既不报错也看不出来。这是扩展的原因。
+    /// </summary>
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => string.IsNullOrWhiteSpace(value as string) ? Visibility.Collapsed : Visibility.Visible;
+    {
+        switch (value)
+        {
+            case null:
+                return Visibility.Collapsed;
+            case string text:
+                return string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
+            case System.Collections.IEnumerable items:
+                // 只判断"有没有元素"，不物化整个序列（可能很大）
+                return items.GetEnumerator().MoveNext() ? Visibility.Visible : Visibility.Collapsed;
+            default:
+                return Visibility.Visible;
+        }
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException("只用于单向显示。");
+}
+
+/// <summary>
+/// 字符串集合 → 一行文本（用于"同包的其它版本"这类展示）。
+///
+/// 存在的理由：Homebrew 实测可能同时装了多个版本（<c>brew list --versions</c> 输出
+/// <c>brotli 1.1.0 1.2.0</c>），Core 侧把它们收进 OtherVersions，
+/// 界面需要把这一串渲染出来而不是只显示第一个。
+/// 前缀用"其它版本："而不是裸列表 —— 否则界面上会出现两个相邻的、语义不明的版本号。
+/// </summary>
+public sealed class JoinToTextConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not System.Collections.IEnumerable items || value is string)
+            return "";
+
+        var parts = new List<string>();
+        foreach (var item in items)
+        {
+            if (item?.ToString() is { Length: > 0 } text) parts.Add(text);
+        }
+
+        return parts.Count == 0 ? "" : "其它版本：" + string.Join(" / ", parts);
+    }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException("只用于单向显示。");

@@ -184,3 +184,99 @@ public class OtherViewModelTests
         Assert.Contains(AppTab.Progress, Enum.GetValues<AppTab>());
     }
 }
+
+/// <summary>
+/// 已安装列表接入界面的测试（需求 P0-4：Core 侧早已实现，此前缺界面消费方）。
+/// </summary>
+public class InstalledListUiTests
+{
+    [Fact]
+    public async Task 默认是搜索结果模式()
+    {
+        var vm = new DownloadViewModel();
+        Assert.False(vm.IsInstalledMode);
+        Assert.True(vm.ShowResultsPane);
+        Assert.False(vm.ShowInstalledPane);
+        Assert.Equal("搜索结果", vm.ModeTitle);
+        await Task.CompletedTask;
+    }
+
+    [Fact]
+    public void 切到已安装模式后派生状态一起变()
+    {
+        var vm = new DownloadViewModel();
+        var changed = new List<string>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName ?? "");
+
+        vm.IsInstalledMode = true;
+
+        // 这几个派生属性必须一起通知，否则会出现"列表切了、标题还停在另一种模式"的错位
+        Assert.Contains(nameof(vm.ModeTitle), changed);
+        Assert.Contains(nameof(vm.ShowResultsPane), changed);
+        Assert.Contains(nameof(vm.ShowInstalledPane), changed);
+        Assert.Contains(nameof(vm.InstalledSummary), changed);
+
+        Assert.Equal("已安装", vm.ModeTitle);
+        Assert.True(vm.ShowInstalledPane);
+    }
+
+    [Fact]
+    public void 模式切换命令可用()
+    {
+        var vm = new DownloadViewModel();
+        vm.ShowInstalledCommand.Execute(null);
+        Assert.True(vm.IsInstalledMode);
+        vm.ShowSearchResultsCommand.Execute(null);
+        Assert.False(vm.IsInstalledMode);
+    }
+
+    [Fact]
+    public async Task 能读取本机已安装的包_真机()
+    {
+        var vm = new DownloadViewModel();
+        await vm.InitializeAsync();
+
+        // 选一个本机确定可用的包源（Homebrew 或 npm，至少有一个）
+        var category = vm.VisibleCategories
+            .FirstOrDefault(c => c.Kind == UMango.Core.PackageManagers.PackageSourceKind.Homebrew)
+            ?? vm.VisibleCategories.FirstOrDefault(c => c.Kind == UMango.Core.PackageManagers.PackageSourceKind.Npm);
+
+        if (category is null) return;   // 本机都没有就跳过（不静默通过，下面会断言摘要非空）
+
+        vm.SelectedCategory = category;
+        vm.IsInstalledMode = true;
+        await vm.ReloadInstalledCommand.ExecuteAsync(null);
+
+        // 真机上这两个包源都有已安装的包（npm 自身 / 本机 153 个 formula）
+        Assert.NotEmpty(vm.Installed);
+        Assert.All(vm.Installed, p => Assert.False(string.IsNullOrWhiteSpace(p.Name)));
+        Assert.Contains("共 ", vm.InstalledSummary);
+    }
+
+    [Fact]
+    public async Task 不可用包源的已安装列表给出可操作说明而不是空列表()
+    {
+        var vm = new DownloadViewModel();
+        await vm.InitializeAsync();
+
+        // 打开"显示不支持的包源"，在 macOS 上能找到 winget/scoop
+        vm.ShowUnsupported = true;
+        var unsupported = vm.VisibleCategories.FirstOrDefault(c => !c.Available);
+        if (unsupported is null) return;   // Windows 上跳过
+
+        vm.SelectedCategory = unsupported;
+        vm.IsInstalledMode = true;
+        await vm.ReloadInstalledCommand.ExecuteAsync(null);
+
+        Assert.Empty(vm.Installed);
+        // 必须告诉用户为什么空、以及怎么办 —— 只留一片白是最差的处理
+        Assert.False(string.IsNullOrWhiteSpace(vm.ErrorMessage) && string.IsNullOrWhiteSpace(vm.ErrorAdvice));
+    }
+
+    [Fact]
+    public void 没选包源时已安装摘要不崩()
+    {
+        var vm = new DownloadViewModel();
+        Assert.False(string.IsNullOrWhiteSpace(vm.InstalledSummary));
+    }
+}

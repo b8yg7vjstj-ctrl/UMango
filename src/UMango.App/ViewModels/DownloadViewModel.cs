@@ -78,6 +78,62 @@ public partial class DownloadViewModel : ObservableObject
         }
     }
 
+    private bool _isInstalledMode;
+    private bool _loadingInstalled;
+
+    public ObservableCollection<InstalledPackage> Installed { get; } = [];
+
+    /// <summary>
+    /// 右栏当前显示"已安装列表"还是"搜索结果"。
+    ///
+    /// 需求「应用列表读取参考 UnigetUI」在 Core 侧已实现且有测试
+    /// （六个适配器的 ListInstalledAsync），但此前**没有界面消费方** ——
+    /// 也就是那条需求只做了一半。这个模式开关就是它的落点。
+    /// </summary>
+    public bool IsInstalledMode
+    {
+        get => _isInstalledMode;
+        set
+        {
+            if (!SetProperty(ref _isInstalledMode, value)) return;
+
+            // 这几个都是受模式影响的派生状态，必须一起通知，
+            // 否则会出现"列表已经切了、标题和空态还停在另一种模式"的错位。
+            OnPropertyChanged(nameof(ModeTitle));
+            OnPropertyChanged(nameof(ShowResultsPane));
+            OnPropertyChanged(nameof(ShowInstalledPane));
+            OnPropertyChanged(nameof(InstalledSummary));
+
+            if (value) _ = LoadInstalledAsync();
+        }
+    }
+
+    /// <summary>搜索结果面板是否可见（与已安装列表互斥）</summary>
+    public bool ShowResultsPane => !IsInstalledMode;
+
+    /// <summary>已安装面板是否可见</summary>
+    public bool ShowInstalledPane => IsInstalledMode;
+
+    /// <summary>结果区标题（随模式变化）</summary>
+    public string ModeTitle => IsInstalledMode ? "已安装" : "搜索结果";
+
+    /// <summary>已安装列表的一句汇总。git 的"已安装"语义不同，要如实说明。</summary>
+    public string InstalledSummary
+    {
+        get
+        {
+            if (_loadingInstalled) return "正在读取已安装列表…";
+            var category = SelectedCategory;
+            if (category is null) return "请先在左栏选择一个包源";
+
+            var count = Installed.Count;
+            var noun = category.Kind == PackageSourceKind.Git ? "个本地仓库" : "个已安装包";
+            return count == 0
+                ? $"{category.Title} 下没有已安装的{noun[1..]}"
+                : $"{category.Title}：共 {count} {noun}";
+        }
+    }
+
     /// <summary>
     /// 左栏实际展示的分类：默认只给"可用"的（Available 含 Degraded），
     /// ShowUnsupported=true 时给全部。
@@ -124,6 +180,87 @@ public partial class DownloadViewModel : ObservableObject
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    /// <summary>切到已安装列表。</summary>
+    [RelayCommand]
+    private void ShowInstalled() => IsInstalledMode = true;
+
+    /// <summary>切回搜索结果。</summary>
+    [RelayCommand]
+    private void ShowSearchResults() => IsInstalledMode = false;
+
+    /// <summary>重新读取已安装列表（用户刚在外部装了东西时点它）。</summary>
+    [RelayCommand]
+    private Task ReloadInstalled() => LoadInstalledAsync();
+
+    /// <summary>
+    /// 读取当前包源的已安装列表。
+    ///
+    /// 各包管理器的"已安装"语义并不相同，这里如实区分（不统一措辞掩盖差异）：
+    ///   · npm / pnpm：全局安装的包；
+    ///   · Homebrew：已安装的 formula（同一 formula 的多个版本归到 OtherVersions）；
+    ///   · scoop / winget：已安装的 app（本机无法验证，适配器里已如实标注）；
+    ///   · **git：没有"已安装"概念**，读到的是本地克隆目录里的仓库。
+    /// </summary>
+    private async Task LoadInstalledAsync()
+    {
+        var category = SelectedCategory;
+        if (category is null)
+        {
+            Installed.Clear();
+            OnPropertyChanged(nameof(InstalledSummary));
+            return;
+        }
+
+        if (!category.Available)
+        {
+            // 平台不支持或 CLI 未安装：给出可操作的说明，而不是空列表
+            Installed.Clear();
+            ErrorMessage = category.Detail ?? $"{category.Title} 当前不可用";
+            ErrorAdvice = category.SupportedHere
+                ? $"未检测到 {category.Title} 的命令行工具。{category.InstallHint}"
+                : $"{category.Title} 只在其它操作系统上可用。";
+            OnPropertyChanged(nameof(InstalledSummary));
+            return;
+        }
+
+        var manager = AppServices.Registry.Find(category.Kind);
+        if (manager is null)
+        {
+            Installed.Clear();
+            OnPropertyChanged(nameof(InstalledSummary));
+            return;
+        }
+
+        _loadingInstalled = true;
+        OnPropertyChanged(nameof(InstalledSummary));
+        IsBusy = true;
+        ErrorMessage = null;
+        ErrorAdvice = null;
+
+        try
+        {
+            var list = await manager.ListInstalledAsync();
+
+            // 读的过程中用户可能已经切了包源/退了模式：那时不能再把旧结果写进去。
+            // 这是异步界面最常见的错位来源（请求返回晚于用户的下一次操作）。
+            if (!ReferenceEquals(SelectedCategory, category)) return;
+
+            Installed.Clear();
+            foreach (var item in list) Installed.Add(item);
+            StatusMessage = InstalledSummary;
+        }
+        catch (Exception ex)
+        {
+            if (ReferenceEquals(SelectedCategory, category)) ApplyError(ex, category);
+        }
+        finally
+        {
+            _loadingInstalled = false;
+            IsBusy = false;
+            OnPropertyChanged(nameof(InstalledSummary));
         }
     }
 
@@ -250,12 +387,22 @@ public partial class DownloadViewModel : ObservableObject
         }
     }
 
-    /// <summary>切换包源分类时清空上一轮结果与提示。</summary>
+    /// <summary>
+    /// 切换包源分类时清空上一轮结果与提示。
+    ///
+    /// 已安装列表也在这里清：它是**按包源读取**的，
+    /// 换源后不清就会把上一个包源的清单挂在当前源的名下（串台）。
+    /// 若当前正处于"已安装"模式，则顺手为新源重新读一次 —— 否则界面会停在空列表上。
+    /// </summary>
     partial void OnSelectedCategoryChanged(PackageSourceCategory? value)
     {
         Results.Clear();
         SelectedResult = null;
         ClearMessages();
+
+        Installed.Clear();
+        OnPropertyChanged(nameof(InstalledSummary));
+        if (IsInstalledMode) _ = LoadInstalledAsync();
     }
 
     private async Task<bool> LoadCategoriesAsync(bool refresh)
