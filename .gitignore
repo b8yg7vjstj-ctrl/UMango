@@ -22,9 +22,12 @@
 local.properties
 *.local
 
-# ---- .NET / WPF（新版 src/）----
-src/**/bin/
-src/**/obj/
+# ---- .NET / WPF ----
+# 注意用 **/ 而不是 src/**/：tools/ 下的工具工程同样会产出 bin/obj，
+# 只写 src/** 时它们会被 git add -A 一起提交进去（真实发生过：误提交了 54 个
+# 构建产物文件，包括几 MB 的 Roslyn DLL）。
+**/bin/
+**/obj/
 *.user
 *.suo
 .vs/

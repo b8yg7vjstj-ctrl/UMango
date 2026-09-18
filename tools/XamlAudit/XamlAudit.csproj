@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    XAML 静态审计工具。
+    刻意用 net10.0（而不是 net10.0-windows）且**不引用 WPF**：
+    这样它能在 macOS 上直接跑。它只处理文本（XAML 用 XDocument、C# 用 Roslyn），
+    不需要加载任何 WPF 类型 —— 而 WPF 程序集在 macOS 上根本加载不了。
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>UMango.Tools.XamlAudit</RootNamespace>
+    <AssemblyName>xaml-audit</AssemblyName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+  </ItemGroup>
+
+</Project>

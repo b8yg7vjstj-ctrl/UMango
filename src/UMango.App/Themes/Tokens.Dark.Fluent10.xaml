@@ -54,6 +54,8 @@
   <SolidColorBrush x:Key="BrG8" Color="{StaticResource G8}"/>
   <SolidColorBrush x:Key="BrBg" Color="{StaticResource Bg}"/>
   <SolidColorBrush x:Key="BrRed" Color="{StaticResource RedLight}"/>
+  <!-- 错误/危险提示条的底色（对应 Color RedBack）。缺了它，错误提示就只能借用正常底色 —— 看起来不像错误 -->
+  <SolidColorBrush x:Key="BrRedBack" Color="{StaticResource RedBack}"/>
   <!-- 语义色·警告 / 成功：深色版取同色相的亮化值（浅色版为 #8A5300 / #1E6B33），
        否则在深色卡片(#2B2B2B)上作为文字对比度不足。四套字典 key 名与数量必须一致。 -->
   <SolidColorBrush x:Key="BrWarnAmber" Color="#FFAD33"/>

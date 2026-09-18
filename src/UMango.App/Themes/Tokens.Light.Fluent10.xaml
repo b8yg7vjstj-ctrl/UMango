@@ -56,6 +56,8 @@
   <SolidColorBrush x:Key="BrG8" Color="{StaticResource G8}"/>
   <SolidColorBrush x:Key="BrBg" Color="{StaticResource Bg}"/>
   <SolidColorBrush x:Key="BrRed" Color="{StaticResource RedLight}"/>
+  <!-- 错误/危险提示条的底色（对应 Color RedBack）。缺了它，错误提示就只能借用正常底色 —— 看起来不像错误 -->
+  <SolidColorBrush x:Key="BrRedBack" Color="{StaticResource RedBack}"/>
   <!--
     语义色·警告 / 成功。Win10 浅色沿用与 PCL 浅色相同的取值（#8A5300 / #1E6B33）：
     这两个值来自需求指定，浅色下两套主题的对比度都达标，没有理由凭空改数。

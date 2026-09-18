@@ -50,6 +50,8 @@
   <SolidColorBrush x:Key="BrG8" Color="{StaticResource G8}"/>
   <SolidColorBrush x:Key="BrBg" Color="{StaticResource Bg}"/>
   <SolidColorBrush x:Key="BrRed" Color="{StaticResource RedLight}"/>
+  <!-- 错误/危险提示条的底色（对应 Color RedBack）。缺了它，错误提示就只能借用正常底色 —— 看起来不像错误 -->
+  <SolidColorBrush x:Key="BrRedBack" Color="{StaticResource RedBack}"/>
   <!--
     语义色·警告（Degraded / 未验证）。浅色版 #8A5300 在深色卡片(#2B2C31)上的对比度只有约 2:1，
     当文字几乎读不出来，故深色版取**同色相的亮化值**（H≈36° 不变，只提亮度）。

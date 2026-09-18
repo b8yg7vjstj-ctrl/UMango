@@ -84,7 +84,7 @@
                   Background="{DynamicResource BrRedBack}"
                   Visibility="{Binding ErrorMessage, Converter={StaticResource BoolToVis}}">
             <TextBlock Text="{Binding ErrorMessage}" FontSize="12" TextWrapping="Wrap"
-                       Foreground="{DynamicResource BrRedDark}"/>
+                       Foreground="{DynamicResource BrRed}"/>
           </Border>
         </StackPanel>
       </Border>
