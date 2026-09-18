@@ -39,6 +39,7 @@ public static class ProcessRunner
         if (!string.IsNullOrEmpty(spec.WorkingDirectory)) psi.WorkingDirectory = spec.WorkingDirectory;
         // 降低 CLI 的交互与本地化差异，便于稳定解析
         psi.Environment["NO_COLOR"] = "1";
+        foreach (var (key, value) in spec.Env) psi.Environment[key] = value;
 
         var sw = Stopwatch.StartNew();
         using var proc = new Process { StartInfo = psi };
