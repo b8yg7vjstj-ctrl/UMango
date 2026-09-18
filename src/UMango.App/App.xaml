@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:UMango.App"
+             xmlns:views="clr-namespace:UMango.App.Views"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
     <ResourceDictionary>
@@ -9,7 +10,16 @@
         <ResourceDictionary Source="Themes/PclTokens.xaml"/>
         <ResourceDictionary Source="Themes/Styles.xaml"/>
       </ResourceDictionary.MergedDictionaries>
+      <!--
+        两个"显隐"转换器，**按绑定源的类型选**，不要混用 —— 混用不报错，只是永远不显示：
+          · BoolToVis      —— 源是 bool（IsWindows / HasError / IsBusy / SupportProgress …）；
+          · NotEmptyToVis  —— 源是 string?（StatusMessage / ErrorMessage / Detail / VerificationNote …）。
+        BoolToVis 的判定是 `value is true`，喂字符串永远得到 Collapsed，
+        于是"状态提示/错误提示"会静默消失（概览页与工具页曾因此看不到任何失败原因）。
+        放在应用级资源里，页面就不必各自再定义一份；页面里同 key 的资源仍会覆盖它（行为一致）。
+      -->
       <local:BoolToVisibilityConverter x:Key="BoolToVis"/>
+      <views:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis"/>
     </ResourceDictionary>
   </Application.Resources>
 </Application>

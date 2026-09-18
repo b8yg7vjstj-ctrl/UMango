@@ -1,24 +1,102 @@
 <Window x:Class="UMango.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:UMango.App.Views"
         Title="UMango" Height="620" Width="960" MinHeight="470" MinWidth="810"
-        Background="{StaticResource BrBg}"
-        FontFamily="{StaticResource UiFont}"
+        Background="{DynamicResource BrBg}"
+        FontFamily="{DynamicResource UiFont}"
         WindowStartupLocation="CenterScreen">
   <!--
     窗口外壳：沿用 PCL-CE 的结构
       · 四周 10px 留白 + 6px 圆角的卡片式窗口
-      · 顶部 48px 标题栏：左 Logo / 中 四个 banner 选项卡 / 右 三大金刚键
-      · 标题栏下方：左栏（随选项卡变化）+ 内容区
+      · 顶部 48px 标题栏：左 Logo / 中 五个 banner 选项卡 / 右 三大金刚键
+      · 标题栏下方：左栏菜单（随选项卡变化）+ 内容区（五个页面）
     三大金刚键使用 Windows 原生字形与行为（WPF 即 Windows 原生栈）。
+
+    ⚠ 颜色/尺寸 token 一律 {DynamicResource}（不要退回 {StaticResource}）：
+      StaticResource 在 XAML 加载时只求值一次，运行时 ThemeManager 换掉
+      MergedDictionaries 里的 token 字典后不会重新求值，界面就"切不动主题"。
+      唯一保留 StaticResource 的是样式/模板 key（BannerTab / CaptionButton / 本文件的
+      NavItemStyle / NavItemTemplate）：它们本身不是主题资源，内部引用颜色时仍是 DynamicResource。
   -->
   <WindowChrome.WindowChrome>
+    <!-- CaptionHeight 只能写常量：WindowChrome 不是 FrameworkElement，不在资源查找链里，
+         拿不到 {DynamicResource TitleBarHeight}。数值与 token TitleBarHeight(48) 保持一致，改 token 时要一起改。 -->
     <WindowChrome CaptionHeight="48" ResizeBorderThickness="6" GlassFrameThickness="0"
                   CornerRadius="0" UseAeroCaptionButtons="False"/>
   </WindowChrome.WindowChrome>
 
-  <Border Margin="10" CornerRadius="6" Background="White" SnapsToDevicePixels="True">
+  <Window.Resources>
+    <!--
+      左栏菜单项渲染：**两行** —— 标题（13 号 BrC1）+ 可选副标题（11 号 BrG3）。
+      副标题是为「包源分类」预留的同一套渲染：那里 Title = 包管理器名、Subtitle = 安装目录
+      （需求原文要求左栏显示安装目录），普通菜单项只有标题。
+      副标题为 null / 空字符串时用 DataTrigger 整块收起来：TextBlock 即使文本为空仍然占着
+      Margin(0,2,0,0)，不收起来每项都会多出 2px 的假空隙。
+      放在 Window.Resources 而不是 Themes/：这是外壳专属的渲染，页面不共用（Themes/ 归主题 agent）。
+    -->
+    <DataTemplate x:Key="NavItemTemplate">
+      <StackPanel>
+        <TextBlock Text="{Binding Title}" FontSize="13"
+                   Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis"/>
+        <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="0,2,0,0"
+                   Foreground="{DynamicResource BrG3}" TextTrimming="CharacterEllipsis">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Subtitle}" Value="{x:Null}">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Subtitle}" Value="">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+      </StackPanel>
+    </DataTemplate>
+
+    <!--
+      左栏菜单项容器：**整块替换 ControlTemplate**（= 关闭默认选中高亮）。
+      默认 ListBoxItem 的选中态是系统主题色蓝底，既不属于我们的 token 体系、
+      深色主题下也不跟随，所以自绘：选中 = BrC6 底 + 左侧 3px BrC3 竖条（需求指定）。
+      高度取 ListItemHeight(36)；带副标题的项由内容撑高，故用 MinHeight 而不是固定 Height。
+    -->
+    <Style x:Key="NavItemStyle" TargetType="ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <!-- 关掉键盘焦点虚线框：它是系统绘制的、不跟主题走，而且 PCL 的左栏里没有这个视觉 -->
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Grid Background="Transparent" MinHeight="{DynamicResource ListItemHeight}">
+              <Border x:Name="Bd" Background="Transparent"/>
+              <Border x:Name="Bar" Width="3" HorizontalAlignment="Left" Visibility="Collapsed"
+                      Background="{DynamicResource BrC3}"/>
+              <!-- 左内边距 16 留出竖条位置：竖条宽 3px 压在 16px 里，文字不会被它压住 -->
+              <ContentPresenter Margin="16,6,10,6" VerticalAlignment="Center"/>
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrG8}"/>
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrC6}"/>
+                <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
+  <Border Margin="10" CornerRadius="6" Background="{DynamicResource BrCard}" SnapsToDevicePixels="True">
     <Border.Effect>
+      <!-- 窗口阴影是固定黑色（不属于主题 token 集合：它不随主题改变观感），故保留字面量 -->
       <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.18" Color="#000000"/>
     </Border.Effect>
     <Border.Clip>
@@ -27,12 +105,15 @@
 
     <Grid>
       <Grid.RowDefinitions>
-        <RowDefinition Height="48"/>
+        <!-- 标题栏用 Auto + 内部 Grid 的 Height=token：RowDefinition.Height 是 GridLength，
+             喂给它一个 sys:Double 的 token 会被类型转换拒掉，所以高度挂在 Grid 上。 -->
+        <RowDefinition Height="Auto"/>
         <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
       <!-- ===== 标题栏 ===== -->
-      <Grid Grid.Row="0" Background="{StaticResource BrTitleBar}">
+      <Grid Grid.Row="0" Height="{DynamicResource TitleBarHeight}"
+            Background="{DynamicResource BrTitleBar}">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto"/>
           <ColumnDefinition Width="*"/>
@@ -41,22 +122,32 @@
 
         <!-- 左：Logo + 应用名（自绘，不使用 PCL 图片资源） -->
         <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center">
-          <Border Width="24" Height="24" CornerRadius="6" Background="#33FFFFFF">
+          <Border Width="24" Height="24" CornerRadius="6"
+                  Background="{DynamicResource BrTitleBarHover}">
             <TextBlock Text="🥭" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
-          <TextBlock Text="UMango" Foreground="White" FontSize="15" FontWeight="SemiBold"
-                     Margin="9,0,0,0" VerticalAlignment="Center"/>
+          <TextBlock Text="UMango" Foreground="{DynamicResource BrTitleBarForeHot}" FontSize="15"
+                     FontWeight="SemiBold" Margin="9,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
 
-        <!-- 中：四个 banner 选项卡 -->
+        <!--
+          中：五个 banner 选项卡 —— 主页 / 下载 / 进度 / 设置 / 工具。
+          「进度」是独立入口（需求要求下载进度页可直达），不再挂在下载页里。
+          Tag 保持字符串形式（与改造前一致）：由一个 switch 映射到 ViewModels.AppTab，
+          这样样式与命令机制都不变，将来加"外部跳转入口"也只是多一个 Tag。
+          WindowChrome.IsHitTestVisibleInChrome 必须开：标题栏整条都是窗口 caption 区，
+          不声明的话鼠标消息被当作"拖动窗口"吃掉，选项卡点不动。
+        -->
         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
           <RadioButton x:Name="TabHome" Content="主页" Style="{StaticResource BannerTab}"
                        IsChecked="True" Checked="Tab_Checked" Tag="home"/>
           <RadioButton x:Name="TabDownload" Content="下载" Style="{StaticResource BannerTab}"
                        Checked="Tab_Checked" Tag="download"/>
-          <RadioButton x:Name="TabSetup" Content="设置" Style="{StaticResource BannerTab}"
-                       Checked="Tab_Checked" Tag="setup"/>
+          <RadioButton x:Name="TabProgress" Content="进度" Style="{StaticResource BannerTab}"
+                       Checked="Tab_Checked" Tag="progress"/>
+          <RadioButton x:Name="TabSettings" Content="设置" Style="{StaticResource BannerTab}"
+                       Checked="Tab_Checked" Tag="settings"/>
           <RadioButton x:Name="TabTools" Content="工具" Style="{StaticResource BannerTab}"
                        Checked="Tab_Checked" Tag="tools"/>
         </StackPanel>
@@ -75,53 +166,45 @@
       <!-- ===== 主体：左栏 + 内容区 ===== -->
       <Grid Grid.Row="1">
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="168"/>
+          <!-- Auto + Border.Width=token：理由同标题栏（GridLength 不吃 Double token） -->
+          <ColumnDefinition Width="Auto"/>
           <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="{StaticResource BrC8}" BorderBrush="{StaticResource BrG6}"
-                BorderThickness="0,0,1,0">
-          <StackPanel x:Name="LeftRail" Margin="0,8,0,0"/>
+        <!--
+          左栏：内容由 ShellViewModel.LeftMenu 驱动（每个选项卡一组菜单项），
+          选中项 → ViewModel 的 CurrentNavKey（由 MainWindow.xaml.cs 接线）。
+          ListBox 模板内自带 ScrollViewer，条目超出高度会自动出现滚动条，
+          所以不再外套一层 ScrollViewer（否则会出现双层滚动条）。
+        -->
+        <Border Grid.Column="0" Width="{DynamicResource LeftRailWidth}"
+                Background="{DynamicResource BrC8}"
+                BorderBrush="{DynamicResource BrG6}" BorderThickness="0,0,1,0">
+          <ListBox x:Name="LeftMenuList" Margin="0,8,0,0"
+                   Background="Transparent" BorderThickness="0"
+                   FocusVisualStyle="{x:Null}"
+                   ItemTemplate="{StaticResource NavItemTemplate}"
+                   ItemContainerStyle="{StaticResource NavItemStyle}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   SelectionChanged="LeftMenuList_SelectionChanged"/>
         </Border>
 
-        <Grid Grid.Column="1">
-          <!-- 首页：概览 -->
-          <StackPanel x:Name="PageHome" Margin="20">
-            <TextBlock Text="UMango" FontSize="20" FontWeight="Bold" Foreground="{StaticResource BrC1}"/>
-            <TextBlock Text="跨平台包管理器图形界面 · 基于 PCL-CE 架构重写"
-                       FontSize="12" Foreground="{StaticResource BrG3}" Margin="0,4,0,0"/>
-            <Border Margin="0,16,0,0" Padding="14" CornerRadius="6"
-                    Background="{StaticResource BrG8}" BorderBrush="{StaticResource BrG6}" BorderThickness="1">
-              <StackPanel>
-                <TextBlock Text="本次重构进度" FontSize="13" FontWeight="SemiBold"
-                           Foreground="{StaticResource BrC1}"/>
-                <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource BrG2}"
-                           TextWrapping="Wrap"
-                           Text="已废弃 Flutter 第一版，改为 .NET 10 + WPF。&#x0a;已采用 PCL-CE 的任务/进度模型（ITask / ITaskProgressive / ITaskGroup / TaskCenter）。&#x0a;下一步：包管理器适配器、下载进度页（按下载方式列子项进度）、Windows10 Fluent 主题。"/>
-              </StackPanel>
-            </Border>
-          </StackPanel>
-
-          <!-- 下载：任务与子项进度（"按不同下载方式列明子项进度"的落地页） -->
-          <Grid x:Name="PageDownload" Visibility="Collapsed" Margin="20">
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto"/>
-              <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Text="下载进度" FontSize="14" FontWeight="SemiBold"
-                       Foreground="{StaticResource BrC1}" Margin="0,0,0,10"/>
-            <ListBox x:Name="TaskList" Grid.Row="1" BorderThickness="0" Background="Transparent"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     ItemTemplate="{StaticResource TaskItemTemplate}"/>
-          </Grid>
-
-          <!-- 设置 / 工具：占位 -->
-          <StackPanel x:Name="PageSetup" Visibility="Collapsed" Margin="20">
-            <TextBlock Text="设置" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrC1}"/>
-          </StackPanel>
-          <StackPanel x:Name="PageTools" Visibility="Collapsed" Margin="20">
-            <TextBlock Text="工具" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrC1}"/>
-          </StackPanel>
+        <!--
+          内容区：五个页面 UserControl **叠放在同一个 Grid 里，按可见性切换**。
+          为什么不用 ContentControl 换内容：五个页面在 XAML 里各建一次，
+          构造顺序可预测、Loaded（页面的异步加载入口）只触发一次；
+          切页只改 Visibility，页面自己的滚动位置与展开状态都不会因为重建而丢失。
+          内边距与滚动由各页面自己负责（页面根容器自带 Margin/ScrollViewer），
+          外壳只提供区域与底色。
+          底色取 BrBg（PCL 的窗口主体色）而不是 BrCard：卡片本身是 BrCard（白），
+          页面（如进度页）刻意留透明等外壳给底色，底色若也是白就会"白卡片糊在白底上"没有层次。
+        -->
+        <Grid Grid.Column="1" Background="{DynamicResource BrBg}">
+          <views:HomeView x:Name="ViewHome"/>
+          <views:DownloadView x:Name="ViewDownload" Visibility="Collapsed"/>
+          <views:ProgressView x:Name="ViewProgress" Visibility="Collapsed"/>
+          <views:SettingsView x:Name="ViewSettings" Visibility="Collapsed"/>
+          <views:ToolsView x:Name="ViewTools" Visibility="Collapsed"/>
         </Grid>
       </Grid>
     </Grid>

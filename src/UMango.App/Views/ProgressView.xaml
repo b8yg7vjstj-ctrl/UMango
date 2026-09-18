@@ -1,0 +1,620 @@
+<!--
+  ============================================================================
+  进度页（Views/ProgressView.xaml）
+  ============================================================================
+  对应需求原文的两条：
+    1.「进度展示为 PCL-CE 中下载进度同 UI 设计完成，而下载进度界面于进度根据不同下载方式
+        列明子项进度」→ 左栏任务列表 + 右侧「按下载方式列明的子项进度」；
+    2.「做一个终端集成桥，实现可观测的输出……可在下载进度页原生回传终端输出，
+        而非以黑底硬嵌终端，与子中文进度同级」
+        → 终端输出用**与页面一致的底色 + 普通文本**呈现（绝不黑底绿字），
+          并且**逐行挂在对应子项那一行的下方**，与中文子项进度同级。
+
+  为什么"与子中文进度同级"要这样做（方案说明）：
+    需求原文优先要求把输出挂在子项下，所以本页选了「子项行 + 该子项输出紧随其下」的方案：
+      · 右侧中部的每一个子项行下面，直接渲染它自己的 CLI 输出（缩进与子项名对齐）；
+      · 输出行与子项名共用同一套排版尺度（12/13 号字、同一左边距），视觉上就是
+        「这个阶段的中文进度 + 它的原生输出」；
+      · 归属不到任何子项的行（命令行回显、退出码汇总）不硬塞给某个子项，
+        统一出现在下方「终端输出」区，因此没有任何输出会被丢掉；
+      · 下方终端区是全量的**时间顺序**视图（调试用），因为那里不是按子项分组，
+        所以每行额外标注 [子项名] —— 这正是需求里"退一步"的标注方案，
+        两种方案同时提供：内联看上下文，底部看时间线。
+
+  ⚠ 颜色/尺寸一律 {DynamicResource 主题 key}（换主题必须跟着变，见 Themes/Styles.xaml 的说明）；
+    只有"转换器/模板/本页自有的等宽字体"用 StaticResource —— 它们不是可从主题替换的资源。
+  ============================================================================
+-->
+<UserControl x:Class="UMango.App.Views.ProgressView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:UMango.App.Views"
+             xmlns:core="clr-namespace:UMango.Core.App.Tasks;assembly=UMango.Core"
+             xmlns:term="clr-namespace:UMango.Core.Terminal;assembly=UMango.Core"
+             IsVisibleChanged="OnIsVisibleChanged"
+             FontFamily="{DynamicResource UiFont}">
+  <!--
+    页面自身不设 Background：内容区底色由外壳决定，页面留透明，
+    这样"卡片 BrCard 叠在页面底色上"的层次在任何主题/外壳下都成立，不会出现色块边界。
+  -->
+  <UserControl.Resources>
+
+    <!-- ===== 转换器（纯数值/纯逻辑，与主题无关，故用 StaticResource） ===== -->
+    <!-- Core 的 Progress 是 0~1 分数，进度条按百分比刻度展示，故统一 ×100。 -->
+    <local:FractionToPercentConverter x:Key="Percent"/>
+    <!-- 子项 → 视图侧的子项行（子项进度 + 该子项自己的输出），见 ChildStepTemplate 与 code-behind。 -->
+    <local:StepRowSourceConverter x:Key="StepRowSource"/>
+
+    <!-- 等宽字体：终端输出必须等宽才好对齐（Windows 用 Consolas，macOS 用 Menlo，逐级回退）。 -->
+    <FontFamily x:Key="MonoFont">Consolas, Menlo, Cascadia Mono, Courier New</FontFamily>
+
+    <!--
+      成功态绿（BrProgressSuccess）已收敛进四套主题字典（Themes/Tokens.*.xaml），
+      故本页**不再**定义同名画刷：页面级资源优先于应用级，两处都定义会让主题里的那份失效。
+      取值仍是需求指定的 #1E6B33 一族（深色主题由字典给出亮化值）。
+    -->
+
+    <!-- ===== 小号文字按钮（取消 / 清空）：扁平、小尺寸，不抢主视觉 ===== -->
+    <Style x:Key="MiniButton" TargetType="Button">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrC2}"/>
+      <Setter Property="Padding" Value="8,3"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="SnapsToDevicePixels" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Bd" CornerRadius="4" Background="Transparent"
+                    BorderBrush="{DynamicResource BrG5}" BorderThickness="1"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrC8}"/>
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BrC5}"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrC6}"/>
+              </Trigger>
+              <!--
+                不可用时置灰但保留可见：TaskModel.Cancel 只有在创建任务时带了取消回调才可用，
+                按钮灰着能让用户明白"有取消这个能力，但当前任务没提供"，比直接消失更好懂。
+              -->
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{DynamicResource BrG4}"/>
+                <Setter Property="Cursor" Value="Arrow"/>
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BrG6}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- ===== 「调试模式」开关：与设置页写的是同一个静态开关，这里只做就地切换 ===== -->
+    <Style x:Key="DebugToggle" TargetType="ToggleButton">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrG2}"/>
+      <Setter Property="Padding" Value="8,3"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="SnapsToDevicePixels" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ToggleButton">
+            <Border x:Name="Bd" CornerRadius="4" Background="Transparent"
+                    BorderBrush="{DynamicResource BrG5}" BorderThickness="1"
+                    Padding="{TemplateBinding Padding}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="Dot" Text="○" FontSize="11"
+                           Foreground="{DynamicResource BrG4}" VerticalAlignment="Center"/>
+                <ContentPresenter Margin="4,0,0,0" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BrC5}"/>
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource BrC2}"/>
+                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrC6}"/>
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BrC5}"/>
+                <Setter TargetName="Dot" Property="Text" Value="●"/>
+                <Setter TargetName="Dot" Property="Foreground" Value="{DynamicResource BrC3}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!--
+      左栏任务行：自绘模板 = **关掉 WPF 默认的选中高亮**（否则会出现蓝底白字，
+      与 PCL 视觉冲突且不随主题变色），改成需求指定的「BrC6 底 + 左侧 BrC3 竖条」。
+    -->
+    <Style x:Key="TaskRowStyle" TargetType="ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="SnapsToDevicePixels" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Bg" Margin="0,0,0,4" CornerRadius="6"
+                    Background="Transparent" SnapsToDevicePixels="True">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="3"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Bar" Grid.Column="0" Width="3" CornerRadius="2"
+                        Background="{DynamicResource BrC3}" Visibility="Collapsed"/>
+                <!-- 显式绑 HorizontalContentAlignment（样式里设为 Stretch）：
+                     否则内容默认按自身期望宽度排列，任务行里的细进度条会缩成一小截。 -->
+                <ContentPresenter Grid.Column="1" Margin="9,8,10,8"
+                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+              </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+              <!-- 悬停用最浅的灰底；IsSelected 的触发器写在后面，选中态优先。 -->
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource BrG8}"/>
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource BrC6}"/>
+                <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!--
+      子项行**内联**的输出行（挂在子项下方）：只给时间 + 原文。
+      这里不再标注 [子项名] —— 它已经在对应子项行下面了，重复标注只会让每一行都变长。
+    -->
+    <DataTemplate x:Key="StepLineTemplate" DataType="{x:Type term:TerminalLine}">
+      <Grid Margin="0,1,0,1">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock Grid.Column="0" Text="{Binding At, StringFormat={}{0:HH:mm:ss}}"
+                   FontFamily="{StaticResource MonoFont}" FontSize="11"
+                   Foreground="{DynamicResource BrG4}" VerticalAlignment="Top"/>
+        <TextBlock Grid.Column="1" Text="{Binding Text}" Margin="8,0,0,0"
+                   TextWrapping="Wrap" FontFamily="{StaticResource MonoFont}" FontSize="12">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <!-- 普通输出用 BrG2；stderr 用 BrRed 区分，但仍然是**同一个列表里的普通文本**。 -->
+              <Setter Property="Foreground" Value="{DynamicResource BrG2}"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsStdErr}" Value="True">
+                  <Setter Property="Foreground" Value="{DynamicResource BrRed}"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+      </Grid>
+    </DataTemplate>
+
+    <!--
+      下方终端区的输出行（时间顺序，非分组）：每行额外标注 [子项名]，
+      这样在时间线里也能一眼看出这行属于哪个子项（与上面的内联输出互为对照）。
+    -->
+    <DataTemplate x:Key="TerminalLineTemplate" DataType="{x:Type term:TerminalLine}">
+      <Grid Margin="0,1,0,1">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock Grid.Column="0" Text="{Binding At, StringFormat={}{0:HH:mm:ss}}"
+                   FontFamily="{StaticResource MonoFont}" FontSize="11"
+                   Foreground="{DynamicResource BrG4}" VerticalAlignment="Top"/>
+        <TextBlock Grid.Column="1" Text="{Binding Step, StringFormat='[{0}]'}" FontSize="11"
+                   Margin="8,0,0,0" VerticalAlignment="Top"
+                   Foreground="{DynamicResource BrC5}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <!-- 未归属到子项的行不显示空的 []。 -->
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Step}" Value="{x:Null}">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+        <TextBlock Grid.Column="2" Text="{Binding Text}" Margin="8,0,0,0"
+                   TextWrapping="Wrap" FontFamily="{StaticResource MonoFont}" FontSize="12">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Foreground" Value="{DynamicResource BrG2}"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsStdErr}" Value="True">
+                  <Setter Property="Foreground" Value="{DynamicResource BrRed}"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+      </Grid>
+    </DataTemplate>
+
+    <!--
+      左栏任务行：标题（13）+ 状态文案（11, BrG3）+ 细进度条（4px, BrC3）+ 取消按钮。
+      取消按钮直接绑 TaskModel.Cancel：RelayCommand 自带可用性判断，
+      任务没有取消回调时按钮自动置灰（不需要界面自己判断）。
+
+      与通用模板 TaskItemTemplate（Themes/Styles.xaml）的关系：
+        两者都表达「父任务 + 子项进度」，但本页左栏是**260px 的导航式列表**，
+        规格是"13 号标题 + 11 号状态 + 4px 细条 + 取消按钮 + 自绘选中态"，
+        而 TaskItemTemplate 是"卡片 + 12 号状态 + 内嵌子项列表（150+120 两列）"，
+        塞进 260px 列里子项那两列会被压烂，因此左栏没有直接复用它；
+        本页的子项部分改由 StepRowTemplate 承载 —— 因为需求要在子项行**下方**接终端输出，
+        这是通用模板做不到的（它只认识 TaskModel 自己的 Children）。
+        通用模板仍然保留给"只要父任务+子项进度、不需要内联输出"的场景使用。
+    -->
+    <DataTemplate x:Key="TaskRowTemplate" DataType="{x:Type core:TaskModel}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0">
+          <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                     Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis"/>
+          <TextBlock Text="{Binding StateMessage}" FontSize="11" Margin="0,2,0,0"
+                     Foreground="{DynamicResource BrG3}" TextTrimming="CharacterEllipsis"/>
+          <ProgressBar Height="4" Margin="0,6,0,0" Minimum="0" Maximum="100"
+                       Value="{Binding Progress, Converter={StaticResource Percent}}"
+                       Foreground="{DynamicResource BrC3}" Background="{DynamicResource BrG6}"
+                       BorderThickness="0"/>
+        </StackPanel>
+
+        <Button Grid.Column="1" Content="取消" Style="{StaticResource MiniButton}"
+                Margin="8,0,0,0" VerticalAlignment="Center" Command="{Binding Cancel}"
+                ToolTip="取消该任务（未提供取消回调时自动置灰）"/>
+      </Grid>
+    </DataTemplate>
+
+    <!--
+      ★ 子项行模板：**「按不同下载方式列明子项进度」+「输出与子中文进度同级」的唯一载体**。
+        上半行 = 状态图标 + 子项中文名 + 该子项自己的进度条（每个子项一条，互不共用） + 百分比；
+        下半部 = 该子项的 CLI 输出，紧随其下、缩进对齐，而不是另开黑底终端。
+
+      为什么模板根节点要换一次 DataContext：
+        外层列表按规格**直接绑定 SelectedTask.Children**（数据源就是 Core 的子项本身），
+        而"把输出挂到该子项下方"还需要视图侧的每子项输出集合（含显示行数裁剪与省略提示）。
+        于是用 StepRowSource 转换器把 (子项, 本页的 StepRows) 映射为一个 StepRow，
+        之后模板内部的绑定（Child.Title / Output / TruncationHint）都以它为准 ——
+        业务数据仍然直接读 Core 的 TaskModel（StepRow.Child），视图没有复制任何业务状态。
+
+      两个容易被写错的地方（照抄时注意）：
+        · 子项取自**容器**的 DataContext（AncestorType=ContentPresenter），而不是写成无 Path 的
+          <Binding/>：本元素正在设置自己的 DataContext，再用自己的 DataContext 当绑定源就是自引用；
+        · 页面用 RelativeSource 而不是 ElementName 找 StepRows：模板有自己的命名范围，
+          ElementName 指不到页面根节点，这是 WPF 模板里做跨层绑定的标准写法。
+    -->
+    <DataTemplate x:Key="ChildStepTemplate" DataType="{x:Type core:TaskModel}">
+      <StackPanel Margin="0,0,0,10">
+        <StackPanel.DataContext>
+          <MultiBinding Converter="{StaticResource StepRowSource}">
+            <Binding Path="DataContext"
+                     RelativeSource="{RelativeSource AncestorType=ContentPresenter}"/>
+            <Binding Path="StepRows"
+                     RelativeSource="{RelativeSource AncestorType={x:Type local:ProgressView}}"/>
+          </MultiBinding>
+        </StackPanel.DataContext>
+
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="16"/>
+            <ColumnDefinition Width="120"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <!-- 状态图标：默认值也写在 Style 里（局部值会盖住触发器，所以不能在元素上写 Text/Foreground）。 -->
+          <TextBlock x:Name="StateIcon" Grid.Column="0" FontSize="12"
+                     HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Text" Value="○"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrG4}"/>
+                <Setter Property="ToolTip" Value="等待中"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Child.State}" Value="Running">
+                    <Setter Property="Text" Value="●"/>
+                    <Setter Property="Foreground" Value="{DynamicResource BrC3}"/>
+                    <Setter Property="ToolTip" Value="进行中"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding Child.State}" Value="Success">
+                    <Setter Property="Text" Value="√"/>
+                    <Setter Property="Foreground" Value="{DynamicResource BrProgressSuccess}"/>
+                    <Setter Property="ToolTip" Value="已完成"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding Child.State}" Value="Failed">
+                    <Setter Property="Text" Value="×"/>
+                    <Setter Property="Foreground" Value="{DynamicResource BrRed}"/>
+                    <Setter Property="ToolTip" Value="失败"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding Child.State}" Value="Canceled">
+                    <Setter Property="Text" Value="–"/>
+                    <Setter Property="Foreground" Value="{DynamicResource BrG3}"/>
+                    <Setter Property="ToolTip" Value="已取消"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+
+          <!-- 子项中文名（来自 Core 的 StepNames，例如「下载」「链接与写入」）。 -->
+          <TextBlock Grid.Column="1" Text="{Binding Child.Title}" FontSize="13"
+                     Foreground="{DynamicResource BrG2}" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis"
+                     ToolTip="{Binding Child.Title}"/>
+
+          <!-- 每个子项**独立**的进度条：高 3px、BrC5，与父任务的 6px 总进度条区分层级。 -->
+          <ProgressBar Grid.Column="2" Height="3" Margin="8,0" Minimum="0" Maximum="100"
+                       Value="{Binding Child.Progress, Converter={StaticResource Percent}}"
+                       Foreground="{DynamicResource BrC5}" Background="{DynamicResource BrG6}"
+                       BorderThickness="0" VerticalAlignment="Center"/>
+
+          <TextBlock Grid.Column="3" Text="{Binding Child.StateMessage}" FontSize="11"
+                     Foreground="{DynamicResource BrG4}" MinWidth="34"
+                     HorizontalAlignment="Right" VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- 该子项的输出：与子项名同列起排（左边距 = 图标列宽），因此"与子中文进度同级"。 -->
+        <ItemsControl ItemsSource="{Binding Output}" Margin="16,3,0,0"
+                      ItemTemplate="{StaticResource StepLineTemplate}">
+          <ItemsControl.Style>
+            <Style TargetType="ItemsControl">
+              <Style.Triggers>
+                <Trigger Property="HasItems" Value="False">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+              </Style.Triggers>
+            </Style>
+          </ItemsControl.Style>
+        </ItemsControl>
+
+        <!-- 该子项被裁剪时的提示（关闭调试模式时每个子项只显示最近若干行）。 -->
+        <TextBlock Text="{Binding TruncationHint}" FontSize="11" Margin="16,2,0,0"
+                   TextWrapping="Wrap" Foreground="{DynamicResource BrG4}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding TruncationHint}" Value="{x:Null}">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+      </StackPanel>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <Grid Margin="16,14">
+    <Grid.ColumnDefinitions>
+      <!-- 需求：左侧任务列表宽 260。 -->
+      <ColumnDefinition Width="260"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- ================= 左：任务列表 ================= -->
+    <Grid Grid.Column="0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+
+      <Grid Grid.Row="0" Margin="2,0,2,8">
+        <TextBlock Text="任务" Style="{DynamicResource PclSectionTitle}"/>
+        <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"
+                   Foreground="{DynamicResource BrG3}"
+                   Text="{Binding Tasks.Count, StringFormat='共 {0} 个'}"/>
+      </Grid>
+
+      <!--
+        用 ListBox（它本身就是 ItemsControl 的子类）而不是裸 ItemsControl：
+        选中项高亮/键盘上下切换是列表控件该管的事，自己实现只会更脆；
+        默认高亮已被 TaskRowStyle 完全换成主题色，不会出现系统蓝。
+        ItemsSource 直接绑 ViewModel.Tasks（= Core 的 TaskCenter.Tasks），
+        因此安装执行器注册新任务时列表自动出现，不需要任何刷新调用。
+      -->
+      <ListBox x:Name="TaskList" Grid.Row="1"
+               ItemsSource="{Binding Tasks}"
+               SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
+               ItemTemplate="{StaticResource TaskRowTemplate}"
+               ItemContainerStyle="{StaticResource TaskRowStyle}"
+               Background="Transparent" BorderThickness="0" Padding="0"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+    </Grid>
+
+    <!-- ================= 右：选中任务详情（无选中时显示空态） ================= -->
+    <Grid Grid.Column="1" Margin="16,0,0,0">
+
+      <Grid x:Name="DetailPane">
+        <Grid.Style>
+          <Style TargetType="Grid">
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding SelectedTask}" Value="{x:Null}">
+                <Setter Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Grid.Style>
+
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="3*" MinHeight="110"/>
+          <RowDefinition Height="2*" MinHeight="140"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===== 顶部：任务标题 + 状态 + 总进度条 ===== -->
+        <Border Grid.Row="0" Style="{DynamicResource PclCard}" Padding="14,12">
+          <StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <TextBlock Grid.Column="0" Text="{Binding SelectedTask.Title}"
+                         FontSize="16" FontWeight="Bold" VerticalAlignment="Center"
+                         Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis"
+                         ToolTip="{Binding SelectedTask.Title}"/>
+
+              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{Binding SelectedTask.StateMessage}" FontSize="12"
+                           Foreground="{DynamicResource BrG3}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock FontSize="12" FontWeight="SemiBold" Margin="10,0,0,0"
+                           VerticalAlignment="Center" Foreground="{DynamicResource BrC2}"
+                           Text="{Binding SelectedTask.Progress, Converter={StaticResource Percent}, StringFormat={}{0:0}%}"/>
+                <!-- 走 ViewModel 的取消命令：父任务没有回调时会退一步取消它的子项。 -->
+                <Button Content="取消任务" Style="{StaticResource MiniButton}" Margin="12,0,0,0"
+                        Command="{Binding CancelTaskCommand}"
+                        CommandParameter="{Binding SelectedTask}"
+                        ToolTip="取消该任务（父任务没有取消回调时会尝试取消其子项）"/>
+              </StackPanel>
+            </Grid>
+
+            <!-- 父任务总进度：6px，与子项的 3px 形成层级。 -->
+            <ProgressBar Height="6" Margin="0,10,0,0" Minimum="0" Maximum="100"
+                         Value="{Binding SelectedTask.Progress, Converter={StaticResource Percent}}"
+                         Foreground="{DynamicResource BrC3}" Background="{DynamicResource BrG6}"
+                         BorderThickness="0"/>
+          </StackPanel>
+        </Border>
+
+        <!-- ===== 中部：按下载方式列明的子项进度（每个子项带自己的输出） ===== -->
+        <Border Grid.Row="1" Style="{DynamicResource PclCard}" Padding="14,12" Margin="0,12,0,0">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+              <TextBlock Text="子项进度" Style="{DynamicResource PclSectionTitle}"/>
+              <TextBlock FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
+                         Foreground="{DynamicResource BrG4}"
+                         Text="（按下载方式/阶段划分，每个子项独立进度；命令行输出直接挂在对应子项下方）"/>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" Margin="0,10,0,0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <!--
+                子项列表**直接绑定 SelectedTask.Children**（Core 的 TaskModel 子项本身），
+                因此执行器异步补齐子项时列表自动出现，界面不需要刷新调用；
+                每个子项的输出由 ChildStepTemplate 挂到它自己那一行下方。
+              -->
+              <ItemsControl ItemsSource="{Binding SelectedTask.Children}"
+                            ItemTemplate="{StaticResource ChildStepTemplate}"/>
+            </ScrollViewer>
+
+            <!-- 没有子项时的说明：执行器正在规划，或这类任务本身不分阶段。 -->
+            <TextBlock Grid.Row="1" Margin="0,10,0,0" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource BrG4}"
+                       Text="该任务还没有划分下载方式子项（可能仍在规划，或本身不分阶段）。命令行输出见下方「终端输出」。">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding SelectedTask.Children.Count}" Value="0">
+                      <Setter Property="Visibility" Value="Visible"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </Grid>
+        </Border>
+
+        <!-- ===== 下部：终端输出（原生回传，普通文本，不是黑底终端） ===== -->
+        <Border Grid.Row="2" Style="{DynamicResource PclCard}" Padding="14,10" Margin="0,12,0,0">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <TextBlock Text="终端输出" Style="{DynamicResource PclSectionTitle}"/>
+                <TextBlock FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Foreground="{DynamicResource BrG4}"
+                           Text="命令行原样回传，普通文本呈现（与内容区同底色，非黑底终端）"/>
+              </StackPanel>
+
+              <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <!-- 与设置页的「调试模式」是同一个开关（Core 的静态开关 + 落盘），两处状态一致。 -->
+                <ToggleButton x:Name="DebugToggleButton" Content="调试模式" Style="{StaticResource DebugToggle}"
+                              IsChecked="{Binding DebugMode, Mode=TwoWay}"
+                              ToolTip="等价于 PCL-CE 原菜单位置的调试模式：打开后保留并显示全部输出行，关闭时只显示最近 50 行"/>
+                <Button Content="清空" Style="{StaticResource MiniButton}" Margin="8,0,0,0"
+                        Command="{Binding ClearTerminalCommand}"
+                        ToolTip="清空当前任务的终端输出（Core 缓冲与界面一起清）"/>
+              </StackPanel>
+            </Grid>
+
+            <!-- 操作反馈（如"已清空该任务的终端输出"），空时只是一行占位。 -->
+            <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" FontSize="11" Margin="0,6,0,0"
+                       Foreground="{DynamicResource BrG3}" TextTrimming="CharacterEllipsis"/>
+
+            <ScrollViewer x:Name="TerminalScroll" Grid.Row="2" Margin="0,6,0,0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          ScrollChanged="TerminalScroll_ScrollChanged">
+              <StackPanel>
+                <ItemsControl x:Name="TerminalList" ItemTemplate="{StaticResource TerminalLineTemplate}"/>
+                <!-- 末尾的省略提示：提醒用户上面还有更早的输出（打开调试模式即可看全）。 -->
+                <TextBlock x:Name="TerminalTruncationHint" Visibility="Collapsed"
+                           FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"
+                           Foreground="{DynamicResource BrG4}"/>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <!-- ===== 空态：一个任务都没有 ===== -->
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel.Style>
+          <Style TargetType="StackPanel">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding SelectedTask}" Value="{x:Null}">
+                <Setter Property="Visibility" Value="Visible"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </StackPanel.Style>
+
+        <TextBlock Text="暂无任务，去下载页安装一个包试试" FontSize="14"
+                   HorizontalAlignment="Center" Foreground="{DynamicResource BrG3}"/>
+        <TextBlock FontSize="12" Margin="0,8,0,0" HorizontalAlignment="Center"
+                   TextAlignment="Center" TextWrapping="Wrap" MaxWidth="360"
+                   Foreground="{DynamicResource BrG4}"
+                   Text="安装开始后，这里会按下载方式列出每个子项的进度，并把命令行输出原生回传到对应子项下方。"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</UserControl>

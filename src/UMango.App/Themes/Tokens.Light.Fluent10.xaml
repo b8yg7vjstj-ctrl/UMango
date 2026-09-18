@@ -1,0 +1,97 @@
+<!--
+  ============================================================================
+  主题 token：Windows 10 Fluent · 浅色（Tokens.Light.Fluent10.xaml）
+  ============================================================================
+  ⚠ Fluent Design ≠ WinUI3 / Win11。本套刻意还原 **Windows 10「设置」** 的观感：
+    · 圆角极小（Win10 的控件几乎方正，没有 Win11 的大圆角；本表的几何 token 相应收紧）；
+    · 标题栏**纯色**（系统强调蓝 #0078D4），不做 Mica/亚克力、不做居中标题；
+    · 控件紧凑：标题栏高 32（Win10 标准 32px）、列表项 32（比 PCL 的 36 更紧凑）；
+    · 分隔线细而浅（#E5E5E5），窗口底 #F3F3F3，内容/卡片 #FFFFFF，正文 #000000 / 次级 #5D5D5D。
+
+  key 名与 Tokens.Light.Pcl.xaml **完全一致**，两套主题可整体互换。
+  合规约束：界面主要色相必须是蓝色 —— 因此强调色取 Win10 默认系统强调蓝 #0078D4，
+  而不是 Win11 的 #0078D4+#B3 之类的浅色变体，也不使用紫色/橙色强调色。
+  ============================================================================
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+  <!-- ===== 主色阶（Win10 强调蓝一族）===== -->
+  <Color x:Key="C1">#000000</Color>  <!-- 正文（Win10 设置正文为纯黑，不是深灰） -->
+  <Color x:Key="C2">#005A9E</Color>  <!-- 按下/深一档 -->
+  <Color x:Key="C3">#0078D4</Color>  <!-- Win10 默认系统强调蓝 = 主强调色 -->
+  <Color x:Key="C4">#106EBE</Color>  <!-- 悬停/深一档 -->
+  <Color x:Key="C5">#2B88D8</Color>  <!-- 次级进度条蓝 -->
+  <Color x:Key="C6">#CCE4F7</Color>  <!-- 选中底（强调蓝的浅色混合） -->
+  <Color x:Key="C7">#E5F1FB</Color>
+  <Color x:Key="C8">#F2F8FD</Color>
+  <!-- ===== 灰阶：Win10 的"两级文字 + 细浅分隔线"===== -->
+  <Color x:Key="G1">#5D5D5D</Color>  <!-- 次级文字（Win10 设置里的说明文字） -->
+  <Color x:Key="G2">#767676</Color>
+  <Color x:Key="G3">#8A8A8A</Color>
+  <Color x:Key="G4">#A0A0A0</Color>  <!-- 弱化文字/占位 -->
+  <Color x:Key="G5">#C5C5C5</Color>  <!-- 控件边框/禁用 -->
+  <Color x:Key="G6">#E5E5E5</Color>  <!-- 分隔线与卡片 1px 边框 -->
+  <Color x:Key="G7">#F0F0F0</Color>
+  <Color x:Key="G8">#E9E9E9</Color>  <!-- 列表项悬停底（比窗口底 #F3F3F3 略深） -->
+  <!-- ===== 语义色：Win10 的错误红与错误底 ===== -->
+  <Color x:Key="RedLight">#C42B1C</Color>
+  <Color x:Key="RedBack">#FDE7E9</Color>
+  <Color x:Key="Bg">#F3F3F3</Color>  <!-- 窗口底（Win10 设置是灰底 + 白内容区） -->
+
+  <SolidColorBrush x:Key="BrC1" Color="{StaticResource C1}"/>
+  <SolidColorBrush x:Key="BrC2" Color="{StaticResource C2}"/>
+  <SolidColorBrush x:Key="BrC3" Color="{StaticResource C3}"/>
+  <SolidColorBrush x:Key="BrC5" Color="{StaticResource C5}"/>
+  <SolidColorBrush x:Key="BrC6" Color="{StaticResource C6}"/>
+  <SolidColorBrush x:Key="BrC8" Color="{StaticResource C8}"/>
+  <SolidColorBrush x:Key="BrG1" Color="{StaticResource G1}"/>
+  <SolidColorBrush x:Key="BrG2" Color="{StaticResource G2}"/>
+  <SolidColorBrush x:Key="BrG3" Color="{StaticResource G3}"/>
+  <SolidColorBrush x:Key="BrG4" Color="{StaticResource G4}"/>
+  <SolidColorBrush x:Key="BrG5" Color="{StaticResource G5}"/>
+  <SolidColorBrush x:Key="BrG6" Color="{StaticResource G6}"/>
+  <SolidColorBrush x:Key="BrG7" Color="{StaticResource G7}"/>
+  <SolidColorBrush x:Key="BrG8" Color="{StaticResource G8}"/>
+  <SolidColorBrush x:Key="BrBg" Color="{StaticResource Bg}"/>
+  <SolidColorBrush x:Key="BrRed" Color="{StaticResource RedLight}"/>
+  <!--
+    语义色·警告 / 成功。Win10 浅色沿用与 PCL 浅色相同的取值（#8A5300 / #1E6B33）：
+    这两个值来自需求指定，浅色下两套主题的对比度都达标，没有理由凭空改数。
+    深色版才需要亮化（见 Tokens.Dark.Fluent10.xaml）。四套字典 key 名与数量必须一致。
+  -->
+  <SolidColorBrush x:Key="BrWarnAmber" Color="#8A5300"/>
+  <!-- 琥珀底上的文字色：浅色下琥珀是深色，故角标文字用白（与 BrTitleBarForeHot 同值）。 -->
+  <SolidColorBrush x:Key="BrWarnAmberFore" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="BrProgressSuccess" Color="#1E6B33"/>
+
+  <!-- 标题栏：**纯色**系统强调蓝。Win10 没有 Mica/亚克力，标题栏就是不透明纯色块。 -->
+  <SolidColorBrush x:Key="BrTitleBar" Color="{StaticResource C3}"/>
+
+  <!-- 扩展 token（key 与另三套完全同名） -->
+  <SolidColorBrush x:Key="BrCard" Color="#FFFFFF"/>               <!-- 内容区/卡片：Win10 是灰底 + 白卡片 -->
+  <SolidColorBrush x:Key="BrTitleBarFore" Color="#B3FFFFFF"/>
+  <SolidColorBrush x:Key="BrTitleBarForeHot" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="BrTitleBarHover" Color="#26FFFFFF"/>
+  <SolidColorBrush x:Key="BrTitleBarBar" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="BrCaptionFore" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="BrCaptionHover" Color="#26FFFFFF"/>
+  <SolidColorBrush x:Key="BrCaptionPressed" Color="#40FFFFFF"/>
+  <!-- 关闭键用 Win10 的原生关闭红 #E81123（PCL 主题用的是 #C42B1C，两套各自贴合自身观感） -->
+  <SolidColorBrush x:Key="BrCaptionCloseHover" Color="#E81123"/>
+  <SolidColorBrush x:Key="BrCaptionClosePressed" Color="#F1707A"/>
+
+  <!-- ===== 尺寸：Win10 的紧凑几何 ===== -->
+  <sys:Double x:Key="TitleBarHeight">32</sys:Double>   <!-- Win10 标准标题栏 32px（非 Win11 的 48） -->
+  <sys:Double x:Key="LeftRailWidth">200</sys:Double>   <!-- 设置式左栏更宽，贴近 Win10 设置的导航栏比例 -->
+  <sys:Double x:Key="WindowButtonWidth">46</sys:Double> <!-- 46x32 即 Win10 标准三大金刚键 -->
+  <sys:Double x:Key="WindowButtonHeight">32</sys:Double>
+  <sys:Double x:Key="TabHeight">28</sys:Double>
+  <sys:Double x:Key="ListItemHeight">32</sys:Double>   <!-- 比 PCL 的 36 紧凑 -->
+
+  <!-- Win10 用 Segoe UI（Segoe UI Variable 是 Win11 才有的，故不放进回退链首位） -->
+  <FontFamily x:Key="UiFont">Segoe UI, Microsoft YaHei UI, PingFang SC, Helvetica Neue</FontFamily>
+  <!-- Win10 自带 Segoe MDL2 Assets（Segoe Fluent Icons 是 Win11 的），故 MDL2 优先 -->
+  <FontFamily x:Key="IconFont">Segoe MDL2 Assets, Segoe Fluent Icons</FontFamily>
+</ResourceDictionary>

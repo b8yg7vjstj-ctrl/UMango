@@ -31,6 +31,15 @@ public sealed record InstallResult(bool Success, string? ErrorCode, string? Mess
 ///
 /// **可测试性**：进程执行通过构造函数注入，
 /// 因此单元测试可以喂入假的 CLI 输出流，无需真的安装任何东西。
+///
+/// **⚠️ 线程约定（不要"优化"掉）**：本类会修改 <see cref="TaskCenter.Tasks"/> 与
+/// <see cref="TaskModel.Children"/> 这类**绑定到界面的 ObservableCollection**，
+/// 而 WPF 不允许从非 UI 线程改它们。因此下面所有 await **故意不加
+/// ConfigureAwait(false)** —— 那样会把后续代码切到线程池线程上执行，
+/// 运行时会抛「This type of CollectionView does not support changes to its
+/// SourceCollection from a different thread」。
+/// 保留调用方的同步上下文，就等于自动回到 UI 线程。
+/// 已有一条回归测试专门锁住这一点（见 InstallExecutorTests 的线程亲和性用例）。
 /// </summary>
 public sealed class InstallExecutor
 {
@@ -78,7 +87,8 @@ public sealed class InstallExecutor
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
         // 1) 建立子项（按下载方式划分）
-        var steps = await PlanAsync(request.Source, request.Name, request.Version, ct).ConfigureAwait(false);
+        // 注意：这里刻意不写 ConfigureAwait(false) —— 见类注释的线程约定
+        var steps = await PlanAsync(request.Source, request.Name, request.Version, ct);
         var children = new List<(InstallStep Step, TaskModel Model)>();
         foreach (var step in steps)
         {
@@ -158,7 +168,8 @@ public sealed class InstallExecutor
         ProcessOutput output;
         try
         {
-            output = await _run(spec, OnLine, ct).ConfigureAwait(false);
+            // 同样不写 ConfigureAwait(false)：OnLine 回调会更新界面绑定的属性与集合
+            output = await _run(spec, OnLine, ct);
         }
         catch (ProcessException ex)
         {

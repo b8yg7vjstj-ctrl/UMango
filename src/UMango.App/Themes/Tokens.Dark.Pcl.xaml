@@ -1,0 +1,89 @@
+<!--
+  ============================================================================
+  主题 token：PCL 经典 · 深色（Tokens.Dark.Pcl.xaml）
+  ============================================================================
+  把 Tokens.Light.Pcl.xaml 的同一套 key 按深色重映射，key 名与数量**一个不改**，
+  这样 Themes/ThemeManager.Apply() 只要整体换字典，页面无需任何改动即可变深色。
+
+  重映射规则（为什么这样取值）：
+    · 色阶方向反转：浅色下 C1 最深（正文）、C2..C8 越来越浅；深色下 C1 必须变浅
+      （正文是浅色），C2..C8 的"浅蓝底"变成"深蓝底"，否则选中/悬停底色会亮得刺眼。
+    · 主强调色仍锁定 PCL 蓝 #1370F3（C3 与标题栏不变）—— 合规要求界面主色相为蓝，
+      且这是 PCL 经典主题的身份色，不因深浅而改。
+    · 灰阶同样反转：G1 是正文灰（浅色下最深 → 深色下最浅），G8 是"贴近窗口底色的次级底"，
+      所以深色下 G8 比 Bg 略亮一点点，与浅色版保持同一语义方向。
+    · 语义色保持语义：RedLight 在深色下提亮一档（深底上暗红看不清），RedBack 变成深红底。
+  ============================================================================
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+  <!-- ===== 主色阶（蓝）===== -->
+  <Color x:Key="C1">#E8EAED</Color><Color x:Key="C2">#2E7BD6</Color>
+  <Color x:Key="C3">#1370F3</Color><Color x:Key="C4">#4890F5</Color>
+  <Color x:Key="C5">#7FB2F6</Color><Color x:Key="C6">#1D3A5C</Color>
+  <Color x:Key="C7">#22384F</Color><Color x:Key="C8">#182634</Color>
+  <!-- ===== 灰阶 ===== -->
+  <Color x:Key="G1">#D0D3D8</Color><Color x:Key="G2">#9AA0A6</Color>
+  <Color x:Key="G3">#85888C</Color><Color x:Key="G4">#6E7276</Color>
+  <Color x:Key="G5">#55585C</Color><Color x:Key="G6">#3A3D42</Color>
+  <Color x:Key="G7">#303338</Color><Color x:Key="G8">#26282C</Color>
+  <!-- ===== 语义色（深色适配，语义不变）===== -->
+  <Color x:Key="RedLight">#FF6B6B</Color>
+  <Color x:Key="RedBack">#4A2224</Color>
+  <Color x:Key="Bg">#1E1F22</Color>
+
+  <SolidColorBrush x:Key="BrC1" Color="{StaticResource C1}"/>
+  <SolidColorBrush x:Key="BrC2" Color="{StaticResource C2}"/>
+  <SolidColorBrush x:Key="BrC3" Color="{StaticResource C3}"/>
+  <SolidColorBrush x:Key="BrC5" Color="{StaticResource C5}"/>
+  <SolidColorBrush x:Key="BrC6" Color="{StaticResource C6}"/>
+  <SolidColorBrush x:Key="BrC8" Color="{StaticResource C8}"/>
+  <SolidColorBrush x:Key="BrG1" Color="{StaticResource G1}"/>
+  <SolidColorBrush x:Key="BrG2" Color="{StaticResource G2}"/>
+  <SolidColorBrush x:Key="BrG3" Color="{StaticResource G3}"/>
+  <SolidColorBrush x:Key="BrG4" Color="{StaticResource G4}"/>
+  <SolidColorBrush x:Key="BrG5" Color="{StaticResource G5}"/>
+  <SolidColorBrush x:Key="BrG6" Color="{StaticResource G6}"/>
+  <SolidColorBrush x:Key="BrG7" Color="{StaticResource G7}"/>
+  <SolidColorBrush x:Key="BrG8" Color="{StaticResource G8}"/>
+  <SolidColorBrush x:Key="BrBg" Color="{StaticResource Bg}"/>
+  <SolidColorBrush x:Key="BrRed" Color="{StaticResource RedLight}"/>
+  <!--
+    语义色·警告（Degraded / 未验证）。浅色版 #8A5300 在深色卡片(#2B2C31)上的对比度只有约 2:1，
+    当文字几乎读不出来，故深色版取**同色相的亮化值**（H≈36° 不变，只提亮度）。
+    四套字典 key 名与数量必须一致，深浅只是取值不同（见 Tokens.Light.Pcl.xaml 的命名契约）。
+  -->
+  <SolidColorBrush x:Key="BrWarnAmber" Color="#FFAD33"/>
+  <!-- 琥珀底上的文字色：深色下琥珀是亮色，故角标文字取**深色墨**（= 窗口底色），保证约 8:1 的对比度。 -->
+  <SolidColorBrush x:Key="BrWarnAmberFore" Color="#1E1F22"/>
+  <!-- 语义色·成功（进度完成）：浅色 #1E6B33 → 深色同色相亮化（H≈140°）。 -->
+  <SolidColorBrush x:Key="BrProgressSuccess" Color="#61D180"/>
+
+  <!-- 标题栏：深色下仍是 PCL 蓝（纯色，PCL 实测就是纯色），保持主题身份与蓝色主色相 -->
+  <SolidColorBrush x:Key="BrTitleBar" Color="{StaticResource C3}"/>
+
+  <!-- 扩展 token：key 与浅色版完全同名同名同数（见 Tokens.Light.Pcl.xaml 的说明） -->
+  <SolidColorBrush x:Key="BrCard" Color="#2B2C31"/>               <!-- 卡片/内容区底色：比窗口底亮一档才形成层次 -->
+  <SolidColorBrush x:Key="BrTitleBarFore" Color="#B3FFFFFF"/>
+  <SolidColorBrush x:Key="BrTitleBarForeHot" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="BrTitleBarHover" Color="#26FFFFFF"/>
+  <SolidColorBrush x:Key="BrTitleBarBar" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="BrCaptionFore" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="BrCaptionHover" Color="#33FFFFFF"/>
+  <SolidColorBrush x:Key="BrCaptionPressed" Color="#55FFFFFF"/>
+  <SolidColorBrush x:Key="BrCaptionCloseHover" Color="#C42B1C"/>
+  <SolidColorBrush x:Key="BrCaptionClosePressed" Color="#A02316"/>
+
+  <!-- ===== 尺寸：PCL 经典主题的几何不随深浅变化 ===== -->
+  <sys:Double x:Key="TitleBarHeight">48</sys:Double>
+  <sys:Double x:Key="LeftRailWidth">168</sys:Double>
+  <sys:Double x:Key="WindowButtonWidth">46</sys:Double>
+  <sys:Double x:Key="WindowButtonHeight">32</sys:Double>
+  <sys:Double x:Key="TabHeight">27</sys:Double>
+  <sys:Double x:Key="ListItemHeight">36</sys:Double>
+
+  <FontFamily x:Key="UiFont">Microsoft YaHei UI, Segoe UI, PingFang SC, Helvetica Neue</FontFamily>
+  <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+</ResourceDictionary>

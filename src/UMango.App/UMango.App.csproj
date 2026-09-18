@@ -7,6 +7,15 @@
     <RootNamespace>UMango.App</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <!-- 显式引用 CommunityToolkit.Mvvm 的原因（版本与 UMango.Core 保持一致，不引入新依赖）：
+         NuGet 的 PackageReference 默认 PrivateAssets 含 analyzers，所以 Core 里的这个包
+         传到 App 工程时只带来 lib/*.dll（ObservableObject 等基类可用），
+         却**不带源生成器**；而 App 的 ViewModel 全靠 [ObservableProperty]/[RelayCommand]
+         生成属性与命令，没有生成器就会大面积编译失败。
+         注意：若其它 agent 也已在本文件加过同一行，保留一份即可（重复 PackageReference 会报 NU1504）。 -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\UMango.Core\UMango.Core.csproj" />
   </ItemGroup>
 </Project>
