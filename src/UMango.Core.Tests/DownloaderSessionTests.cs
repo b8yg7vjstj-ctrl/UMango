@@ -198,7 +198,7 @@ public class DownloaderSessionTests
     {
         var dir = DownloaderSession.DefaultOutputDirectory();
         Assert.False(string.IsNullOrWhiteSpace(dir));
-        Assert.True(dir.EndsWith("UMango", StringComparison.Ordinal));
+        Assert.EndsWith("UMango", dir);
     }
 
     [Fact]

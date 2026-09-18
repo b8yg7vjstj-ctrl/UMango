@@ -59,7 +59,8 @@ public sealed class DownloaderSession
         }
     }
 
-    private string _outputDirectory;
+    // 赋初值只是为了让编译器确认非空：真正的默认值在构造函数里按平台算（见 DefaultOutputDirectory）
+    private string _outputDirectory = string.Empty;
     public string OutputDirectory
     {
         get => _outputDirectory;
