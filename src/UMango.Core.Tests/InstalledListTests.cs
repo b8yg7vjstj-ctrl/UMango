@@ -11,6 +11,7 @@ namespace UMango.Core.Tests;
 /// 其中 npm / Homebrew 两项是**真机验证**（本机装了这两个 CLI，且确实有已安装的包）；
 /// scoop / winget 无法在 macOS 上验证，只断言"平台门控生效、不执行命令"。
 /// </summary>
+[Trait("Category", "真机")]
 public class InstalledListTests
 {
     [Fact]

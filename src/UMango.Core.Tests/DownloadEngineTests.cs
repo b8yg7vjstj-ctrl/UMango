@@ -6,6 +6,7 @@ using Xunit;
 namespace UMango.Core.Tests;
 
 /// <summary>下载层测试：协议识别、aria2 输出解析、引擎选择、许可约束。</summary>
+[Trait("Category", "真机")]
 public class DownloadEngineTests
 {
     // ---------- 协议识别 ----------

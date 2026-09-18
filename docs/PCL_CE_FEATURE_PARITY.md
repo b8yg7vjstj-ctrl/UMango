@@ -101,12 +101,12 @@
 
 | 指标 | 数量 | 口径 |
 |------|------|------|
-| **本清单收录功能条目总数** | **172** | 第 2.A–2.K 共 11 张功能表的全部数据行 |
+| **本清单收录功能条目总数** | **174** | 第 2.A–2.K 共 11 张功能表的全部数据行 |
 | 其中 **MC 专属**（列值「是」） | **81** | 见第 3 节完整清单 |
 | 其中 **"部分 MC"**（列值「部分」：机制通用、数据/语义是 MC 的） | **3** | `DownloadRequestFactory`、`LoaderDownload`、`ModBase` |
-| 其中 **非 MC**（列值「否」） | **88** | ← 这是"完整迁移"需求的真实作用域 |
-| — 已完成 | **19** | 全部在非 MC 侧 |
-| — 部分完成 | **29** | 27 条非 MC + 2 条「部分 MC」 |
+| 其中 **非 MC**（列值「否」） | **90** | ← 这是"完整迁移"需求的真实作用域 |
+| — 已完成 | **20** | 全部在非 MC 侧 |
+| — 部分完成 | **30** | 28 条非 MC + 2 条「部分 MC」 |
 | — 未做 | **42** | 41 条非 MC + 1 条「部分 MC」 |
 | — 不适用 | **82** | 81 条 MC 专属 + 1 条废弃死代码 |
 
@@ -115,18 +115,21 @@
 >    MC 专属的 81 条 + 「部分 MC」的 3 条 = **84 条在红线之外**，其状态一律记「不适用」或按其机制记为未做/部分。
 > 2. **本表是修正后的版本。** 本报告初稿曾写"总数 137 / MC 78 / 非 MC 55"，但 **78+55=133≠137**，
 >    内部即不自洽 —— 那是手工累加出的错。现已改为**脚本统计**（`grep` + 逐行解析 Markdown 表），
->    并复核 `19+29+42+82 = 172`、`81+3+88 = 172` 两式均成立。
->    （注：`19/29/42` 是**核对到最后**的值 —— 调研期间并发任务把「已安装包列表」由部分升为已完成、
->    把「日志系统」由未做升为部分；同时主控收尾复核时补入一条被初稿漏掉的非 MC 功能「启动器自定义主页」（见 2.A），故总数为 172。）
-> 3. **"完整迁移 PCL-CE 全部功能"的可迁移作用域 = 88 条非 MC 条目**，
->    其中已完成 19、部分 27、未做 41、废弃死代码 1。
+>    并复核 `20+30+42+82 = 174`、`81+3+90 = 174` 两式均成立。
+>    （注：本表的**每一个位移都发生在调研期间**，均有 commit 号可查：并发任务把「已安装包列表」由部分→已完成（`39f5259`）、
+>    「日志系统」由未做→已完成（`f2cc0b9`）、「日志查看页」由未做→已完成（`f2cc0b9`）；
+>    主控收尾复核时补入了初稿漏掉的非 MC 功能「启动器自定义主页」（见 2.A），并在整合 Modules 子任务完整报告时
+>    把「动画引擎」由已完成下调为部分、补入「加载器/任务编排框架」「任务栏进度聚合」两行。故总数由首版的 171 变为 **174**。）
+> 3. **"完整迁移 PCL-CE 全部功能"的可迁移作用域 = 90 条非 MC 条目**，
+>    其中已完成 20、部分 28、未做 41、废弃死代码 1。
 
 ### 1.2 一句话概览
 
-- UMango 已完成的 **19** 项，**全部集中在"包管理业务主干 + 外壳"**上：
+- UMango 已完成的 **20** 项，**全部集中在"包管理业务主干 + 外壳"**上：
   六个包源适配器、平台门控、搜索/版本/依赖树、安装执行、任务与子项进度、终端桥、操作记录、
   下载引擎、设置体系、主题系统、动画系统、合规声明页。全部有源码证据（见第 2 节各行）。
-- **未做的 42 项里，体积最大、最通用的三块**是：**多语言 i18n**、**启动器自更新**、**HTTP 客户端扩展层与持久化缓存**。
+- **未做的 41 项里，体积最大、最通用的三块**是：**多语言 i18n**、**启动器自更新**、**HTTP 客户端扩展层与持久化缓存**。
+  （另有 P0-1 持久化缓存这一项已由他人接手，见 §6.2）
 - **MC 专属的 81 项**（+3 条部分 MC）占据了 PCL-CE 代码量的约一半（第 3 节），
   但按红线与许可证**都不应迁入** —— 且第 4.5 节给出了比"红线"更硬的技术理由（`net10.0` 编译期闸门）。
 
@@ -285,9 +288,11 @@
 
 | 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
 |------|----------------------|------------|-----------|------|
-| 上游基础设施与转换器（`ModBase.cs` 3,759 行） | `Modules/Base/ModBase.cs` | 部分 | **部分** | UMango 未移植 `ModBase`；其中通用的 `SafeList`、校验、路径工具由自研 `src/UMango.Core/Utils/` 部分覆盖 |
-| 启动初始化流程与加载器管线 | `Modules/Base/ModSetup.cs`、`ModLoader.cs`（`LoaderCombo`）、`Modules/ModMain.cs:1134` | 否 | **部分** | UMango `src/UMango.App/App.xaml.cs` + `Services/AppServices.cs:32`（`Initialize:69`）做 DI 式初始化；**无** PCL-CE 的多阶段 Loader 管线与进度编排 |
-| 窗口动画（`ModAnimation.cs`） | `Modules/Base/ModAnimation.cs` | 否 | **已完成** | UMango `App/Animation/AnimationPlayer.cs`（`PlayEntrance:19`、`PrimeStartState:65`） |
+| 上游基础设施与转换器（`ModBase.cs` **3,759 行**） | `Modules/Base/ModBase.cs` | 否（**大部分通用**） | **部分** | UMango 未移植 `ModBase`，其中通用的 `SafeList`(2250)、校验、路径工具由自研 `src/UMango.Core/Utils/` 部分覆盖。实测其中**零 MC 依赖的通用件**包括：文本扩展方法集 `:1624-2020`（`BeforeFirst/AfterLast/Between/RegexReplace` 等 14+ 个，是全项目字符串解析基座）、模糊搜索引擎 `SearchEntry<T>:2108`/`SearchSource:2135`/`Search<T>:2163`、文件校验器 `FileChecker:1198`（`:1232 Check`）、哈希族 `GetFileMD5:1054`…`GetAuthSHA1:1182`、压缩与目录递归 `ExtractFile:1372`/`CopyDirectory:1499`/`MoveDirectory:1540`、数学工具 `:517-615`（RadixConvert/MathBezier/MathClamp）、颜色模型 `MyColor:126`（9 构造 + 8 隐式转换）、线程与 UI 调度 `RunInNewThread:2614`/`RunInUi:2641`、系统集成 `OpenWebsite:2818`/`OpenExplorer:2848`。⚠️ **该文件在自定义许可目录下**，只能借鉴设计、不能复制代码；且含 Windows 特有件（见 4.5） |
+| 加载器/任务编排框架 | `Modules/Base/ModLoader.cs`（**1,032 行**：`LoaderBase:182`、状态机 `State:281`、加权进度 `:332`/`:366`、父子关系 `RealParent:244`/`InitParent:386`、`Abort:415`、`WaitForExit:420`/`:453`、超时重载 `:508`；`LoaderTask:493`、`LoaderCombo:707`/`:1005`） | 否 | **部分** | UMango 有自研的 `UMango.Core/App/Tasks/`（8 文件 228 行，采用自 PCL.Core），能表达**任务 + 子项 + 加权进度**；但**没有** PCL-CE 这套 Loader 的 `realParent` 父子树、`Abort` 级联、`WaitForExit`/超时、以及 **`LoaderFolderRun:122` 目录变更驱动的缓存失效**（`:164` 递归取最大写入时间）。⚠️ 在**自定义许可目录**下，只能借鉴设计 |
+| 任务栏进度聚合（Windows） | `ModLoader.cs:30`（`LoaderTaskbarAdd`）、`:38`、`:92`；`TaskbarItemProgressState:25` | 否 | **未做** | 把并发加载器合并成 Windows 任务栏进度条 —— **Windows 特有**（WPF `TaskbarItemInfo`），不适用于跨平台目标 |
+| 启动初始化流程与配置观察者 | `Modules/Base/ModSetup.cs`（`ApplyAll:109` + **实测 31 个** `public static void` 应用方法，如 `ToolDownloadThread:196`、`SystemHttpProxy:607`、`VersionRamType:654`） | 部分 | **部分** | UMango `Services/AppServices.cs:32`（`Initialize:69`）+ `SettingsService.Changed` 事件做等价的事；PCL-CE 的 31 个观察者里下载线程/限速/主题/字体/代理是通用的，实例内存方案/登录方案是 MC 专属 |
+| 窗口动画引擎（补间/缓动/分组） | `Modules/Base/ModAnimation.cs`（**1,517 行**：`AniStart:28`、`AniTimer:104`、20+ 个 `Aa*` 补间工厂 `:642-1112`、14 种缓动 `:1233-1452`；`AniData` 结构 `:488`） | 否 | **部分** | ⚠️ **本行由初稿的「已完成」下调为「部分」**：UMango 的 `App/Animation/AnimationPlayer.cs`（`PlayEntrance:19`、`PrimeStartState:65`）只有**入场动画**，而这是个 1,517 行的完整补间引擎（覆盖 X/Y/Width/Height/Opacity/Color/Scale/Rotate 等 20+ 属性 + 14 种缓动 + 帧率控制）。缓动数学已在 `UMango.Core/Animation/Easing.cs` 迁移，但**补间工厂体系与定时器未迁移**。⚠️ 该文件在**自定义许可目录**下，只能借鉴设计 |
 | 位图/图像处理（`MyBitmap.cs`） | `Modules/Base/MyBitmap.cs` | 否 | **未做** | UMango 无位图处理层 |
 | 自定义事件总线 | `Modules/Event/`（6 文件 741 行：`CustomEventService.cs`、`EventType.cs`、`XamlEventSanitizer.cs`） | 否 | **未做** | ⚠️ `Modules/Event` 是 CE 新增能力（见既有分析报告 §2.2）。UMango 用 MVVM 属性通知，无事件总线 |
 | 主题管理器（业务侧） | `Modules/UI/Theme/ThemeManager.cs:9`（**131 行**） | 否 | **已完成** | 见 2.A「主题管理」。⚠️ 本次首轮统计曾把该文件漏算（用了 `-maxdepth 1`），已修正：`Modules/UI` 实为 **3 文件 / 244 行** |
@@ -527,8 +532,21 @@
 
 ## 4. 非 MC 但尚未迁移的功能（按建议优先级排序）
 
-**作用域**：第 1 节统计的 **88 条非 MC 功能**中，**未做 41 条 + 部分 27 条**（部分完成的也列出，但语义是"补齐"而非"新建"）。
-本节把它们归并成 **42 个可执行条目**（P0 四项 / P1 七项 / P2 二十二项 / P3 九项）—— 少于 68，因为多条功能被合并为一项
+**作用域**：第 1 节统计的 **90 条非 MC 功能**中，**未做 41 条 + 部分 28 条**（部分完成的也列出，但语义是"补齐"而非"新建"）。
+> ⚠️⚠️ **读本节前必读：许可证决定了"能迁移"与"只能借鉴"是两件事。**
+>
+> 下表"涉及 PCL.Core 模块"一列里，**凡是标注 `Modules/...` 的条目，其代码都位于
+> `Plain Craft Launcher 2/` 目录下 —— 那是《PCL 分发有限许可》（自定义专有协议），不是 Apache-2.0**
+> （实测根 `LICENSE`：`SPECIAL DIRECTORY: Plain Craft Launcher 2/` → 自定义条款；
+> `ALL THE OTHER DIRECTORIES` → Apache-2.0）。
+> 因此这些条目的正确做法是**只借鉴设计、不复制代码**；直接复制会立即触发 §0 的重度使用义务（改名 + 开源）。
+> 真正可以自由采用代码的，只有 `PCL.Core/**`。
+>
+> 本报告初稿在 P1/P2 表里列了 `Modules/Updates/`、`Modules/Event/`、`Modules/Base/MyBitmap.cs` 等条目，
+> 却只在其中一条注明了许可问题 —— **这个遗漏已在此集中更正**。
+
+本节把它们归并成 **42 个可执行条目**（P0 四项 / P1 七项 / P2 二十二项 / P3 九项；
+其中 P0-3 与 P3-8 已由并发任务完成）—— 少于 68，因为多条功能被合并为一项
 （例如整个 `Utils/Threading/` 的 6 个文件算一项，`Utils/Hash/` 的 7 个文件算一项）。
 
 ### 4.1 P0 —— 高价值、低风险、UMango 已具备落点
@@ -603,7 +621,7 @@
 | ├ 自删逻辑 | 调 `cmd.exe` + `rmdir /s /q` | `PageSetupLauncherMisc.xaml.cs:291-298`（`FileName = "cmd.exe"`, `CreateNoWindow = true`） |
 | ├ 创建快捷方式 | 生成 `.lnk` | `PageToolsTest.xaml.cs:471-481` |
 | └ 位图合成（皮肤） | 依赖 `System.Drawing` | `MySkin.xaml.cs:1-3` |
-| **`Plain Craft Launcher 2/Modules/`（92 文件）** | **13 处 `DllImport` + 3 处 `Registry.`**，全部集中在 `ModMain.cs` | `ModMain.cs:912`（`Registry.CurrentUser.OpenSubKey`）、`:923`（`CreateSubKey`）、`:930`（`SetValue`）；用于写"显卡高性能"偏好 |
+| **`Plain Craft Launcher 2/Modules/`（92 文件）** | 实测 **11 处 `DllImport`** + **3 处 `Registry.`** | `DllImport` 分布：`ModMain.cs` 3 处（`:889 FindWindowA`、`:892 SetForegroundWindow`、`:895 PostMessageA`）、`Minecraft/ModWatcher.cs` 6 处（`:682 EnumWindows`、`:685`、`:688`、`:691 SetWindowText`、`:694 ShowWindow`、`:697`）、`ModLink.cs` 1 处（`:127 iphlpapi GetExtendedTcpTable`，PID 反查 TCP 端口）、`Base/ModBase.cs` 1 处（`:1557 kernel32 GetShortPathNameA`，启动 MC 前转 8.3 短路径）。`Registry.` **仅 3 处且全在** `ModMain.cs:912/923/930`（写 `HKCU` 的 GPU 高性能首选项）。另有 `cmd.exe`（`ModLaunch.cs:2441`/`:2475` 自定义命令、`ModBase.cs:1562` 取短路径）、`taskkill`（`ModWatcher.cs:771`）、`javaw`（`ModLaunch.cs:2511`）、GDI+ 取 DPI（`ModBase.cs:3146 Graphics.FromHwnd`）、`explorer.exe`（`ModBase.cs:2848`） |
 | **`PCL.Core/`（544 文件）** | `UI/` 129 文件中 40 个用 WPF 类型；`Utils/` 92 文件中 6 个 `DllImport` + 3 个 Win32/WinRT | 见 5.3；`Minecraft/` 108 文件**零 WPF 命中**（纯逻辑，但 TFM 仍是 Windows） |
 
 **⚠️ 一个决定性的发现（比"Windows 依赖"更硬）**：调查过程中 UMango 落地了 commit `2f900b1`
@@ -691,6 +709,25 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 
 ---
 
+### 4.7 把 §4 的候选按许可证二分（决定"抄代码"还是"只抄想法"）
+
+这是本节最有操作性的一张表 —— 因为它直接决定每一项**能不能把代码拿过来**：
+
+| 类别 | §4 中的条目 | 可否复制代码 | 依据 |
+|------|------------|------------|------|
+| **A. 可复制（Apache-2.0）** | P0-1 持久化缓存（`IO/Storage/Cache/`）、P0-2 配置体系（`App/Configuration/`）、P1-2 HTTP 扩展层（`IO/Net/Http/`）、P1-3 DNS（`IO/Net/Dns/`）、P1-4 线程原语（`Utils/Threading/`）、P1-5 哈希（`Utils/Hash/`）、P1-6 编码（`Utils/Codecs/`）、P1-7 验证器（`Utils/Validate/`）、P2-3 系统信息（`Utils/OS/` 部分）、P2-4 IoC、P2-5 事件总线（`App/EventBus/`）、P2-6 单实例、P2-7 CLI（`App/Cli/`）、P2-8 扩展方法（`Utils/Exts/`）、P2-9 差分（`Utils/Diff/`）、P2-10 加密（`Utils/Encryption/`）、P2-11 主题（`UI/Theme/`）、P2-12 对话框（`UI/MsgBoxWrapper.cs`）、P2-14 SvgIcon、P2-15 特效、P2-18 SemVer、P2-19 相似度（`Utils/SimilaritySearch.cs`） | ✅ **可以**（保留声明 + 标注变更） | 根 `LICENSE`：`ALL THE OTHER DIRECTORIES` → Apache-2.0 |
+| **B. 只能借鉴设计（自定义专有）** | P1-1 启动器自更新（`Modules/Updates/`）、P2-17 位图（`Modules/Base/MyBitmap.cs`）、P2-20 自定义事件总线（`Modules/Event/`）、P2-21/22 自定义主页（`Pages/PageLaunch/PageLaunchRight`）、**新增：`Modules/Base/ModBase.cs` 的通用工具集、`Modules/Base/ModLoader.cs` 的加载器框架、`Modules/Base/ModAnimation.cs` 的补间引擎、`Modules/Network/` 的下载引擎主体** | ❌ **不可以** —— 直接复制即触发重度使用（改名 + 开源） | 根 `LICENSE`：`SPECIAL DIRECTORY: Plain Craft Launcher 2/` → 自定义条款 |
+
+**B 类里最值得注意的一项**：`Modules/Network/`（12 文件 1,137 行）经实测**只有 2 处 MC 域名硬编码**
+（`FileDownloader.cs:216`、`RequestSigning.cs:25-28`），本质上是个通用下载引擎 ——
+但**它整块在自定义许可目录下**，所以"下载引擎很通用"这个直觉**不能推出"可以搬过来"**。
+UMango 现有的 `Download/`（8 文件 990 行，aria2/内置 HTTP/eD2k 三引擎）是自主设计，**这条路本来就是对的**。
+
+**一个可复用的安全设计参考（B 类，但值得单独记一笔）**：`Modules/Event/XamlEventSanitizer.cs`（用 8 条
+`[GeneratedRegex]` 剥离 XAML 中的事件声明，返回含 `UnsupportedTypesFound` 的 `SanitizeResult`）。
+它与 2.A 表里"远程 XAML 是代码执行面"的问题是配套的 —— 若将来真要支持可自定义界面，
+**"加载前先净化 + 明确拒绝未知事件类型"这个设计思路值得借鉴**，但不要连代码一起搬。
+
 ## 5. 指标
 
 ### 5.1 总量对比
@@ -698,17 +735,17 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 | 指标 | PCL-CE（commit `ab6e2f1`） | UMango（活跃 .NET 栈，commit `602f003`） | 比值 |
 |------|--------------------------:|-------------------------------------:|-----:|
 | 文件总数（不含 `.git`） | 918 | 约 **136** | 6.8× |
-| `.cs` 文件数 / 行数 | **803 / 138,447** | **108 / 17,539** | 7.9× |
-| `.xaml` 文件数 / 行数 | **100 / 24,109** | **14 / 3,423** | 7.0× |
-| C# + XAML 行数合计 | **162,556** | **20,962** | **7.8×** |
-| 测试用例数 | `PCL.Core.Test`：46 文件 / 5,280 行 / 177 个 `[TestMethod]` | `UMango.Core.Tests` 199（154 `[Fact]` + 45 条 `[InlineData]`）+ `UMango.App.Tests` 52（47 `[Fact]` + 5 条 `[InlineData]`）= **251** | — |
+| `.cs` 文件数 / 行数 | **803 / 138,447** | **113 / 18,331** | 7.6× |
+| `.xaml` 文件数 / 行数 | **100 / 24,109** | **15 / 3,565** | 6.8× |
+| C# + XAML 行数合计 | **162,556** | **21,896** | **7.4×** |
+| 测试用例数 | `PCL.Core.Test`：46 文件 / 5,280 行 / 177 个 `[TestMethod]` | 静态计数 **278**（228 `[Fact]` + 50 条 `[InlineData]`）；commit `f2cc0b9` 自述 **277** | — |
 
 > **UMango 文件数口径**（逐目录实测，`-not -path '*/obj/*' -not -path '*/bin/*'`）：
-> `.cs` 108 = Core 57（含新增 `Logging/` 5 个）+ App 20 + Core.Tests 22 + App.Tests 4 + XamlAudit 4；
+> `.cs` 113 = Core 57 + App 25（新增 `LogView.xaml.cs`、`LogViewModel.cs` 等）+ Core.Tests 22 + App.Tests 9 + XamlAudit 4；（口径为 commit `f2cc0b9`）
 > `.xaml` 14 全部在 `App`；另有 5 个 `.csproj` + 1 个 `Directory.Build.props` + 1 个 `UMango.slnx` + `app.manifest` 等工程文件。
 >
 > ⚠️ **本表是"某一时刻"的快照**：本次调研期间有另一个任务在**并发提交**（详见 6.2），
-> 数字取 commit `602f003` 时刻。若与本文件之外的数字不一致，以更新时刻为准。
+> 数字取 commit `f2cc0b9` 时刻。若与本文件之外的数字不一致，以更新时刻为准。
 >
 > ⚠️ **测试用例数是静态计数**（`grep -c '\[Fact\]'` / `\[InlineData\]`），
 > 不是运行结果。commit `2f900b1` 自述"测试 245/245"、`39f5259` 自述"App 测试 46 → 52"，
@@ -729,9 +766,9 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 | `src/UMango.Core/Records` | 2 | 160 | 操作记录 + 存储 |
 | `src/UMango.Core/Terminal` | 2 | 132 | 终端桥 + 行模型 |
 | `src/UMango.Core/Platform` | 2 | 67 | 平台/系统信息 |
-| `src/UMango.Core/Logging` | 5 | 426 | **调研期间新增**（未提交）：`Log.cs`/`ILogSink.cs`/`FileLogSink.cs`/`MemoryLogSink.cs`/`LogModels.cs` |
+| `src/UMango.Core/Logging` | 5 | 429 | 调研期间新增并已提交（`f2cc0b9`）：`Log.cs`/`ILogSink.cs`/`LogModels.cs`/`MemoryLogSink.cs`/`FileLogSink.cs` |
 | **`src/UMango.Core` 合计** | **57** | **7,849** | |
-| `src/UMango.App`（Views + ViewModels + Themes + Animation + Services） | **35** | **7,848** | 6048 行在 `Views/` + `ViewModels/` 共 18 文件 |
+| `src/UMango.App`（Views + ViewModels + Themes + Animation + Services） | **41** | **8,637** | 含新增 `LogView`（404 行）；`Views/` + `ViewModels/` 共 21 文件 |
 | `src/UMango.Core.Tests` | 23 | 3,245 | |
 | `tools/XamlAudit` | 5 | 711 | XAML 静态审计 |
 
@@ -774,8 +811,8 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 | | 数值 |
 |---|---:|
 | PCL-CE 的 **MC 专属**代码（第 3.1 节保守估） | **≈ 67,973 行** |
-| UMango **全部**活跃代码（C# + XAML） | **≈ 20,962 行** |
-| 比值 | **3.2×** |
+| UMango **全部**活跃代码（C# + XAML） | **≈ 21,896 行** |
+| 比值 | **3.1×** |
 
 即：**"完整迁移 PCL-CE 全部功能"意味着项目规模要再放大 3 倍以上，而其中约一半代码落在 UMango 的红线之外** ——
 且那部分代码与项目既定的跨平台方向直接冲突（§4.5）。
@@ -819,6 +856,8 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
     推测由 `PCL.Core` 的下载实现读取；本次未追到消费方。
 14. **`Modules/Minecraft/CrashAnalysis/Detection/CrashStackAnalyzer.cs` 是 `partial` 类**，
     其另一半不在 `Modules/` 范围内，本次未定位（因此 3.5 表对该文件的行数记为"—"）。
+16. **`Modules/Updates/UpdatesMinioModel.cs` 的增量补丁应用逻辑未逐行确认** —— 仅确认数据模型内存在 `Patches` 字段（`:263`），其应用（打补丁）流程未验证；这会影响 P1-1 的成本估算（若含增量更新则成本更高）。
+17. **`Modules/Network/Facade/ModNet.cs` 的 `NetTaskSpeedLimitLow`/`Left` 在 `Modules/` 内无消费点**（见第 13 条），其实际使用可能在 `PCL.Core/`；本次未追到，故 2.H 表中该条目的"部分"判定依据是**架构对照**而非调用链证据。
 15. **PCL-CE 侧无法用 git 交叉核验**：该克隆是**部分克隆（promisor remote）**，
     `git status` / `git diff` 在离线时不可用（会向 github.com 拉取缺失对象并超时 75 秒）。
     因此"PCL-CE 未被本次调研修改"的证据是文件数/行数与初始实测一致，而非 git 的干净输出。
@@ -847,6 +886,9 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 | `Model/Homepage/News` | 非 MC（"PCL 官网新闻"） | **是 MC** | `NewsViewModel.cs:16` 打 `net-secondary.web.minecraft-services.net`，`:20-22` 白名单为 minecraft.net / minecraft-services.net / microsoft.com |
 | `IO/Download/`（NDlFactory 等） | 可迁移的下载抽象 | **废弃死代码，不适用** | 该目录 6 个文件在目录外的引用数 = **0**，无实现、无调用点 |
 | P/Invoke 数量 | 37 处（`Utils/OS/` 30 处） | **33 处**（`Utils/OS/` 25 处） | `grep -rc "DllImport\|LibraryImport"` 逐文件统计 |
+| `Modules/` 的 P/Invoke 数量 | 13 处 | **11 处** | `grep -rn DllImport Modules/` → ModMain 3 + ModWatcher 6 + ModLink 1 + ModBase 1 |
+| 动画引擎状态 | 「已完成」 | **下调为「部分」** | 初稿只比对了 `AnimationPlayer`，忽略了 `ModAnimation.cs` 是 **1,517 行**的完整补间引擎（20+ 属性工厂 + 14 缓动 + 帧率控制） |
+| §4 候选的许可证标注 | P1/P2 表未逐项标注许可来源 | **已集中更正**（新增 §4.7 二分表 + §4 开头警示） | 初稿把 `Modules/Updates/`、`Modules/Event/`、`Modules/Base/MyBitmap.cs` 列为迁移候选，却只标注了其中一条的许可问题；`Modules/` 整体在自定义许可目录下 |
 | 功能普查完整性 | 漏掉「启动器自定义主页」（初稿未收录） | **已补入**（`PageLaunchRight.xaml.cs`，898 行，**非 MC**） | 子任务完整报告收尾送达后比对发现；该功能挂在 `PageLaunch/` 目录下，容易被误当 MC 页面而跳过 |
 
 **主控自身的两处错误已修正**：
@@ -854,8 +896,8 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 1. 首轮统计 `Modules/UI` 时用了 `-maxdepth 1`，漏掉子目录 `Theme/ThemeManager.cs`，
    得到"2 文件 / 113 行"；实测应为 **3 文件 / 244 行**（`ThemeManager.cs` 131 行）。
 2. 初稿的**功能条目计数内部不自洽**（写 137 = MC 78 + 非 MC 55，但 78+55=133）。
-   已改为脚本逐行统计，现为 **171 = MC 81 + 部分 MC 3 + 非 MC 87**，且
-   `18+29+42+82 = 171` 亦成立。
+   已改为脚本逐行统计；经后续多轮补充/下调，**当前值为 174 = MC 81 + 部分 MC 3 + 非 MC 90**，
+   且 `20+30+42+82 = 174` 亦成立（见 §1.1）。
 
 ### 6.2 ⚠️ 重要：本报告是"某一时刻"的快照
 
@@ -870,6 +912,8 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 | 调研末段 | `39f5259`（"已安装包列表接入界面"，App 测试 46 → 52）—— **本报告 P0-4 由「部分」变「已完成」** |
 | 调研末段 | `602f003`（"修正文档债：README 重写，四份过期文档加作废横幅"）—— **本报告 §1.3 指出的过期文档问题被修复**；本报告文件本身也被该 commit 一并提交 |
 | 核对结束时 | 工作区出现未跟踪的 `src/UMango.Core/Logging/`（5 文件 426 行）与 `ProcessRunner.cs` 改动 —— **本报告 P0-3 由「未做」变「部分（进行中）」** |
+| 收尾复核时 | **`f2cc0b9`（"日志系统 + 日志页 + 一键导出诊断包（功能对照表 P0-3，测试 251 → 277）"）** —— 该 commit 的信息里**直接引用了本报告的条目编号「P0-3」**，说明这份清单已被当作工单使用；
+**P0-3（日志系统）与 P3-8（日志查看页）双双由未做/部分变为已完成**；测试数 251 → 277 |
 
 **影响**：
 
@@ -882,6 +926,8 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 5. **有三项判定在调研期间发生了变化**（已安装包列表 → 已完成；日志系统 → 部分进行中；过期文档 → 已修复），
    报告已逐处标注「⚠️ 判定在调研期间发生变化」并给出新证据。
    **这恰恰说明"功能对照清单"这类文档必须带时间戳与 commit 号** —— 否则一周后它会静默失真。
+
+> **本报告在本轮调查期间已被下游消费**：`f2cc0b9` 的提交信息引用「功能对照表 P0-3」，并按该条目实现了日志系统与日志页。这验证了清单的可用性，但也意味着 **§1.1 的数字是流动的** —— 引用本报告的任何结论时，请一并引用它所属的 commit（当前：`f2cc0b9`）。
 
 ### 6.3 一条方法学教训
 

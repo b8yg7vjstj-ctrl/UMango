@@ -190,6 +190,7 @@ public class OtherViewModelTests
 /// 已安装列表接入界面的测试（需求 P0-4：Core 侧早已实现，此前缺界面消费方）。
 /// </summary>
 [Collection("静态状态")]
+[Trait("Category", "真机")]
 public class InstalledListUiTests
 {
     [Fact]
