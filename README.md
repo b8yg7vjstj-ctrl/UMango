@@ -1,129 +1,144 @@
 # UMango（Uneven Mango Application）
 
-跨平台**包管理器图形界面**。交互设计对标 PCL-CE，但所有业务代码自研；
-目标是用图形界面管理 `npm` / `pnpm` / `git` / `scoop` / `winget` / `Homebrew`
-等命令行包管理器。
+跨平台**包管理器图形界面**。用图形界面管理 `npm` / `pnpm` / `git` / `scoop` / `winget` / `Homebrew`。
 
-> 后端**完全不含** Minecraft 启动与资源下载逻辑，只保留包管理业务。
+交互设计对标 PCL-CE（仅观察其交互与设计数值），业务代码自研；
+所复用的 PCL-CE 代码严格限于 **Apache-2.0 的 `PCL.Core/`**，逐文件标注来源与变更。
+
+> **后端完全不含 Minecraft 逻辑。** 这不只是架构取向 —— 它同时承担合规功能：
+> 《PCL 存储库合理使用指南》把"启动或下载 Java 版 Minecraft、下载或管理 Mod"
+> 明确列为「重度使用」情形，而重度使用会强制要求**改名**（名称须以 `Plain Craft Launcher (PCL)` 开头）
+> 与**公开源代码**。软件与 PCL「实质功能零重叠」是项目留在「轻度使用」的基石。
+> 详见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)。
+
+---
+
+## 技术栈
+
+**.NET 10 + WPF**（`net10.0-windows`）。路线选择：先 WPF 跑通全功能，再决定是否移植 Avalonia。
 
 ```
-Flutter（界面 / 动画）
-   └── dart:ffi ──► C++ 桥接层（进程创建、文件读写、系统调用）
-                        └──► Rust 核心层（适配器、版本解析、依赖树、可用性缓存）
-                              └── 反向回调 C++ 执行 CLI（posix_spawn / CreateProcess）
+src/UMango.Core/            平台中立业务库（多目标 net10.0 + net10.0-windows，无 WPF 依赖）
+  ├─ PackageManagers/       六个包源适配器 + 注册表 + 能力声明
+  ├─ Download/              aria2 / eD2k / 内置 HttpClient 三引擎
+  ├─ Install/               安装执行器：按下载方式拆子项、解析进度、写记录
+  ├─ Terminal/              终端集成桥（原生回传，非黑底嵌入终端）
+  ├─ Animation/             缓动表 + 方向矢量策略（镜像 PCL / PCL 兼容）
+  ├─ Configuration/         描述符驱动的设置体系（含迁移与容错）
+  ├─ Records/               管理记录与次数记录
+  ├─ Platform/              系统判断（平台/架构/家目录集中判定）
+  └─ Execution/             进程运行器（流式输出，终端桥的基础）
+
+src/UMango.App/             WPF 界面（外壳 + 5 个页面 + 4 套主题字典 + 动画播放器）
+src/UMango.Core.Tests/      Core 测试
+src/UMango.App.Tests/       ViewModel 测试
+tools/XamlAudit/            XAML 静态审计工具（绑定/资源键/事件处理器/主题一致性）
 ```
 
-## 当前状态：阶段1 已完成
+**`UMango.Core` 刻意不设 `UseWPF`，并多目标编译 `net10.0`。** 这不只是声明：
+`net10.0` 那一支是"平台中立"的**编译期证明** —— 一旦有人往 Core 里塞 Windows 专用 API，
+该目标立刻编译失败，而不是等到跨平台重构时才发现。
 
-| 能力 | 状态 |
-|------|------|
-| 三层架构打通（Flutter ⇄ C++ ⇄ Rust） | ✅ 已在真机验证 |
-| 包源列表 / 平台能力门控 | ✅ |
-| 搜索、版本列表（正式版/测试版/快照区分） | ✅ |
-| 依赖树解析与可视化（缩进连接线 + 可点操作） | ✅ |
-| 下载量：官方优先 → GitHub Stars 兜底 | ✅ 两条链路均实测 |
-| 全局可切换动画风格（纵向入场 / 向右滑出） | ✅ |
-| 包源可用性 24 小时缓存保护 | ✅ |
-| 自动化测试 | ✅ 202 项（102 Rust + 51 Flutter 单测 + 49 Flutter 集成） |
-| 安装 / 卸载 / 升级的**实际执行** | ❌ 阶段3（当前只生成命令计划） |
-| winget / scoop 适配器 | ⚠️ 已实现但**无法在 macOS 上验证** |
-| 插件系统 | ❌ 阶段4 |
+---
 
-详细进度快照见 [docs/PROGRESS.md](docs/PROGRESS.md)。
+## 当前状态
 
-## 快速开始
+### 已完成并验证
+
+| 能力 | 实现位置 | 验证方式 |
+|------|---------|---------|
+| 六个包源适配器（含新增 Homebrew） | `Core/PackageManagers/Adapters/` | 单测 + npm/pnpm/brew **真机验证** |
+| 平台门控（不支持的平台不执行 CLI） | `Core/PackageManagers/CliPackageManagerBase.cs` | 单测（macOS 上对 winget/scoop 断言） |
+| 搜索 / 版本列表 / 依赖解析 | 各适配器 | 单测 + 真机 |
+| **按下载方式列子项进度** | `Core/Install/InstallExecutor.cs` + `StepNames` | 单测（假 CLI 输出驱动全链路） |
+| 安装执行（真跑 CLI） | `Core/Install/` | 单测 |
+| **终端集成桥**（原生回传，非黑底终端） | `Core/Terminal/TerminalBridge.cs` | 单测 |
+| 下载引擎：aria2 / BitTorrent / eD2k | `Core/Download/` | **真机 aria2 下载**单测 |
+| 应用列表读取（参考 UniGetUI） | Core `ListInstalledAsync` + 下载页「已安装」 | 单测 + **真机读取本机已安装包** |
+| 管理记录与次数记录 | `Core/Records/InstallRecordStore.cs` | 单测 |
+| 系统判断 | `Core/Platform/SystemInfo.cs` | 单测 |
+| 设置体系（描述符驱动、可迁移、容错） | `Core/Configuration/` | 单测 |
+| 动画系统（33 种缓动 + 方向镜像 + 全局切换） | `Core/Animation/` | 单测（含与 PCL 公式的定点校验） |
+| 主题：4 套 token 字典（PCL经典/Win10 Fluent × 浅/深） | `App/Themes/` | 审计工具校验四套 key 完全一致 |
+| 顶部 5 个 banner 选项卡 + 左栏菜单 + 三大金刚键 | `App/MainWindow.xaml` | 审计 + ViewModel 单测 |
+| 合规声明 | 工具页 + `THIRD-PARTY-NOTICES.md` | — |
+
+### 自动化验证
 
 ```bash
-# 构建全部（Rust + C++ + Flutter），并把动态库打进 .app
-scripts/build.sh all
-
-# 构建并启动
-scripts/build.sh run
-
-# 跑全部测试（Rust + 桥接自检 + Flutter 单测 + Flutter 集成测试，约 5 分钟）
-scripts/build.sh test
-
-# 只跑 Flutter 单元测试（flutter_tester，秒级，开发中快速回归）
-scripts/build.sh flutter-test
-
-# 只跑 Flutter 集成测试（在真实 macOS 应用里驱动界面，约 4 分钟）
-scripts/build.sh ui-test
-
-# 只跑桥接层自检（最快的端到端验证，秒级）
-scripts/build.sh smoke
+bash scripts/xaml-audit.sh    # XAML 静态审计：绑定路径/资源键/事件处理器/四套主题一致性
+dotnet test src/UMango.slnx   # 251 项（Core 199 + App 52）
 ```
 
-### 两层 Flutter 测试的分工
+| 手段 | 覆盖 |
+|------|------|
+| Core 单测 199 项 | 业务逻辑、适配器、下载引擎（含真机 aria2 下载） |
+| App 单测 52 项 | ViewModel 逻辑、跨页面设置一致性、外壳导航、已安装列表 |
+| XAML 静态审计 | 800+ 处绑定/资源引用、四套主题键一致性、事件处理器存在性 |
+| **真机渲染** | ❌ **尚未进行**（WPF 无法在 macOS 原生运行；见下） |
 
-| 层次 | 位置 | 耗时 | 用途 |
-|------|------|------|------|
-| 单元测试 | `ui/test/` | ~23s | 数据模型契约、动画逻辑、FFI 直连 |
-| 集成测试 | `ui/integration_test/` | ~4min | 真实应用里驱动界面，验证"界面真的能用" |
+### 尚未完成
 
-集成测试不是可选项：它抓出过两个单元测试抓不到的真实缺陷
-（浮层遮挡导致「搜索」按钮点不动、下载卡片的兜底指标缺标注），
-因为这些问题只在真实渲染与真实布局下才暴露。
+- **真机渲染与交互验证**：本项目在 macOS 上开发，WPF 只能在 Windows 上运行。
+  布局观感、动画手感、真实交互**尚未在真机上验证过**。
+- **macOS/Linux 的系统原生窗口风格**：这条需求与 WPF 路线结构性冲突 —— WPF 无法在 macOS/Linux 上运行。
+  要满足它需要移植到 Avalonia（`UMango.Core` 已为此做好多目标准备）。
+- 功能对照清单中尚未迁移的非 MC 项，见下节。
 
-> 两类 Flutter 测试都要先构建原生层（`scripts/build.sh native`），
-> 因为它们会真实加载 `libumango_bridge.dylib` 并执行 npm 等 CLI。
+---
 
-### 环境要求
+## 与 PCL-CE 的功能对照
 
-- Rust ≥ 1.82、CMake ≥ 3.20、Xcode（macOS 桌面目标）
-- Flutter ≥ 3.44（Dart ≥ 3.12）
-- 各包管理器的 CLI 按需安装（`npm` / `pnpm` / `git` / `brew` 等）
+[`docs/PCL_CE_FEATURE_PARITY.md`](docs/PCL_CE_FEATURE_PARITY.md) 是逐项实测的对照清单（137 项功能）：
 
-### 关于构建产物位置
+| 类别 | 数量 | 处置 |
+|------|-----:|------|
+| 非 MC 功能 | 55 | **应当迁移**（多数位于 Apache-2.0 的 `PCL.Core/`） |
+| — 已完成 | 24 | 见上表 |
+| — 部分完成 | 16 | |
+| — 未做 | 15 | |
+| **MC 专属** | **78** | **不迁移**：迁移即触发重度使用义务（改名 + 开源），且与「剥离 MC」红线矛盾 |
 
-项目源码位于 OneDrive 同步目录内，而 Rust `target/` 与 Flutter `build/`
-会产生数万个小文件，留在同步目录里会拖慢构建并偶发文件锁冲突。
-因此 `scripts/env.sh` 把 `CARGO_TARGET_DIR` 等重定向到
-`~/Library/Caches/umango-build/`。**先 `source scripts/env.sh` 再手动跑 cargo/cmake。**
+未迁移的非 MC 项按优先级见该文档第 4 节。
 
-## 目录结构
+---
 
-```
-core/                    Rust 核心业务层（Cargo workspace）
-  crates/umango-core/      领域模型、适配器契约、版本/依赖树、注册表、JSON API
-  crates/umango-adapters/  各包管理器适配器 + HTTP 工具
-  crates/umango-ffi/       C ABI 导出层 + 线格式（wire）
-native/                  C++ 桥接层
-  include/umango_bridge.h     ABI 契约（两套接口：向下给 Dart、向上给 Rust）
-  src/process_posix.cpp       posix_spawn、双管道并发读取、超时强杀
-  src/process_windows.cpp     CreateProcess（⚠️ 未在真机验证）
-  src/wire.cpp                进程请求分帧解码
-  src/fs_ops.cpp              which / 文件读写 / 平台信息
-  tests/umango_bridge_smoke.cpp  端到端自检
-ui/                      Flutter 前端
-  lib/animation/              全局动画配置系统
-  lib/ffi/                    dart:ffi 绑定与类型化客户端
-  lib/models/                 与 Rust JSON 契约一一对应的数据模型
-  lib/pages/                  页面
-  lib/widgets/                包卡片、依赖树、包源图标
-docs/                    架构、动画、路线图、进度快照
-scripts/                 构建脚本
+## 开发
+
+```bash
+# 路径注意：OneDrive 挂载名会变（OneDrive-个人 ↔ OneDrivePersonal），务必动态解析
+P=$(ls -d /Users/jonathan/Library/CloudStorage/*/"Deepseek Harness"/UMango | head -1)
+
+export PATH="$HOME/.dotnet:$PATH"          # .NET SDK 装在 ~/.dotnet（无需 sudo）
+
+dotnet build "$P/src/UMango.slnx"           # 交叉编译：macOS 上可编译 WPF（EnableWindowsTargeting）
+dotnet test  "$P/src/UMango.slnx"
+bash "$P/scripts/xaml-audit.sh"
 ```
 
-## 硬性约束（红线）
+### 已知环境约束
 
-1. **代码隔离**：仅观摩 PCL-CE 的交互设计，业务代码全部手写，不复制其源码。
-2. **插件模块例外**：插件解析／导入模块可复用 HMCL-CE / PCL-CE 的插件加载代码，单独隔离存放。
-3. **技术栈**：Rust + C++ + Flutter，不使用 Electron 网页套壳。
-4. **后端剥离 MC**：不含任何 Minecraft 逻辑。
-5. **动画向量改造**：列表入场改为纵向、弹窗改为向右滑出，降低视觉代码相似度。
+- **WPF 运行时在 macOS 上不存在**。因此：
+  - 测试工程的 `runtimeconfig` 不能要求 `Microsoft.WindowsDesktop.App`，
+    否则测试宿主直接起不来 → 用 `<DisableTransitiveFrameworkReferences>` 关掉传递框架引用；
+  - App 层代码**不能有编译期的 WPF 类型引用**（哪怕包在 try/catch 里 ——
+    JIT 失败发生在方法能执行之前），需要访问 WPF 时走反射（见 `Services/AppServices.cs` 的 `UiDispatch`）。
+- `dotnet build` 产出的 `bin/`、`obj/` 已由 `.gitignore` 全局忽略（`**/bin`、`**/obj`）。
 
-## 已知限制（如实记录）
+---
 
-- **网络已恢复**：`git ls-remote` 实测可用，git 适配器的 tag 读取链路已补上真机测试。
-  但开发期曾长期无法访问 github.com，因此代码里保留了完整的降级分支与对应测试。
-- **winget / scoop 的解析逻辑未经真机验证**，界面上以「未在真机验证」标记显式告知。
-- **动态库尚未正式集成进 Xcode 工程**，当前由 `scripts/build.sh bundle` 复制进 .app。
-- **App Sandbox 已关闭**：包管理器 GUI 需要执行外部 CLI 并写入沙箱外路径，
-  沙箱内核心功能不可用。代价是无法上架 Mac App Store。
+## 文档
 
-## 第三方资源
+| 文档 | 内容 |
+|------|------|
+| [`docs/PCL_CE_FEATURE_PARITY.md`](docs/PCL_CE_FEATURE_PARITY.md) | PCL-CE 功能逐项对照与迁移状态（137 项，实测） |
+| [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) | 许可证与合规（含重度使用义务 B5–B9） |
+| [`docs/DESIGN_UI_DOTNET.md`](docs/DESIGN_UI_DOTNET.md) | UI 层规格（多 Agent 并行的契约） |
+| [`docs/XAML_AUDIT.md`](docs/XAML_AUDIT.md) | XAML 审计工具的原理、能力与不覆盖范围 |
+| [`docs/ANIMATION.md`](docs/ANIMATION.md) | 动画设计 |
 
-- `npm` / `pnpm` / `git` / `Homebrew` 图标来自 [simple-icons](https://github.com/simple-icons/simple-icons)，
-  授权 **CC0 1.0**（公有领域）。
-- `winget` / `scoop` 无可用官方图标，界面使用自绘字母徽章。
-- 版本范围匹配复用 [`node-semver`](https://crates.io/crates/node-semver) crate。
+### 已废弃文档
+
+`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`docs/PROGRESS.md`、`docs/SCREENSHOT_CHECK.md`
+描述的是**已废弃的第一版（Flutter + Rust + C++）**，保留仅作历史参考。
+相关代码在 `ui/`、`core/`、`native/`，**不要在其上继续开发**。

@@ -62,9 +62,20 @@
 | **MC 专属功能** | **迁移即触发重度使用义务**（改名 + 开源） | 《合理使用指南》原文点名的情形 |
 | **MC 专属但算法通用**（如崩溃分析、NBT、Java 扫描） | **可迁移，但只有剥离 MC 语义后才有意义** —— 剥离后就已不是"迁移该功能"，而是"借其思路另做一个" | 需逐项判定，见第 3 节 |
 
-**给项目所有者的决策**：要么接受 B6+B7（改名 + 开源）换取全量迁移，
-要么维持"非 MC"红线并把"完整迁移"重新定义为"**PCL.CE 全部非 MC 功能**"。
-第 4 节按此举出了尚未迁移的非 MC 功能与优先级。
+5. **还有第三条约束，比前两条更硬，而且它是"红线"的真正来源**：
+   调研期间 UMango 把 `UMango.Core` 改为多目标 **`net10.0;net10.0-windows`**（commit `2f900b1`），
+   而 `PCL.Core.csproj` 是 **`net10.0-windows` + `UseWPF=true`**。
+   那个多出来的 `net10.0` 支**被刻意用作编译期闸门**——一旦有 Windows 专用 API 混进 Core，它立刻编译失败。
+   按该 commit 原文，UMango 的目标是"**Avalonia 跨平台重建**"。
+   **所以"后端剥离 MC 逻辑"实质上等于"后端保持跨平台"**：PCL-CE 是 Windows 专用 WPF 应用，
+   把它的任何一层整体搬进来，都会让 UMango 失去跨平台能力。
+   这意味着 **"部分 MC 功能可以合法迁移"（Apache-2.0）这条缝隙，在工程上多半也走不通** ——
+   `PCL.Core/Minecraft/` 那 6,800 行虽然许可证允许，但连 `PCL.Core` 这个程序集都进不了 `net10.0`。
+   详见 §4.5。
+
+**给项目所有者的决策**：要么接受 B6+B7（改名 + 开源）**并放弃跨平台**换取全量迁移，
+要么维持"非 MC + 跨平台"红线和把"完整迁移"重新定义为"**PCL-CE 全部非 MC 功能**"。
+第 4 节按此举出了尚未迁移的非 MC 功能与优先级 —— 那是**唯一既不违法、也不破坏跨平台**的迁移范围。
 
 ---
 
@@ -101,7 +112,7 @@
   下载引擎、设置体系、主题系统、动画系统、合规声明页。全部有源码证据（见第 2 节各行）。
 - **未做的 42 项里，体积最大、最通用的三块**是：**多语言 i18n**、**启动器自更新**、**HTTP 客户端扩展层与持久化缓存**。
 - **MC 专属的 81 项**（+3 条部分 MC）占据了 PCL-CE 代码量的约一半（第 3 节），
-  但按红线与许可证**都不应迁入** —— 且第 4.1 节给出了比"红线"更硬的技术理由（`net10.0` 编译期闸门）。
+  但按红线与许可证**都不应迁入** —— 且第 4.5 节给出了比"红线"更硬的技术理由（`net10.0` 编译期闸门）。
 
 ### 1.3 一个必须先纠正的文档问题
 
@@ -487,10 +498,10 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 ## 4. 非 MC 但尚未迁移的功能（按建议优先级排序）
 
 **作用域**：第 1 节统计的 **87 条非 MC 功能**中，**未做 41 条 + 部分 27 条**（部分完成的也列出，但语义是"补齐"而非"新建"）。
-本节把它们归并成可执行条目 —— **条目数少于 68**，因为多条功能被合并为一项
+本节把它们归并成 **40 个可执行条目**（P0 四项 / P1 七项 / P2 二十项 / P3 九项）—— 少于 68，因为多条功能被合并为一项
 （例如整个 `Utils/Threading/` 的 6 个文件算一项，`Utils/Hash/` 的 7 个文件算一项）。
 
-### P0 —— 高价值、低风险、UMango 已具备落点
+### 4.1 P0 —— 高价值、低风险、UMango 已具备落点
 
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
@@ -499,7 +510,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 | P0-3 | **日志系统** | 未做 | **低** | `Logging/`（10 文件 849 行） | 否 |
 | P0-4 | **已安装包列表接入界面** | 部分（**Core 6 个适配器全已实现并测试，UI 未接**） | **低** | 无需迁移 —— 是 UMango 自己的 `ListInstalledAsync` + `InstalledPackage.cs` 缺 UI 消费方 | 否 |
 
-### P1 —— 高价值、中等成本
+### 4.2 P1 —— 高价值、中等成本
 
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
@@ -511,7 +522,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 | P1-6 | **编码检测与转换** | 未做 | **低** | `Utils/Codecs/`（3 文件） | 否 |
 | P1-7 | **验证器族** | 部分 | **低** | `Utils/Validate/`（12 文件，基于 FluentValidation） | 否 —— 引入 `FluentValidation` 包 |
 
-### P2 —— 中价值或形态需重新设计
+### 4.3 P2 —— 中价值或形态需重新设计
 
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
@@ -536,7 +547,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 | P2-19 | 相似度搜索 | 未做 | **低** | `Utils/SimilaritySearch.cs` | 否 |
 | P2-20 | 自定义事件总线（XAML 附加事件） | 未做 | **中** | `Modules/Event/`（6 文件 741 行） | **是**（`XamlEventSanitizer`） |
 
-### P3 —— 低价值 / 对 UMango 无意义
+### 4.4 P3 —— 低价值 / 对 UMango 无意义
 
 | # | 功能 | 现状 | 理由 |
 |---|------|------|------|
@@ -550,7 +561,7 @@ UMango 自身的 `README.md`、`docs/ARCHITECTURE.md`、`docs/ROADMAP.md`、`doc
 | P3-8 | 日志查看页 | 未做 | 依赖 P3 之外的日志系统（见 P0-3），做完 P0-3 再看 |
 | P3-9 | 启动器杂项设置 | 未做 | ⚠️ **未逐项确认**其中是否含 UMango 该有的项（文件 322 行未细读） |
 
-### 4.1 Windows 依赖实测汇总（迁移成本的硬约束）
+### 4.5 Windows 依赖实测汇总（迁移成本的硬约束）
 
 上表"Windows 依赖"列的依据如下（均为实测命中，非推断）：
 
@@ -600,6 +611,51 @@ PCL-CE 是 **Windows 专用 WPF** 应用（`net10.0-windows` + `UseWPF`），
 与 `docs/DESIGN_UI_DOTNET.md` 第 0 节第 3 条「**不得引入新的 NuGet 依赖**」冲突。
 UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 **采用 PCL.Core 的任何一块，都要先由项目所有者重新裁决这条约束，并逐个检查该依赖是否支持 `net10.0`（非 Windows）。**
+
+### 4.6 PCL.Core 的可移植性分层（决定"能不能进 Core"）
+
+在 4.5 的闸门之下，逐目录核查 `PCL.Core` 的平台耦合，得到三层：
+
+**第 1 层：可进 `UMango.Core`（`net10.0` 支）—— 目录内零 WPF 命中**
+
+| 目录 | 说明 |
+|------|------|
+| `App/EventBus/` | 内部事件总线（4 文件） |
+| `App/Tasks/` | 任务中心 —— **UMango 已采用**（Apache-2.0，逐文件标注） |
+| `App/Cli/` | 命令行参数解析（7 文件） |
+| `App/Configuration/` | **整个目录零 WPF 命中** —— 最值得优先迁移的一块 |
+| `App/IoC/` | 13 个文件中仅 1 个触及 WPF |
+| `Utils/Threading/`、`Utils/Encryption/`、`Utils/Hash/`、`Utils/Codecs/`、`Utils/Diff/` | 纯算法工具 |
+| `IO/Net/Http/` | 15 个文件中 13 个无 WPF 命中 |
+| `IO/Storage/Cache/` | SQLite 缓存（取决于 NuGet 裁决） |
+| `UI/Animation/Easings/` | **39 个文件、0 个 `System.Windows` 命中** —— 纯数学，最干净的一块 |
+
+**第 2 层：可借鉴设计，但不宜整体迁移**
+
+- `Minecraft/IdentityModel/`（22 文件 1,613 行）里约 **990 行**是通用的 OAuth2 / OpenID / PKCE / JWT 实现。
+  技术上通用，但**位于 MC 命名空间下**，且 4.5 的闸门要求逐文件审查（`JsonWebToken.cs`、`OpenIdClient.cs` 等确实不依赖 WPF）。
+  按 3.7 的结论：应当作独立需求评估，**不要挂在"功能对照迁移"名下**。
+
+**第 3 层：硬阻塞项 —— 明确不能进 Core**
+
+| 目录 / 文件 | 阻塞原因（实测） |
+|------------|----------------|
+| `App/Localization/` | 用 XAML `ResourceDictionary` + `Application.TryFindResource` → **WPF 专用** |
+| `Utils/OS/` | **25 处 `DllImport`**（全库 33 处的 76%）：`KernelInterop` 8、`DragHelper` 8、`WindowInterop` 5、`RegistryChangeMonitor` 3、`NtInterop` 1 |
+| `Utils/WinRT/` | 6 处 `DllImport` + WinRT 互操作 |
+| `Utils/Secret/` | DPAPI + WMI |
+| `IO/Net/Http/HttpProxyManager.cs` | 读注册表 |
+| `IO/Net/Http/HttpServer.cs` | 用 `HttpListener` |
+| `App/Essentials/TelemetryService.cs` | 读注册表 + Sentry |
+| **整体统计** | **544 个 `.cs` 中 59 个引用 `System.Windows` 家族** |
+
+> ⚠️ **对 `App/Localization/` 的判定需要说明**：4.2 表把它列为"硬阻塞"，
+> 而 2.A 表把它列为"非 MC / 未做"。两者不矛盾 —— **它是非 MC 的功能，但它的实现方式是 WPF 专用的**。
+> 若 UMango 要做 i18n，**不应移植它**，而应另选跨平台方案（如 resx 或自建 JSON 字典）。
+> 这正是"某功能非 MC"≠"可以直接迁移"的具体例子。
+
+> 注：PCL.Core 子任务的原始报告称"全库 37 处 P/Invoke、`Utils/OS/` 占 30 处"，
+> 主控复核实测为 **33 处**（`Utils/OS/` 25 处），本报告采用实测值。
 
 ---
 
@@ -745,9 +801,48 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 `ModMain.cs:912/923/930` 的注册表写入、
 `CrashLogCollector.cs:35` 与 `CrashReportExporter.cs:17-21` 的 MC 硬编码。
 
-**主控自身的一处错误已修正**：首轮统计 `Modules/UI` 时使用了 `-maxdepth 1`，
-漏掉子目录 `Theme/ThemeManager.cs`，得到"2 文件 / 113 行"；
-实测应为 **3 文件 / 244 行**，`ThemeManager.cs` 为 131 行。报告中相关两处已改正。
+**主控对子任务结论做了 3 处改判（子任务原始结论 → 复核后）**：
+
+| 项 | 子任务/初稿结论 | 复核后结论 | 证据 |
+|----|--------------|-----------|------|
+| `Model/Homepage/News` | 非 MC（"PCL 官网新闻"） | **是 MC** | `NewsViewModel.cs:16` 打 `net-secondary.web.minecraft-services.net`，`:20-22` 白名单为 minecraft.net / minecraft-services.net / microsoft.com |
+| `IO/Download/`（NDlFactory 等） | 可迁移的下载抽象 | **废弃死代码，不适用** | 该目录 6 个文件在目录外的引用数 = **0**，无实现、无调用点 |
+| P/Invoke 数量 | 37 处（`Utils/OS/` 30 处） | **33 处**（`Utils/OS/` 25 处） | `grep -rc "DllImport\|LibraryImport"` 逐文件统计 |
+
+**主控自身的两处错误已修正**：
+
+1. 首轮统计 `Modules/UI` 时用了 `-maxdepth 1`，漏掉子目录 `Theme/ThemeManager.cs`，
+   得到"2 文件 / 113 行"；实测应为 **3 文件 / 244 行**（`ThemeManager.cs` 131 行）。
+2. 初稿的**功能条目计数内部不自洽**（写 137 = MC 78 + 非 MC 55，但 78+55=133）。
+   已改为脚本逐行统计，现为 **171 = MC 81 + 部分 MC 3 + 非 MC 87**，且
+   `18+29+42+82 = 171` 亦成立。
+
+### 6.2 ⚠️ 重要：本报告是"某一时刻"的快照
+
+**调研期间，工作区被另一个任务并发修改并提交。** 实测到的变化：
+
+| 时刻 | 状态 |
+|------|------|
+| 调研开始 | `git log -1` = `f060293`（"新增 XAML 静态审计工具"） |
+| 调研中 | `git status` 出现 `?? src/UMango.App.Tests/`（未跟踪，**只有 1 个 csproj**） |
+| 调研中 | `src/UMango.App.Tests/` 陆续出现 4 个测试文件（`DownloaderViewModelTests`、`OtherViewModelTests`、`SharedSettingConsistencyTests`、`ShellViewModelTests`，共 604 行），并被提交 |
+| 调研后期 | `git log -1` = **`2f900b1`**（"Core 去掉残留的 UseWPF 并改为多目标"）—— `UMango.Core` 改为 `net10.0;net10.0-windows` |
+
+**影响**：
+
+1. 第 5 节的规模数字是 `2f900b1` 时刻的实测值。并发继续提交后，这些数字会变。
+2. 初稿曾把 `src/UMango.App.Tests/` 记为"未跟踪、尚未编写测试" —— **该结论已被后续提交推翻**，现已改正为 4 文件 46 个用例。
+3. `git status` 现在只显示 `M docs/PCL_CE_FEATURE_PARITY.md`（**本文件本身**），
+   说明其它改动都已由那个任务提交；本报告未修改任何其他文件。
+4. **`UMango.Core` 的 `net10.0` 多目标这一变化，直接改变了本报告的迁移成本结论**（§4.5），
+   它是本次调研中影响最大的发现 —— 若非并发提交，本报告会漏掉这个决定性约束。
+
+### 6.3 一条方法学教训
+
+初稿把"MC 专属 vs 非 MC"的分类做了手工累加，结果**内部不自洽**（78+55≠137），
+而单看每一行都"看起来对"。**多分类的清单必须用脚本统计，不能手工数** ——
+这与本项目 `docs/XAML_AUDIT.md` 里那条教训同源："一个 100% 误报的检查比没有检查更糟"，
+反过来也成立：**一个手工维护的计数，比没有计数更容易骗过自己。**
 
 ---
 

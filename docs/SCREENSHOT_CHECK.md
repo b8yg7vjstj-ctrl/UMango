@@ -1,5 +1,20 @@
 # UMango 截图 ↔ PCL-CE 参照数值：程序化比对报告
 
+> # ⚠️ 本文档已作废
+>
+> 本文描述的是**已废弃的第一版（Flutter + Rust + C++ 三层架构）**，
+> 该版本已在 commit `d01f071`（"技术路线切换：废弃 Flutter 版，改用 .NET 10 + WPF"）被取代。
+>
+> **当前技术栈是 .NET 10 + WPF**，请以以下文档为准：
+> - [`README.md`](../README.md) —— 项目现状与开发方式
+> - [`PCL_CE_FEATURE_PARITY.md`](PCL_CE_FEATURE_PARITY.md) —— 功能对照与完成度（逐项实测）
+> - [`DESIGN_UI_DOTNET.md`](DESIGN_UI_DOTNET.md) —— 当前 UI 层规格
+> - [`XAML_AUDIT.md`](XAML_AUDIT.md) —— XAML 静态审计工具
+>
+> 相关代码在 `ui/`、`core/`、`native/`，**不要在其上继续开发**。
+> 本文保留仅作历史参考（其中的 PCL-CE 设计数值分析仍有参考价值）。
+
+
 > 第 0~4 节由 `scripts/compare_screenshots.py` 依据 `ui/build/screenshots/*.png` 生成，**每次运行都会重写**；最后一节「人工分析」写死在脚本里（`MANUAL_SECTION` 常量），负责区分「实测 / 推断 / 做不到」。
 > 所有结论来自**逐像素扫描 + ffmpeg 解码**，不含任何视觉大模型的判断 ——
 > 本机视觉大模型被限流不可用、且没有 Chrome，这条约束贯穿整个流程。
