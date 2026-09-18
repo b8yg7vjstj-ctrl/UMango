@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    测试工程。
+
+    · 目标框架**故意不在这里写**：由 src/Directory.Build.props 统一提供（net10.0-windows），
+      EnableWindowsTargeting 也来自那个文件，所以 macOS 上可以直接交叉编译本工程。
+    · 也**没有**设 UseWPF：被测的 PackageManagers / Records / Execution / Platform 全部与 WPF 无关，
+      测试代码不引用任何 WPF 类型，因此编译不需要 WindowsDesktop 的引用程序集。
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+
+    <!--
+      关键：UMango.Core 是 UseWPF=true 的工程，ProjectReference 会把它对
+      Microsoft.WindowsDesktop.App 的框架引用**传递**过来（NuGet 记在 assets 文件里，
+      SDK 由 ResolvePackageAssets 输出为 TransitiveFrameworkReference 再变成 FrameworkReference），
+      结果就是测试主机的 runtimeconfig.json 会要求 WindowsDesktop 运行时 ——
+      而该运行时只存在于 Windows，macOS 上 `dotnet test` 连测试主机都起不来。
+      本测试工程只用 UMango.Core 里与 WPF 无关的代码，因此显式关闭"传递框架引用"，
+      测试主机只需 Microsoft.NETCore.App，可在 macOS 上直接跑；在 Windows 上同样成立。
+      （若日后测试需要引用 WPF 类型，删掉这一行并改用 Windows/CrossOver 运行。）
+    -->
+    <DisableTransitiveFrameworkReferences>true</DisableTransitiveFrameworkReferences>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 版本均为较新的稳定版；除测试框架外不引入任何第三方依赖（不新增 NuGet 依赖是硬性要求） -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UMango.Core\UMango.Core.csproj" />
+  </ItemGroup>
+
+</Project>
