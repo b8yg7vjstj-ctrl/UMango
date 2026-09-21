@@ -51,7 +51,7 @@ public sealed class HttpService : IHttpService
                 }
                 return new HttpResponse<T> { IsSuccess = false, StatusCode = (int)response.StatusCode, Error = response.ReasonPhrase };
             }
-            catch (Exception ex) when (attempt < MaxRetries)
+            catch (Exception) when (attempt < MaxRetries)
             {
                 await Task.Delay(RetryDelayMs * (attempt + 1), ct).ConfigureAwait(false);
             }
