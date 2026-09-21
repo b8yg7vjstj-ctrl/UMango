@@ -29,16 +29,35 @@ public sealed class HttpService : IHttpService
         }
     }
 
+    private const int MaxRetries = 3;
+    private const int RetryDelayMs = 1000;
+
     public async Task<HttpResponse<T>> GetJsonAsync<T>(string url, CancellationToken ct = default)
     {
-        try
+        for (var attempt = 0; attempt <= MaxRetries; attempt++)
         {
-            var response = await GetClient().GetAsync(url, ct).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode) return new HttpResponse<T> { IsSuccess = false, StatusCode = (int)response.StatusCode, Error = response.ReasonPhrase };
-            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            return new HttpResponse<T> { IsSuccess = true, Value = JsonSerializer.Deserialize<T>(json), StatusCode = (int)response.StatusCode };
+            try
+            {
+                var response = await GetClient().GetAsync(url, ct).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                    return new HttpResponse<T> { IsSuccess = true, Value = JsonSerializer.Deserialize<T>(json), StatusCode = (int)response.StatusCode };
+                }
+                if (attempt < MaxRetries && (int)response.StatusCode >= 500)
+                {
+                    await Task.Delay(RetryDelayMs * (attempt + 1), ct).ConfigureAwait(false);
+                    continue;
+                }
+                return new HttpResponse<T> { IsSuccess = false, StatusCode = (int)response.StatusCode, Error = response.ReasonPhrase };
+            }
+            catch (Exception ex) when (attempt < MaxRetries)
+            {
+                await Task.Delay(RetryDelayMs * (attempt + 1), ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) { return new HttpResponse<T> { IsSuccess = false, Error = ex.Message }; }
         }
-        catch (Exception ex) { return new HttpResponse<T> { IsSuccess = false, Error = ex.Message }; }
+        return new HttpResponse<T> { IsSuccess = false, Error = "重试次数耗尽" };
     }
 
     public async Task<HttpResponse<string>> GetStringAsync(string url, CancellationToken ct = default)

@@ -1,8 +1,7 @@
 namespace UMango.Core.Cache;
 
 /// <summary>
-/// 通用 LRU（最近最少使用）缓存。
-/// 超过容量上限时自动淘汰最久未访问的条目。
+/// 通用 LRU（最近最少使用）缓存。超过容量上限时淘汰最久未访问的条目。
 /// 使用场景：HTTP 响应缓存、CLI 输出缓存、搜索结果缓存。
 /// </summary>
 public sealed class LruCache<TKey, TValue> where TKey : notnull
