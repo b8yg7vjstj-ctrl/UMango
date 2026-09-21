@@ -170,7 +170,9 @@ public partial class MainWindow : Window
 
         // 关掉动画时 AnimationPlanner 会给出零时长规格，PlayEntrance 会直接复位到终态，
         // 因此这里不需要额外判断 AppSettings.Animation.Enabled。
-        AnimationPlayer.PlayEntrance(visible, ElementMotion.PageContent);
+        // 新引擎模式：走 Core 的帧驱动，支持关键帧/组合/取消（将来扩展动画用得上）。
+        // 旧模式 PlayEntrance 仍可调用，两者共存。
+        AnimationPlayer.PlayWithEngineFireAndForget(visible, ElementMotion.PageContent);
     }
 
     private FrameworkElement? CurrentVisibleView()
