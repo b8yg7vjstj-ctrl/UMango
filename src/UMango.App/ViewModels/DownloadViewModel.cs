@@ -115,6 +115,7 @@ public partial class DownloadViewModel : ObservableObject
             OnPropertyChanged(nameof(ShowResultsPane));
             OnPropertyChanged(nameof(ShowInstalledPane));
             OnPropertyChanged(nameof(InstalledSummary));
+            OnPropertyChanged(nameof(ExportInstalledJsonCommand));
 
             if (value) _ = LoadInstalledAsync();
         }
@@ -223,6 +224,7 @@ public partial class DownloadViewModel : ObservableObject
         {
             Installed.Clear();
             OnPropertyChanged(nameof(InstalledSummary));
+            OnPropertyChanged(nameof(ExportInstalledJsonCommand));
             return;
         }
 
@@ -235,6 +237,7 @@ public partial class DownloadViewModel : ObservableObject
                 ? $"未检测到 {category.Title} 的命令行工具。{category.InstallHint}"
                 : $"{category.Title} 只在其它操作系统上可用。";
             OnPropertyChanged(nameof(InstalledSummary));
+            OnPropertyChanged(nameof(ExportInstalledJsonCommand));
             return;
         }
 
@@ -243,6 +246,7 @@ public partial class DownloadViewModel : ObservableObject
         {
             Installed.Clear();
             OnPropertyChanged(nameof(InstalledSummary));
+            OnPropertyChanged(nameof(ExportInstalledJsonCommand));
             return;
         }
 
@@ -280,6 +284,7 @@ public partial class DownloadViewModel : ObservableObject
                 _loadingInstalled = false;
                 IsBusy = false;
                 OnPropertyChanged(nameof(InstalledSummary));
+            OnPropertyChanged(nameof(ExportInstalledJsonCommand));
             }
         }
     }
@@ -523,4 +528,23 @@ public partial class DownloadViewModel : ObservableObject
         null => "操作未成功，可重试；若持续失败请查看进度页的终端输出。",
         _ => "操作未成功，可重试；若持续失败请查看进度页的终端输出。"
     };
+
+    /// <summary>导出已安装列表为 JSON 文件。</summary>
+    [RelayCommand]
+    private void ExportInstalledJson()
+    {
+        try
+        {
+            var dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            var path = Path.Combine(dir, $"umango-installed-{stamp}.json");
+            var list = Installed.Select(i => new { Name = i.Name, Version = i.Version, InstallPath = i.InstallPath, OtherVersions = i.OtherVersions }).ToList();
+            File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(list, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            StatusMessage = $"已导出到桌面：{Path.GetFileName(path)}";
+        }
+        catch
+        {
+            StatusMessage = "导出失败";
+        }
+    }
 }
