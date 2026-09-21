@@ -332,7 +332,18 @@ public partial class DownloadViewModel : ObservableObject
         {
             var found = await manager.SearchAsync(keyword, SearchLimit);
             Results.Clear();
-            foreach (var item in found) Results.Add(item);
+            // 搜索结果排序：精确匹配在前（按包名排序），模糊匹配在后（按相似度排序）。
+            // 精确匹配指的是包名与搜索词的相似度 >= 0.6（即大部分字母匹配）。
+            // 这样用户搜 "express" 时，"express" 本身排在最前面，
+            // 而 "express-cookies" 之类的模糊匹配排在后面。
+            foreach (var item in found.OrderBy(f =>
+            {
+                var sim = UMango.Core.Utils.StringDistance.Similarity(keyword, f.Name);
+                return sim >= 0.6 ? 0 : 1;  // 精确匹配组=0，模糊匹配组=1
+            }).ThenBy(f => f.Name))
+            {
+                Results.Add(item);
+            }
             StatusMessage = found.Count == 0
                 ? $"没有找到与「{keyword}」匹配的包。"
                 : $"在 {category.Title} 中找到 {found.Count} 个结果。";
