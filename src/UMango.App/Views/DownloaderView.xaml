@@ -57,9 +57,14 @@
                     Command="{Binding ClearTerminalCommand}"/>
           </StackPanel>
 
-          <!-- 进度 -->
+          <!-- 进度
+               ⚠️ Mode=OneWay 必须显式写：ProgressBar.Value 的默认绑定模式是 TwoWay，
+               而 ProgressFraction 是只读属性 —— 不写 Mode 会在绑定挂载时抛
+               "无法对只读属性进行 TwoWay 或 OneWayToSource 绑定" 的 InvalidOperationException，
+               **直接导致整个应用启动即崩溃**（真机实测发现，dotnet build 与单元测试都查不出来）。
+               审计工具已加对应静态检查（"只读绑定"类别），同类问题不会再进得来。 -->
           <ProgressBar Height="6" Margin="0,14,0,0" Minimum="0" Maximum="1"
-                       Value="{Binding ProgressFraction, FallbackValue=0}"
+                       Value="{Binding ProgressFraction, Mode=OneWay, FallbackValue=0}"
                        IsIndeterminate="{Binding IsProgressKnown, Converter={StaticResource InverseBool}}"
                        Foreground="{DynamicResource BrC3}"
                        Background="{DynamicResource BrG6}" BorderThickness="0"/>

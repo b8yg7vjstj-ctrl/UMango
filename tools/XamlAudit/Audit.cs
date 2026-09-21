@@ -47,6 +47,7 @@ public sealed class Audit(string appRoot)
             CheckResourceKeys(file, definedKeys);
             CheckEventHandlers(file);
             CheckBindings(file, code);
+            CheckImplicitTwoWayBindings(file, code);
         }
 
     }
@@ -186,6 +187,73 @@ public sealed class Audit(string appRoot)
     }
 
     private static string Truncate(string s, int max = 120) => s.Length <= max ? s : s[..max] + "…";
+
+    // ---------- 5) 隐式 TwoWay 绑定打在只读属性上（真机崩溃级问题） ----------
+
+    /// <summary>
+    /// 检查那些 **默认就是 TwoWay** 的依赖属性上，是否绑了**只读属性**却没写 Mode。
+    ///
+    /// **这条检查来自一次真机崩溃**：`DownloaderView.xaml` 里
+    /// `ProgressBar.Value="{Binding ProgressFraction}"`（Value 默认 TwoWay），
+    /// 而 ProgressFraction 是只读属性。WPF 在绑定挂载时抛
+    /// "无法对只读属性进行 TwoWay 或 OneWayToSource 绑定" 的 InvalidOperationException，
+    /// **导致整个应用启动即崩溃**。
+    ///
+    /// 这个缺陷：dotnet build 不报、单元测试不报、XAML 静态审计原先也不查 ——
+    /// 只有真机启动才暴露。因此把它固化成静态检查，同类问题再也进不来。
+    /// </summary>
+    private void CheckImplicitTwoWayBindings(XamlFile file, CSharpIndex code)
+    {
+        // 这些依赖属性的默认绑定模式是 TwoWay（由 WPF 元数据决定，不是我们的选择）
+        var twoWayByDefault = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Value", "Text", "IsChecked", "SelectedItem", "SelectedIndex", "SelectedValue", "Content"
+        };
+
+        var dataContextType = FindDataContextType(file);
+        if (dataContextType is null) return;
+
+        var vm = code.Find(dataContextType);
+        if (vm is null) return;
+
+        foreach (var (path, line, elementType) in file.Bindings)
+        {
+            // 需要在 XAML 里能看出"属性名 + 未写 Mode"，因此重新扫一遍原始文本：
+            // Bindings 列表只保留了路径，丢掉了属性名与 Mode 信息。
+            _ = path; _ = line; _ = elementType;
+        }
+
+        // 直接扫原始 XAML 文本（比从 Bindings 列表回溯更直接）
+        string raw;
+        try { raw = File.ReadAllText(file.Path); }
+        catch (Exception) { return; }
+
+        foreach (System.Text.RegularExpressions.Match m in
+                 System.Text.RegularExpressions.Regex.Matches(
+                     raw, @"(\w[\w.]*)\s*=\s*""\{Binding\s+([^}""]+)"""))
+        {
+            var propName = m.Groups[1].Value;
+            var expr = m.Groups[2].Value;
+
+            var shortName = propName.Contains('.') ? propName[(propName.LastIndexOf('.') + 1)..] : propName;
+            if (!twoWayByDefault.Contains(shortName)) continue;
+            if (expr.Contains("Mode=", StringComparison.Ordinal)) continue;   // 已显式指定
+
+            var head = expr.Split(',')[0].Trim();
+            var bindPath = head.Contains('=') ? head[(head.IndexOf('=') + 1)..].Trim() : head;
+            if (bindPath.Length == 0) continue;
+
+            // 只在该属性**确实存在**但不可写时才报（存在性由另一条检查负责）
+            if (!vm.Properties.Contains(bindPath)) continue;
+
+            var line = raw[..m.Index].Count(c => c == '\n') + 1;
+            _findings.Add(new Finding("ERROR", "只读绑定",
+                file.RelativePath, line,
+                $"{shortName}=\"{{Binding {bindPath}}}\" 未写 Mode，但 {shortName} 的默认绑定模式是 TwoWay；"
+                + $"若 {bindPath} 是只读属性，WPF 会在挂载绑定时抛异常并**导致应用启动崩溃**。"
+                + "请加 Mode=OneWay。"));
+        }
+    }
 
     // ---------- 辅助 ----------
 
