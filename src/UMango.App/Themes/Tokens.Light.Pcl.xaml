@@ -32,24 +32,24 @@
   <Color x:Key="RedBack">#FBDDDD</Color>
   <Color x:Key="Bg">#FBFBFB</Color>
 
-  <SolidColorBrush x:Key="BrC1" Color="{StaticResource C1}"/>
-  <SolidColorBrush x:Key="BrC2" Color="{StaticResource C2}"/>
-  <SolidColorBrush x:Key="BrC3" Color="{StaticResource C3}"/>
-  <SolidColorBrush x:Key="BrC5" Color="{StaticResource C5}"/>
-  <SolidColorBrush x:Key="BrC6" Color="{StaticResource C6}"/>
-  <SolidColorBrush x:Key="BrC8" Color="{StaticResource C8}"/>
-  <SolidColorBrush x:Key="BrG1" Color="{StaticResource G1}"/>
-  <SolidColorBrush x:Key="BrG2" Color="{StaticResource G2}"/>
-  <SolidColorBrush x:Key="BrG3" Color="{StaticResource G3}"/>
-  <SolidColorBrush x:Key="BrG4" Color="{StaticResource G4}"/>
-  <SolidColorBrush x:Key="BrG5" Color="{StaticResource G5}"/>
-  <SolidColorBrush x:Key="BrG6" Color="{StaticResource G6}"/>
-  <SolidColorBrush x:Key="BrG7" Color="{StaticResource G7}"/>
-  <SolidColorBrush x:Key="BrG8" Color="{StaticResource G8}"/>
+  <SolidColorBrush x:Key="BrC1" Color="{DynamicResource C1}"/>
+  <SolidColorBrush x:Key="BrC2" Color="{DynamicResource C2}"/>
+  <SolidColorBrush x:Key="BrC3" Color="{DynamicResource C3}"/>
+  <SolidColorBrush x:Key="BrC5" Color="{DynamicResource C5}"/>
+  <SolidColorBrush x:Key="BrC6" Color="{DynamicResource C6}"/>
+  <SolidColorBrush x:Key="BrC8" Color="{DynamicResource C8}"/>
+  <SolidColorBrush x:Key="BrG1" Color="{DynamicResource G1}"/>
+  <SolidColorBrush x:Key="BrG2" Color="{DynamicResource G2}"/>
+  <SolidColorBrush x:Key="BrG3" Color="{DynamicResource G3}"/>
+  <SolidColorBrush x:Key="BrG4" Color="{DynamicResource G4}"/>
+  <SolidColorBrush x:Key="BrG5" Color="{DynamicResource G5}"/>
+  <SolidColorBrush x:Key="BrG6" Color="{DynamicResource G6}"/>
+  <SolidColorBrush x:Key="BrG7" Color="{DynamicResource G7}"/>
+  <SolidColorBrush x:Key="BrG8" Color="{DynamicResource G8}"/>
   <SolidColorBrush x:Key="BrBg" Color="{StaticResource Bg}"/>
-  <SolidColorBrush x:Key="BrRed" Color="{StaticResource RedLight}"/>
+  <SolidColorBrush x:Key="BrRed" Color="{DynamicResource RedLight}"/>
   <!-- 错误/危险提示条的底色（对应 Color RedBack）。缺了它，错误提示就只能借用正常底色 —— 看起来不像错误 -->
-  <SolidColorBrush x:Key="BrRedBack" Color="{StaticResource RedBack}"/>
+  <SolidColorBrush x:Key="BrRedBack" Color="{DynamicResource RedBack}"/>
   <!--
     语义色·警告（Degraded / 未验证）。取值 #8A5300 沿用需求指定的琥珀色，
     与旧实现（ui/lib/widgets/package_card.dart 的 AvailabilityState.degraded）一致。
@@ -69,7 +69,7 @@
 
   <!-- 标题栏：PCL 的标题栏实测为**纯色**（录屏横向 11 点采样 9 点同色），
        故这里用纯色而不是渐变。深色版同样保持 PCL 蓝，满足「主色相为蓝」的合规要求。 -->
-  <SolidColorBrush x:Key="BrTitleBar" Color="{StaticResource C3}"/>
+  <SolidColorBrush x:Key="BrTitleBar" Color="{DynamicResource C3}"/>
 
   <!--
     以下为四套主题**同名扩展 token**：原 PclTokens.xaml 没有这些 key，

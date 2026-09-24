@@ -34,24 +34,24 @@
   <Color x:Key="RedBack">#4A2224</Color>
   <Color x:Key="Bg">#1E1F22</Color>
 
-  <SolidColorBrush x:Key="BrC1" Color="{StaticResource C1}"/>
-  <SolidColorBrush x:Key="BrC2" Color="{StaticResource C2}"/>
-  <SolidColorBrush x:Key="BrC3" Color="{StaticResource C3}"/>
-  <SolidColorBrush x:Key="BrC5" Color="{StaticResource C5}"/>
-  <SolidColorBrush x:Key="BrC6" Color="{StaticResource C6}"/>
-  <SolidColorBrush x:Key="BrC8" Color="{StaticResource C8}"/>
-  <SolidColorBrush x:Key="BrG1" Color="{StaticResource G1}"/>
-  <SolidColorBrush x:Key="BrG2" Color="{StaticResource G2}"/>
-  <SolidColorBrush x:Key="BrG3" Color="{StaticResource G3}"/>
-  <SolidColorBrush x:Key="BrG4" Color="{StaticResource G4}"/>
-  <SolidColorBrush x:Key="BrG5" Color="{StaticResource G5}"/>
-  <SolidColorBrush x:Key="BrG6" Color="{StaticResource G6}"/>
-  <SolidColorBrush x:Key="BrG7" Color="{StaticResource G7}"/>
-  <SolidColorBrush x:Key="BrG8" Color="{StaticResource G8}"/>
+  <SolidColorBrush x:Key="BrC1" Color="{DynamicResource C1}"/>
+  <SolidColorBrush x:Key="BrC2" Color="{DynamicResource C2}"/>
+  <SolidColorBrush x:Key="BrC3" Color="{DynamicResource C3}"/>
+  <SolidColorBrush x:Key="BrC5" Color="{DynamicResource C5}"/>
+  <SolidColorBrush x:Key="BrC6" Color="{DynamicResource C6}"/>
+  <SolidColorBrush x:Key="BrC8" Color="{DynamicResource C8}"/>
+  <SolidColorBrush x:Key="BrG1" Color="{DynamicResource G1}"/>
+  <SolidColorBrush x:Key="BrG2" Color="{DynamicResource G2}"/>
+  <SolidColorBrush x:Key="BrG3" Color="{DynamicResource G3}"/>
+  <SolidColorBrush x:Key="BrG4" Color="{DynamicResource G4}"/>
+  <SolidColorBrush x:Key="BrG5" Color="{DynamicResource G5}"/>
+  <SolidColorBrush x:Key="BrG6" Color="{DynamicResource G6}"/>
+  <SolidColorBrush x:Key="BrG7" Color="{DynamicResource G7}"/>
+  <SolidColorBrush x:Key="BrG8" Color="{DynamicResource G8}"/>
   <SolidColorBrush x:Key="BrBg" Color="{StaticResource Bg}"/>
-  <SolidColorBrush x:Key="BrRed" Color="{StaticResource RedLight}"/>
+  <SolidColorBrush x:Key="BrRed" Color="{DynamicResource RedLight}"/>
   <!-- 错误/危险提示条的底色（对应 Color RedBack）。缺了它，错误提示就只能借用正常底色 —— 看起来不像错误 -->
-  <SolidColorBrush x:Key="BrRedBack" Color="{StaticResource RedBack}"/>
+  <SolidColorBrush x:Key="BrRedBack" Color="{DynamicResource RedBack}"/>
   <!--
     语义色·警告（Degraded / 未验证）。浅色版 #8A5300 在深色卡片(#2B2C31)上的对比度只有约 2:1，
     当文字几乎读不出来，故深色版取**同色相的亮化值**（H≈36° 不变，只提亮度）。
@@ -64,7 +64,7 @@
   <SolidColorBrush x:Key="BrProgressSuccess" Color="#61D180"/>
 
   <!-- 标题栏：深色下仍是 PCL 蓝（纯色，PCL 实测就是纯色），保持主题身份与蓝色主色相 -->
-  <SolidColorBrush x:Key="BrTitleBar" Color="{StaticResource C3}"/>
+  <SolidColorBrush x:Key="BrTitleBar" Color="{DynamicResource C3}"/>
 
   <!-- 扩展 token：key 与浅色版完全同名同名同数（见 Tokens.Light.Pcl.xaml 的说明） -->
   <SolidColorBrush x:Key="BrCard" Color="#2B2C31"/>               <!-- 卡片/内容区底色：比窗口底亮一档才形成层次 -->

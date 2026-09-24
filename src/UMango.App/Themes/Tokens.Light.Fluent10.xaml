@@ -40,24 +40,24 @@
   <Color x:Key="RedBack">#FDE7E9</Color>
   <Color x:Key="Bg">#F3F3F3</Color>  <!-- 窗口底（Win10 设置是灰底 + 白内容区） -->
 
-  <SolidColorBrush x:Key="BrC1" Color="{StaticResource C1}"/>
-  <SolidColorBrush x:Key="BrC2" Color="{StaticResource C2}"/>
-  <SolidColorBrush x:Key="BrC3" Color="{StaticResource C3}"/>
-  <SolidColorBrush x:Key="BrC5" Color="{StaticResource C5}"/>
-  <SolidColorBrush x:Key="BrC6" Color="{StaticResource C6}"/>
-  <SolidColorBrush x:Key="BrC8" Color="{StaticResource C8}"/>
-  <SolidColorBrush x:Key="BrG1" Color="{StaticResource G1}"/>
-  <SolidColorBrush x:Key="BrG2" Color="{StaticResource G2}"/>
-  <SolidColorBrush x:Key="BrG3" Color="{StaticResource G3}"/>
-  <SolidColorBrush x:Key="BrG4" Color="{StaticResource G4}"/>
-  <SolidColorBrush x:Key="BrG5" Color="{StaticResource G5}"/>
-  <SolidColorBrush x:Key="BrG6" Color="{StaticResource G6}"/>
-  <SolidColorBrush x:Key="BrG7" Color="{StaticResource G7}"/>
-  <SolidColorBrush x:Key="BrG8" Color="{StaticResource G8}"/>
+  <SolidColorBrush x:Key="BrC1" Color="{DynamicResource C1}"/>
+  <SolidColorBrush x:Key="BrC2" Color="{DynamicResource C2}"/>
+  <SolidColorBrush x:Key="BrC3" Color="{DynamicResource C3}"/>
+  <SolidColorBrush x:Key="BrC5" Color="{DynamicResource C5}"/>
+  <SolidColorBrush x:Key="BrC6" Color="{DynamicResource C6}"/>
+  <SolidColorBrush x:Key="BrC8" Color="{DynamicResource C8}"/>
+  <SolidColorBrush x:Key="BrG1" Color="{DynamicResource G1}"/>
+  <SolidColorBrush x:Key="BrG2" Color="{DynamicResource G2}"/>
+  <SolidColorBrush x:Key="BrG3" Color="{DynamicResource G3}"/>
+  <SolidColorBrush x:Key="BrG4" Color="{DynamicResource G4}"/>
+  <SolidColorBrush x:Key="BrG5" Color="{DynamicResource G5}"/>
+  <SolidColorBrush x:Key="BrG6" Color="{DynamicResource G6}"/>
+  <SolidColorBrush x:Key="BrG7" Color="{DynamicResource G7}"/>
+  <SolidColorBrush x:Key="BrG8" Color="{DynamicResource G8}"/>
   <SolidColorBrush x:Key="BrBg" Color="{StaticResource Bg}"/>
-  <SolidColorBrush x:Key="BrRed" Color="{StaticResource RedLight}"/>
+  <SolidColorBrush x:Key="BrRed" Color="{DynamicResource RedLight}"/>
   <!-- 错误/危险提示条的底色（对应 Color RedBack）。缺了它，错误提示就只能借用正常底色 —— 看起来不像错误 -->
-  <SolidColorBrush x:Key="BrRedBack" Color="{StaticResource RedBack}"/>
+  <SolidColorBrush x:Key="BrRedBack" Color="{DynamicResource RedBack}"/>
   <!--
     语义色·警告 / 成功。Win10 浅色沿用与 PCL 浅色相同的取值（#8A5300 / #1E6B33）：
     这两个值来自需求指定，浅色下两套主题的对比度都达标，没有理由凭空改数。
@@ -69,7 +69,7 @@
   <SolidColorBrush x:Key="BrProgressSuccess" Color="#1E6B33"/>
 
   <!-- 标题栏：**纯色**系统强调蓝。Win10 没有 Mica/亚克力，标题栏就是不透明纯色块。 -->
-  <SolidColorBrush x:Key="BrTitleBar" Color="{StaticResource C3}"/>
+  <SolidColorBrush x:Key="BrTitleBar" Color="{DynamicResource C3}"/>
 
   <!-- 扩展 token（key 与另三套完全同名） -->
   <SolidColorBrush x:Key="BrCard" Color="#FFFFFF"/>               <!-- 内容区/卡片：Win10 是灰底 + 白卡片 -->
