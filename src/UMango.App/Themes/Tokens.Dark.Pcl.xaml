@@ -88,4 +88,21 @@
 
   <FontFamily x:Key="UiFont">Microsoft YaHei UI, Segoe UI, PingFang SC, Helvetica Neue</FontFamily>
   <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+  <SolidColorBrush x:Key="BrC7" Color="#1E3A5F"/>
+  <SolidColorBrush x:Key="BrC4" Color="#6BA8F7"/>
+  <SolidColorBrush x:Key="BrRedDark" Color="#FF7A6B"/>
+  <SolidColorBrush x:Key="BrHalfWhite" Color="#33FFFFFF"/>
+  <SolidColorBrush x:Key="BrSemiWhite" Color="#44FFFFFF"/>
+  <SolidColorBrush x:Key="BrWhite" Color="#1E1F22"/>
+  <SolidColorBrush x:Key="BrTransparent" Color="#00FFFFFF"/>
+  <SolidColorBrush x:Key="BrSemiTransparent" Color="#01EAF2FE"/>
+  <SolidColorBrush x:Key="BrTransparentBackground" Color="#D21E1F22"/>
+  <SolidColorBrush x:Key="BrToolTip" Color="#E52B2C31"/>
+  <SolidColorBrush x:Key="BrFatal" Color="#FF6B5A"/>
+  <SolidColorBrush x:Key="BrError" Color="#FF6B5B"/>
+  <SolidColorBrush x:Key="BrWarn" Color="#FFB84D"/>
+  <SolidColorBrush x:Key="BrInfoDark" Color="#1E1F22"/>
+  <SolidColorBrush x:Key="BrInfo" Color="#E8EAED"/>
+  <SolidColorBrush x:Key="BrDebug" Color="#8A8F94"/>
+  <SolidColorBrush x:Key="BrMsgBoxShadow" Color="#000000"/>
 </ResourceDictionary>

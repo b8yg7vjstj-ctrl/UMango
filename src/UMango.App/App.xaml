@@ -9,6 +9,8 @@
       <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="Themes/PclTokens.xaml"/>
         <ResourceDictionary Source="Themes/Styles.xaml"/>
+        <!-- PCL 观感控件主题包（13 个控件样式，按 PCL 设计数值自研实现） -->
+        <ResourceDictionary Source="Themes/Controls.Pcl.xaml"/>
       </ResourceDictionary.MergedDictionaries>
       <!--
         两个"显隐"转换器，**按绑定源的类型选**，不要混用 —— 混用不报错，只是永远不显示：
