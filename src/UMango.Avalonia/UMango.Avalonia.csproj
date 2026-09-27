@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>UMango</AssemblyName>
+    <RootNamespace>UMango.Avalonia</RootNamespace>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 与 WPF 版同名程序集但目标不同：WPF 版 = net10.0-windows（Windows 专属），
+         本项目 = net10.0（macOS/Linux/Windows 跨平台）。业务全部复用 UMango.Core。 -->
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
+    <!-- 多目标库默认解析到 net10.0-windows；这里强制取平台中立的 net10.0 -->
+    <ProjectReference Include="..\UMango.Core\UMango.Core.csproj" SetTargetFramework="TargetFramework=net10.0" />
+  </ItemGroup>
+</Project>

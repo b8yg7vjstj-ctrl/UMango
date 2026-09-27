@@ -1,7 +1,8 @@
 <Solution>
-  <Project Path="UMango.Core/UMango.Core.csproj" Type="C#" />
-  <Project Path="UMango.App/UMango.App.csproj" Type="C#" />
-  <Project Path="UMango.Core.Tests/UMango.Core.Tests.csproj" Type="C#" />
-  <Project Path="UMango.App.Tests/UMango.App.Tests.csproj" Type="C#" />
+  <Project Path="UMango.Core/UMango.Core.csproj" />
+  <Project Path="UMango.App/UMango.App.csproj" />
+  <Project Path="UMango.Avalonia/UMango.Avalonia.csproj" />
+  <Project Path="UMango.Core.Tests/UMango.Core.Tests.csproj" />
+  <Project Path="UMango.App.Tests/UMango.App.Tests.csproj" />
   <Project Path="../tools/XamlAudit/XamlAudit.csproj" />
 </Solution>

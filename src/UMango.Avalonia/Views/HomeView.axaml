@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UMango.Avalonia.Views.HomeView">
+  <!--
+    主页（macOS/Linux 版）：真实数据，不是占位图。
+    · 系统信息来自 UMango.Core.Platform.SystemInfo
+    · 包源可用性来自 PackageManagerRegistry（在 macOS 上 npm/pnpm/git/homebrew 原生可探测）
+  -->
+  <ScrollViewer Padding="24,16">
+    <StackPanel Spacing="12" MaxWidth="860" HorizontalAlignment="Left">
+
+      <TextBlock Classes="pcl-title" Text="UMango" FontSize="22" />
+      <TextBlock Classes="pcl-secondary"
+                 Text="跨平台包管理器图形界面 · 与 Windows 版共用同一业务核心与动效引擎" />
+
+      <Border Classes="pcl-card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="pcl-title" Text="系统" />
+          <TextBlock x:Name="PlatformText" Classes="pcl-secondary" TextWrapping="Wrap" />
+          <TextBlock x:Name="ArchText" Classes="pcl-secondary" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="pcl-card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="pcl-title" Text="包源" />
+          <TextBlock Classes="pcl-secondary"
+                     Text="探测结果来自各 CLI 的真实调用（可用 / 未安装 / 不适用当前平台）" />
+          <ItemsControl x:Name="ManagersList">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Padding="4" Margin="0,2">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <!-- 状态点：绿=可用 灰=未装 红=错误 -->
+                    <Ellipse Width="9" Height="9"
+                             Fill="{Binding StateBrush, Mode=OneWay}" />
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Detail}" Classes="pcl-secondary" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button x:Name="BtnRefresh" Classes="pcl" Content="重新探测" HorizontalAlignment="Left" />
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

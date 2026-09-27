@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:UMango.Avalonia.ViewModels"
+        x:Class="UMango.Avalonia.MainWindow"
+        Title="UMango"
+        Width="980" Height="640"
+        MinWidth="760" MinHeight="520"
+        Background="{DynamicResource PageBack}"
+        FontFamily="Inter, Microsoft YaHei UI, Segoe UI, PingFang SC">
+
+  <!--
+    macOS / Linux 版主窗口：PCL 布局骨架（顶部 banner 选项卡 + 内容区）。
+    与 WPF 版同构 —— 业务全部来自 UMango.Core，动效走同一套 Core 引擎
+    （PCL 原版数值：淡入 100ms + 两段落体 250/350ms BackOut）。
+    平台差异按需求保留：macOS/Linux 用系统原生窗口风格（系统标题栏，
+    不自绘三大金刚键 —— 那是 Windows 版的专属需求）。
+  -->
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- 顶部 banner 选项卡（PCL 骨架：一行大标签） -->
+    <Border Background="{DynamicResource TitleBarBack}" Padding="10,8">
+      <StackPanel Orientation="Horizontal" Spacing="4">
+        <Button x:Name="TabHome"     Classes="banner" Content="主页" Click="OnNavClick" />
+        <Button x:Name="TabDownload" Classes="banner" Click="OnNavClick" Content="下载" />
+        <Button x:Name="TabProgress" Classes="banner" Click="OnNavClick" Content="进度" />
+        <Button x:Name="TabSettings" Classes="banner" Click="OnNavClick" Content="设置" />
+        <Button x:Name="TabTools"    Classes="banner" Content="工具" />
+      </StackPanel>
+    </Border>
+
+    <!-- 内容区：切页时由后台代码用 PCL 动效入场 -->
+    <ContentControl x:Name="PageHost" Grid.Row="1" />
+  </Grid>
+</Window>

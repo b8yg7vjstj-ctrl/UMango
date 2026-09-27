@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    PCL 色板（Avalonia 版，纯资源）。
+    色值与 WPF 版 Tokens.Light.Pcl.xaml 同源（提取自 PCL-CE Application.xaml 实测）。
+    样式在 Pcl.Controls.axaml（Avalonia 方言要求资源与样式分文件）。
+  -->
+  <SolidColorBrush x:Key="C1" Color="#343d4a" />
+  <SolidColorBrush x:Key="C2" Color="#0b5bcb" />
+  <SolidColorBrush x:Key="C3" Color="#1370f3" />
+  <SolidColorBrush x:Key="C4" Color="#4890f5" />
+  <SolidColorBrush x:Key="C5" Color="#96c0f9" />
+  <SolidColorBrush x:Key="C6" Color="#d5e6fd" />
+  <SolidColorBrush x:Key="C7" Color="#e0eafd" />
+  <SolidColorBrush x:Key="C8" Color="#eaf2fe" />
+  <SolidColorBrush x:Key="G1" Color="#404040" />
+  <SolidColorBrush x:Key="G3" Color="#8c8c8c" />
+  <SolidColorBrush x:Key="G5" Color="#cccccc" />
+  <SolidColorBrush x:Key="G6" Color="#ebebeb" />
+  <SolidColorBrush x:Key="G8" Color="#f5f5f5" />
+  <SolidColorBrush x:Key="PageBack" Color="#fbfbfb" />
+  <SolidColorBrush x:Key="CardBack" Color="#ffffff" />
+  <SolidColorBrush x:Key="RedLight" Color="#ff4c4c" />
+  <SolidColorBrush x:Key="TitleBarBack" Color="#0b5bcb" />
+</ResourceDictionary>
