@@ -335,7 +335,8 @@ public class SettingsServiceTests
         var s = NewService();
         var inAnimation = s.Descriptors.Where(d => d.Section == UiSettings.SectionAnimation).ToList();
 
-        Assert.Equal(4, inAnimation.Count);
+        // 5 项：开关 / 方向矢量 / 动效预设（PCL 原版数值，随主题同步）/ 速度倍率 / 帧率
+        Assert.Equal(5, inAnimation.Count);
         // 同一分组内按 Order 升序
         var orders = inAnimation.Select(d => d.Order).ToList();
         Assert.Equal(orders.OrderBy(x => x), orders);
