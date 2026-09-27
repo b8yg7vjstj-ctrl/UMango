@@ -49,6 +49,13 @@ public sealed class AnimationSettings
     /// <summary>帧率上限，默认 59 —— 取自 PCL-CE 的 Config.System.AnimationFpsLimit 默认值</summary>
     public int FpsLimit { get; set; } = 59;
 
+    /// <summary>
+    /// 动效预设（默认 PCL 原版数值）。
+    /// 需求：「动效之类的在 PCL 主题中完整保留」——预设由 ThemeManager 随主题同步
+    /// （PCL 主题 → Pcl 预设；Fluent10 主题 → Fluent 预设），用户改设置可覆盖。
+    /// </summary>
+    public MotionProfileKind Profile { get; set; } = MotionProfileKind.Pcl;
+
     /// <summary>把速度倍率夹到合理范围，避免 0 或负数导致除零/负时长。</summary>
     public double EffectiveSpeedFactor => Math.Clamp(SpeedFactor, 0.1, 10.0);
 
@@ -57,6 +64,7 @@ public sealed class AnimationSettings
         Enabled = Enabled,
         Direction = Direction,
         SpeedFactor = SpeedFactor,
-        FpsLimit = FpsLimit
+        FpsLimit = FpsLimit,
+        Profile = Profile
     };
 }

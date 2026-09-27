@@ -49,4 +49,48 @@ public static class AnimationPlannerBinding
 
         return new AnimationBinding(group, opacity);
     }
+
+    /// <summary>
+    /// 为一次**页面切换**创建 PCL 式关键帧绑定。
+    ///
+    /// PCL 的切页入场不是单段插值，而是三段并行/串联的组合（MyPageRight.cs 实测）：
+    ///   · 淡入：0 → 1，100ms，幂缓动 Out
+    ///   · 位移：Y 两段 —— 先落到中段（250ms，QuadOut），再落定（350ms，BackOut 回弹）
+    ///   · 终态 Y 归 0（PCL 存档值 11 是它"先推开再落回"的实现细节，我们直接落回）
+    ///
+    /// 位移总量会按 settings.EffectiveSpeedFactor 缩放，时长同样除以倍率，
+    /// 与单段 <see cref="CreateEntrance"/> 的语义一致。
+    /// </summary>
+    public static AnimationBinding CreatePageEnter(
+        PageMotionProfile profile,
+        IAnimatable offsetX,
+        IAnimatable offsetY,
+        IAnimatable opacity,
+        AnimationSettings settings,
+        int fps,
+        ValueProcessorRegistry? registry = null)
+    {
+        var speed = settings.EffectiveSpeedFactor;
+        var processors = registry ?? new ValueProcessorRegistry();
+
+        int Frames(int ms) => Math.Max(1, (int)Math.Round(ms / speed / 1000.0 * Math.Clamp(fps, 1, 1000)));
+
+        var fade = new FromToAnimation(0.0, 1.0, Frames(profile.FadeInMs), Easing.Of(profile.FadeInEase), processors);
+        var ySeg1 = new FromToAnimation(profile.EnterFromY, profile.EnterMidY, Frames(profile.EnterMidMs), Easing.Of(profile.EnterMidEase), processors);
+        var ySeg2 = new FromToAnimation(profile.EnterMidY, 0.0, Frames(profile.EnterToMs), Easing.Of(profile.EnterToEase), processors);
+        var ySeq = new SequentialAnimationGroup { Name = "PageEnter:Y" };
+        ySeq.Add(ySeg1, offsetY);
+        ySeq.Add(ySeg2, offsetY);
+
+        var group = new ParallelAnimationGroup { Name = "PageEnter" };
+        group.Add(fade, opacity);
+        // 嵌套组：组的 target 参数被忽略（子动画各带 target），这里传 offsetY 仅作占位
+        group.Add(new AnimationBinding(ySeq, offsetY));
+
+        // X 不动：PCL 的切页只有纵向落体，没有横向位移（与"对话框左右滑"不同）
+        var xHold = new FromToAnimation(0.0, 0.0, Frames(profile.EnterMidMs + profile.EnterToMs), Easing.Of(EasingKind.Linear), processors);
+        group.Add(xHold, offsetX);
+
+        return new AnimationBinding(group, opacity);
+    }
 }
