@@ -343,11 +343,23 @@ public partial class MainWindow : Window
     /// </summary>
     private void ShowToast(UMango.Core.Notifications.Notification notification)
     {
-        // 去重：同一文案已在显示中就不再叠一条（PCL 的 HintWaiting 也做同样检查）
-        if (_toasts.Any(t => t.Message == notification.Message)) return;
+        // 线程编组（必须）：
+        // NotificationService.OnShow 的触发方可能是**后台线程** ——
+        //   · PCL 侧的调用方（安装/下载工作线程）会调 HintWrapper.Show；
+        //   · AppServices.Initialize 本身就被 ProgressView 用 Task.Run 在后台线程跑过。
+        // 而下面要改的 _toasts 是绑定的 ObservableCollection：一旦在非 UI 线程上改，
+        // WPF 会抛"集合被非拥有线程修改"。本项目此前已经踩过同类坑（见 InstallExecutor 的
+        // 线程亲和性注释），所以这里显式编组，而不是指望调用方在 UI 线程。
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(() => ShowToast(notification));
+            return;
+        }
 
-        // 上限保护：超过 4 条时先挤掉最旧的一条
-        while (_toasts.Count >= 4) _toasts.RemoveAt(0);
+        // 列队策略（去重 + 上限）抽到 ToastPolicy 里，以便无界面测试 —— 见该类的注释
+        if (!ToastPolicy.ShouldEnqueue(_toasts.Select(t => t.Message), notification.Message)) return;
+
+        for (var i = ToastPolicy.EvictionsNeeded(_toasts.Count); i > 0; i--) _toasts.RemoveAt(0);
 
         var item = new ToastItem
         {
