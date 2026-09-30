@@ -57,6 +57,10 @@ public partial class MainWindow : Window
         // 二级导航变化 → 由外壳裁决是否要换成独立页面（当前只有"下载器"这一例）。
         _shell.NavChanged += _ => ApplyNavOverride();
 
+        // 全局提示浮层：PCL 的 HintWrapper 经 PclUiBridge 汇入 NotificationService，
+        // 这里订阅同一事件把提示渲染成右下角浮条（对应 PCL 的 PanHint）。
+        Services.AppServices.Notifications.OnShow += ShowToast;
+
         // 选项卡也可能被别处改（快捷键、将来页面内的跳转）→ 跟着切右区、勾选顶部 banner。
         _shell.PropertyChanged += OnShellPropertyChanged;
 
@@ -325,4 +329,63 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
+
+    // ================= 全局提示浮层 =================
+
+    /// <summary>当前显示中的提示条（ObservableCollection 以便自动消失时移除）。</summary>
+    private readonly System.Collections.ObjectModel.ObservableCollection<ToastItem> _toasts = [];
+
+    /// <summary>
+    /// 展示一条全局提示（右下角浮条），到时自动消失。
+    ///
+    /// 与 PCL-CE HintService 的行为对齐：同时只保留有限条数（避免刷屏把界面糊住），
+    /// 相同文案的重复提示合并（PCL 也是这么做的）。
+    /// </summary>
+    private void ShowToast(UMango.Core.Notifications.Notification notification)
+    {
+        // 去重：同一文案已在显示中就不再叠一条（PCL 的 HintWaiting 也做同样检查）
+        if (_toasts.Any(t => t.Message == notification.Message)) return;
+
+        // 上限保护：超过 4 条时先挤掉最旧的一条
+        while (_toasts.Count >= 4) _toasts.RemoveAt(0);
+
+        var item = new ToastItem
+        {
+            Message = notification.Message,
+            AccentBrush = AccentFor(notification.Type),
+        };
+        _toasts.Add(item);
+
+        // 首条提示时才把集合挂上去（省掉 MainWindow 起步阶段的一次绑定开销）
+        if (!ReferenceEquals(ToastHost.ItemsSource, _toasts)) ToastHost.ItemsSource = _toasts;
+
+        // 到时移除。用 DispatcherTimer 而不是 Task.Delay：后者回调在后台线程，
+        // 直接改 _toasts（绑定目标）会抛"集合被非拥有线程修改"。
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(Math.Max(800, notification.DurationMs)),
+        };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            _toasts.Remove(item);
+        };
+        timer.Start();
+    }
+
+    /// <summary>按提示类型取左侧色条颜色（走主题 token，明暗主题都会跟着变）。</summary>
+    private System.Windows.Media.Brush AccentFor(UMango.Core.Notifications.NotificationType type) => type switch
+    {
+        UMango.Core.Notifications.NotificationType.Error => (System.Windows.Media.Brush)FindResource("BrError"),
+        UMango.Core.Notifications.NotificationType.Warning => (System.Windows.Media.Brush)FindResource("BrWarnAmber"),
+        UMango.Core.Notifications.NotificationType.Success => (System.Windows.Media.Brush)FindResource("BrProgressSuccess"),
+        _ => (System.Windows.Media.Brush)FindResource("BrC3"),
+    };
+
+    /// <summary>提示条的数据项（只读：浮层里不需要双向绑定）。</summary>
+    public sealed class ToastItem
+    {
+        public required string Message { get; init; }
+        public required System.Windows.Media.Brush AccentBrush { get; init; }
+    }
 }

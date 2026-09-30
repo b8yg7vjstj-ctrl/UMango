@@ -9,6 +9,7 @@ using UMango.Core.Caching;
 using UMango.Core.Configuration;
 using UMango.Core.Download;
 using UMango.Core.Logging;
+using UMango.Core.Notifications;
 using UMango.Core.Platform;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
@@ -47,6 +48,13 @@ public static class AppServices
 
     /// <summary>安装执行器（复用上面两个单例）。</summary>
     public static InstallExecutor Executor => LazyExecutor.Value;
+
+    /// <summary>
+    /// 全局通知服务（提示队列）。
+    /// PCL 的 <c>HintWrapper</c> 经 <see cref="PclUiBridge"/> 汇入这里；
+    /// 界面上的消费方订阅 <see cref="UMango.Core.Notifications.NotificationService.OnShow"/> 即可。
+    /// </summary>
+    public static NotificationService Notifications { get; } = new();
 
     /// <summary>
     /// 内存日志（界面"日志"页直接读它，不必解析文件）。
@@ -126,6 +134,10 @@ public static class AppServices
         _ = Records;
         _ = Executor;
         AppSettings.Load();
+
+        // PCL UI 契约接线：采用 PCL 代码后，HintWrapper/MsgBoxWrapper 的调用方
+        // （PCL 侧代码）通过事件把提示与对话框交给界面层，这里接上 UMango 的实现。
+        PclUiBridge.Wire(Notifications);
     }
 
     /// <summary>
