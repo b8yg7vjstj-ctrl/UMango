@@ -6,6 +6,8 @@ using UMango.App.Animation;
 using UMango.App.ViewModels;
 using UMango.Core.Animation;
 
+using UMango.App.Themes;
+
 namespace UMango.App;
 
 /// <summary>
@@ -144,6 +146,42 @@ public partial class MainWindow : Window
     /// <summary>切换右区内容：五个页面叠放，只改可见性（不重建，页面状态得以保留）。</summary>
     private void ShowTabContent(AppTab tab)
     {
+        // PCL 主题 + 动画开启时：先播 PCL 原版退场（70ms 上收），到位后再切可见性并播入场。
+        // 退场调用形状逐字对照 PCL-CE MyPageRight.cs:618-623。
+        if (ThemeManager.CurrentKind == ThemeKind.PclClassic && Services.AppSettings.Animation.Enabled)
+        {
+            var leaving = CurrentVisibleView();
+            if (leaving is not null)
+            {
+                var aniList = new List<PCL.ModAnimation.AniData>
+                {
+                    PCL.ModAnimation.AaOpacity(leaving, -1, 70, 0),
+                    PCL.ModAnimation.AaTranslateY(leaving, -6, 70, 0),
+                };
+                PCL.ModAnimation.AniStart(aniList, "UMango PageLeave");
+                // 退场 70ms 后真正切换（与动画同步，期间旧页仍可见）
+                var timer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(70)
+                };
+                timer.Tick += (_, _) =>
+                {
+                    timer.Stop();
+                    SwitchNow(tab);
+                    PlayContentAnimation();
+                };
+                timer.Start();
+                return;
+            }
+        }
+
+        SwitchNow(tab);
+        PlayContentAnimation();
+    }
+
+    /// <summary>立即切换可见性（不含动画时序）。</summary>
+    private void SwitchNow(AppTab tab)
+    {
         ViewHome.Visibility = VisibleIf(tab == AppTab.Home);
         ViewDownload.Visibility = VisibleIf(tab == AppTab.Download);
         ViewProgress.Visibility = VisibleIf(tab == AppTab.Progress);
@@ -168,10 +206,27 @@ public partial class MainWindow : Window
         var visible = CurrentVisibleView();
         if (visible is null) return;
 
+        // PCL 主题 + 动画开启：走 **PCL-CE 原版动画 API**（ModAnimation 是逐字采用的
+        // PCL 代码本体，见 Pcl/ModAnimation.cs 文件头）。调用形状逐字对照
+        // PCL-CE MyPageRight.cs:578-587 —— 这就是"动效在 PCL 主题中完整保留"的字面实现。
+        if (ThemeManager.CurrentKind == ThemeKind.PclClassic && Services.AppSettings.Animation.Enabled)
+        {
+            visible.Opacity = 0d;
+            visible.RenderTransform = new System.Windows.Media.TranslateTransform(0d, -16);
+            var enterList = new List<PCL.ModAnimation.AniData>
+            {
+                PCL.ModAnimation.AaOpacity(visible, 1d, 100, 0,
+                    new PCL.ModAnimation.AniEaseOutFluent(PCL.ModAnimation.AniEasePower.Weak)),
+                PCL.ModAnimation.AaTranslateY(visible, 5d, 250, 0, new PCL.ModAnimation.AniEaseOutFluent()),
+                PCL.ModAnimation.AaTranslateY(visible, 11d, 350, 0, new PCL.ModAnimation.AniEaseOutBack()),
+            };
+            PCL.ModAnimation.AniStart(enterList, "UMango PageEnter");
+            return;
+        }
+
+        // Fluent10 主题（或用户改了设置）：走 Core 帧驱动引擎（数值来自 AnimationProfile）。
         // 关掉动画时 AnimationPlanner 会给出零时长规格，PlayEntrance 会直接复位到终态，
         // 因此这里不需要额外判断 AppSettings.Animation.Enabled。
-        // 新引擎模式：走 Core 的帧驱动，支持关键帧/组合/取消（将来扩展动画用得上）。
-        // 旧模式 PlayEntrance 仍可调用，两者共存。
         AnimationPlayer.PlayWithEngineFireAndForget(visible, ElementMotion.PageContent);
     }
 

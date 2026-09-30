@@ -27,6 +27,10 @@ public partial class App : Application
         // 放在最后：基类负责触发 Startup 事件，StartupUri 指向的主窗口在其之后创建，
         // 因此上面两步都先于首帧完成（主题不会"先用默认色画一帧再变"）。
         base.OnStartup(e);
+
+        // 启动 PCL-CE 原版动画驱动线程（ModAnimation.AniStart() 自带线程循环 + FPS 限制，
+        // 帧率上限经 PclCompat 桥接读取 UMango 的动画设置）。采用自 PCL-CE，见 Pcl/ 文件头。
+        PCL.ModAnimation.AniStart();
     }
 
     /// <summary>
