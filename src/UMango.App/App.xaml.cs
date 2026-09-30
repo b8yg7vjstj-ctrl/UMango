@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Windows;
 using UMango.App.Services;
 using UMango.App.Themes;
@@ -18,6 +19,11 @@ namespace UMango.App;
 /// </summary>
 public partial class App : Application
 {
+    /// <summary>
+    /// 动画驱动线程是否已启动（0=未启动，1=已启动）。
+    /// 用 Interlocked 而不是 bool：OnStartup 理论上可能被重入，且要保证跨线程可见性。
+    /// </summary>
+    private static int _animationDriverStarted;
     protected override void OnStartup(StartupEventArgs e)
     {
         SeedServices();
@@ -30,7 +36,18 @@ public partial class App : Application
 
         // 启动 PCL-CE 原版动画驱动线程（ModAnimation.AniStart() 自带线程循环 + FPS 限制，
         // 帧率上限经 PclCompat 桥接读取 UMango 的动画设置）。采用自 PCL-CE，见 Pcl/ 文件头。
-        PCL.ModAnimation.AniStart();
+        //
+        // ⚠ 必须只调一次，因此这里加守卫：
+        //   PCL 原版的 AniStart() **没有防重入**（`aniRunning` 字段只被写、从不被读 ——
+        //   见 ModAnimation.cs:33/461）。调两次就会起两个驱动线程，各自独立推进
+        //   AniTimer 的 delta，同一份动画增量被施加两次 → 动效速度翻倍并抖动。
+        //   PCL 自己只在启动时调一次，所以原版不会暴露这个问题。
+        //   这不是假想：真机日志里出现过两次"启动"（多个实例/重入），正是这条路径。
+        // 修在调用点而不是改 PCL 文件 —— 保持该文件逐字采用（见 Pcl/ModAnimation.cs 文件头）。
+        if (Interlocked.Exchange(ref _animationDriverStarted, 1) == 0)
+        {
+            PCL.ModAnimation.AniStart();
+        }
     }
 
     /// <summary>
