@@ -103,7 +103,9 @@
       <RectangleGeometry Rect="0,0,10000,10000" RadiusX="6" RadiusY="6"/>
     </Border.Clip>
 
-    <Grid>
+    <!-- UseLayoutRounding 采纳自 PCL-CE FormMain.xaml:28：让小字号文字与 1px 边线
+         对齐设备像素，深色模式下小字（11-13px）的模糊/发虚明显改善。 -->
+    <Grid UseLayoutRounding="True">
       <Grid.RowDefinitions>
         <!-- 标题栏用 Auto + 内部 Grid 的 Height=token：RowDefinition.Height 是 GridLength，
              喂给它一个 sys:Double 的 token 会被类型转换拒掉，所以高度挂在 Grid 上。 -->
@@ -223,16 +225,26 @@
                     Margin="0,0,18,20" IsHitTestVisible="False">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <!-- 提示条：左侧主题色条 + 文字；样式走主题 token，换主题即时生效 -->
+            <!--
+              提示条：左侧主题色条 + 文字；样式走主题 token，换主题即时生效。
+              ⚠ 用 Grid 两列而不是横向 StackPanel：
+              横向 StackPanel 给子元素**无限宽度**，TextWrapping 永远不会生效 ——
+              长文案会把提示条撑到任意宽（被卡片裁掉一半，看起来像一截多余的横条）。
+              Grid 的 * 列会把文字宽度约束在 MaxWidth 内，换行才会真正发生。
+            -->
             <Border Background="{DynamicResource BrCard}"
                     BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
                     CornerRadius="4" Padding="12,9" Margin="0,0,0,8" MaxWidth="360">
-              <StackPanel Orientation="Horizontal">
-                <Border Width="3" CornerRadius="2" Margin="0,0,10,0"
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="3" CornerRadius="2" Margin="0,0,10,0"
                         Background="{Binding AccentBrush}"/>
-                <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap"
                            Style="{DynamicResource PclText}" VerticalAlignment="Center"/>
-              </StackPanel>
+              </Grid>
             </Border>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
