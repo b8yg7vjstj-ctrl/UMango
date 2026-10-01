@@ -26,7 +26,7 @@
   <Color x:Key="C7">#22384F</Color><Color x:Key="C8">#182634</Color>
   <!-- ===== 灰阶 ===== -->
   <Color x:Key="G1">#D0D3D8</Color><Color x:Key="G2">#9AA0A6</Color>
-  <Color x:Key="G3">#85888C</Color><Color x:Key="G4">#6E7276</Color>
+  <Color x:Key="G3">#919499</Color><!-- 深色文字优化：卡底对比 3.91→4.58（AA≥4.5）；保原冷调 --><Color x:Key="G4">#8A8F95</Color><!-- 深色文字优化：终端G8底对比 3.05→4.53（AA达标）；保原冷调 -->
   <Color x:Key="G5">#55585C</Color><Color x:Key="G6">#3A3D42</Color>
   <Color x:Key="G7">#303338</Color><Color x:Key="G8">#26282C</Color>
   <!-- ===== 语义色（深色适配，语义不变）===== -->
