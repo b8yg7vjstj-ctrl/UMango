@@ -588,6 +588,15 @@
     <Setter Property="SnapsToDevicePixels" Value="True"/>
     <Setter Property="FontSize" Value="12"/>
     <Setter Property="Foreground" Value="{DynamicResource BrC1}"/>
+    <!--
+      Placement=Left（真机截图实测的缺陷修复）：
+      贴近窗口右缘的按钮（如主页"刷新"），其长提示默认向右弹出，
+      会横跨窗口边缘伸到桌面上 —— 看起来像窗口"长出一块"。
+      向左弹出后提示落在窗口内部；左缘控件用 ToolTipService.Placement="Right" 显式改回。
+      说明：ToolTipService 的附加属性优先级高于 ToolTip 自身属性，
+      因此个别控件仍可按需覆盖。
+    -->
+    <Setter Property="Placement" Value="Left"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ToolTip">
