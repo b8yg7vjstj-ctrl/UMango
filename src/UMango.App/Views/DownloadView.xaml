@@ -310,7 +310,7 @@
             <Border Grid.Column="1" Margin="5,0,0,0" Padding="4,0" CornerRadius="2"
                     Background="{DynamicResource BrWarnAmber}"
                     VerticalAlignment="Center"
-                    ToolTip="{Binding VerificationNote}"
+                    ToolTipService.Placement="Right" ToolTip="{Binding VerificationNote}"
                     Visibility="{Binding VerificationNote, Converter={StaticResource NotEmptyToVis}}">
               <TextBlock Text="未验证" FontSize="10"
                          Foreground="{DynamicResource BrWarnAmberFore}"/>
@@ -322,7 +322,7 @@
                      FontSize="11" Margin="0,2,0,0"
                      Foreground="{DynamicResource BrG3}"
                      TextTrimming="CharacterEllipsis"
-                     ToolTip="{Binding Subtitle}"/>
+                     ToolTipService.Placement="Right" ToolTip="{Binding Subtitle}"/>
         </Grid>
       </Border>
     </DataTemplate>
@@ -474,7 +474,7 @@
                  Style="{DynamicResource DownloadSearchBox}"
                  Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
                  KeyDown="QueryBox_KeyDown"
-                 ToolTip="输入包名或关键词后按回车搜索；Git 源可以直接填仓库地址"/>
+                 ToolTipService.Placement="Right" ToolTip="输入包名或关键词后按回车搜索；Git 源可以直接填仓库地址"/>
 
         <Button Grid.Column="1" Content="搜索" Margin="8,0,0,0"
                 Style="{DynamicResource DownloadPrimaryButton}"
