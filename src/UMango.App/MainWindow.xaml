@@ -23,7 +23,7 @@
     <!-- CaptionHeight 只能写常量：WindowChrome 不是 FrameworkElement，不在资源查找链里，
          拿不到 {DynamicResource TitleBarHeight}。数值与 token TitleBarHeight(48) 保持一致，改 token 时要一起改。 -->
     <WindowChrome CaptionHeight="48" ResizeBorderThickness="6" GlassFrameThickness="0"
-                  CornerRadius="0" UseAeroCaptionButtons="False"/>
+                  CornerRadius="6" UseAeroCaptionButtons="False"/>
   </WindowChrome.WindowChrome>
 
   <Window.Resources>
@@ -94,11 +94,17 @@
     </Style>
   </Window.Resources>
 
-  <Border Margin="10" CornerRadius="6" Background="{DynamicResource BrCard}" SnapsToDevicePixels="True">
-    <Border.Effect>
-      <!-- 窗口阴影是固定黑色（不属于主题 token 集合：它不随主题改变观感），故保留字面量 -->
-      <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.18" Color="#000000"/>
-    </Border.Effect>
+  <!--
+    ⚠ 不要在这里加 Margin（真机截图逐像素实测的缺陷）：
+    原先 Margin="10" + DropShadowEffect(BlurRadius=12) 的卡片式外壳，
+    需要的投影空间比窗口多出的边距更大，投影被窗口边缘裁断，
+    露出的那圈窗口底色就成了"内容之外多出来的背景板"（实测右缘 16px 的 #F0F0F0 带）。
+    PCL-CE 的做法是**根本没有这层外壳**：窗口不画背景板（Background 内容直接铺满），
+    圆角交给 WindowChrome.CornerRadius 由 DWM 实现 —— 见其 FormMain.xaml 的
+    `Background="{x:Null}"` + `WindowChrome CornerRadius="12"`。
+    照此办理：边距归零、去掉投影，圆角由上方的 CornerRadius=6 提供。
+  -->
+  <Border CornerRadius="6" Background="{DynamicResource BrCard}" SnapsToDevicePixels="True">
     <Border.Clip>
       <RectangleGeometry Rect="0,0,10000,10000" RadiusX="6" RadiusY="6"/>
     </Border.Clip>
