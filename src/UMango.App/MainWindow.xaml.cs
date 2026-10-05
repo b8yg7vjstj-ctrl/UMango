@@ -6,6 +6,8 @@ using UMango.App.Animation;
 using UMango.App.ViewModels;
 using UMango.Core.Animation;
 
+using UMango.App.Themes;
+
 namespace UMango.App;
 
 /// <summary>
@@ -54,6 +56,10 @@ public partial class MainWindow : Window
 
         // 二级导航变化 → 由外壳裁决是否要换成独立页面（当前只有"下载器"这一例）。
         _shell.NavChanged += _ => ApplyNavOverride();
+
+        // 全局提示浮层：PCL 的 HintWrapper 经 PclUiBridge 汇入 NotificationService，
+        // 这里订阅同一事件把提示渲染成右下角浮条（对应 PCL 的 PanHint）。
+        Services.AppServices.Notifications.OnShow += ShowToast;
 
         // 选项卡也可能被别处改（快捷键、将来页面内的跳转）→ 跟着切右区、勾选顶部 banner。
         _shell.PropertyChanged += OnShellPropertyChanged;
@@ -144,6 +150,42 @@ public partial class MainWindow : Window
     /// <summary>切换右区内容：五个页面叠放，只改可见性（不重建，页面状态得以保留）。</summary>
     private void ShowTabContent(AppTab tab)
     {
+        // PCL 主题 + 动画开启时：先播 PCL 原版退场（70ms 上收），到位后再切可见性并播入场。
+        // 退场调用形状逐字对照 PCL-CE MyPageRight.cs:618-623。
+        if (ThemeManager.CurrentKind == ThemeKind.PclClassic && Services.AppSettings.Animation.Enabled)
+        {
+            var leaving = CurrentVisibleView();
+            if (leaving is not null)
+            {
+                var aniList = new List<PCL.ModAnimation.AniData>
+                {
+                    PCL.ModAnimation.AaOpacity(leaving, -1, 70, 0),
+                    PCL.ModAnimation.AaTranslateY(leaving, -6, 70, 0),
+                };
+                PCL.ModAnimation.AniStart(aniList, "UMango PageLeave");
+                // 退场 70ms 后真正切换（与动画同步，期间旧页仍可见）
+                var timer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(70)
+                };
+                timer.Tick += (_, _) =>
+                {
+                    timer.Stop();
+                    SwitchNow(tab);
+                    PlayContentAnimation();
+                };
+                timer.Start();
+                return;
+            }
+        }
+
+        SwitchNow(tab);
+        PlayContentAnimation();
+    }
+
+    /// <summary>立即切换可见性（不含动画时序）。</summary>
+    private void SwitchNow(AppTab tab)
+    {
         ViewHome.Visibility = VisibleIf(tab == AppTab.Home);
         ViewDownload.Visibility = VisibleIf(tab == AppTab.Download);
         ViewProgress.Visibility = VisibleIf(tab == AppTab.Progress);
@@ -168,10 +210,27 @@ public partial class MainWindow : Window
         var visible = CurrentVisibleView();
         if (visible is null) return;
 
+        // PCL 主题 + 动画开启：走 **PCL-CE 原版动画 API**（ModAnimation 是逐字采用的
+        // PCL 代码本体，见 Pcl/ModAnimation.cs 文件头）。调用形状逐字对照
+        // PCL-CE MyPageRight.cs:578-587 —— 这就是"动效在 PCL 主题中完整保留"的字面实现。
+        if (ThemeManager.CurrentKind == ThemeKind.PclClassic && Services.AppSettings.Animation.Enabled)
+        {
+            visible.Opacity = 0d;
+            visible.RenderTransform = new System.Windows.Media.TranslateTransform(0d, -16);
+            var enterList = new List<PCL.ModAnimation.AniData>
+            {
+                PCL.ModAnimation.AaOpacity(visible, 1d, 100, 0,
+                    new PCL.ModAnimation.AniEaseOutFluent(PCL.ModAnimation.AniEasePower.Weak)),
+                PCL.ModAnimation.AaTranslateY(visible, 5d, 250, 0, new PCL.ModAnimation.AniEaseOutFluent()),
+                PCL.ModAnimation.AaTranslateY(visible, 11d, 350, 0, new PCL.ModAnimation.AniEaseOutBack()),
+            };
+            PCL.ModAnimation.AniStart(enterList, "UMango PageEnter");
+            return;
+        }
+
+        // Fluent10 主题（或用户改了设置）：走 Core 帧驱动引擎（数值来自 AnimationProfile）。
         // 关掉动画时 AnimationPlanner 会给出零时长规格，PlayEntrance 会直接复位到终态，
         // 因此这里不需要额外判断 AppSettings.Animation.Enabled。
-        // 新引擎模式：走 Core 的帧驱动，支持关键帧/组合/取消（将来扩展动画用得上）。
-        // 旧模式 PlayEntrance 仍可调用，两者共存。
         AnimationPlayer.PlayWithEngineFireAndForget(visible, ElementMotion.PageContent);
     }
 
@@ -270,4 +329,75 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
+
+    // ================= 全局提示浮层 =================
+
+    /// <summary>当前显示中的提示条（ObservableCollection 以便自动消失时移除）。</summary>
+    private readonly System.Collections.ObjectModel.ObservableCollection<ToastItem> _toasts = [];
+
+    /// <summary>
+    /// 展示一条全局提示（右下角浮条），到时自动消失。
+    ///
+    /// 与 PCL-CE HintService 的行为对齐：同时只保留有限条数（避免刷屏把界面糊住），
+    /// 相同文案的重复提示合并（PCL 也是这么做的）。
+    /// </summary>
+    private void ShowToast(UMango.Core.Notifications.Notification notification)
+    {
+        // 线程编组（必须）：
+        // NotificationService.OnShow 的触发方可能是**后台线程** ——
+        //   · PCL 侧的调用方（安装/下载工作线程）会调 HintWrapper.Show；
+        //   · AppServices.Initialize 本身就被 ProgressView 用 Task.Run 在后台线程跑过。
+        // 而下面要改的 _toasts 是绑定的 ObservableCollection：一旦在非 UI 线程上改，
+        // WPF 会抛"集合被非拥有线程修改"。本项目此前已经踩过同类坑（见 InstallExecutor 的
+        // 线程亲和性注释），所以这里显式编组，而不是指望调用方在 UI 线程。
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(() => ShowToast(notification));
+            return;
+        }
+
+        // 列队策略（去重 + 上限）抽到 ToastPolicy 里，以便无界面测试 —— 见该类的注释
+        if (!ToastPolicy.ShouldEnqueue(_toasts.Select(t => t.Message), notification.Message)) return;
+
+        for (var i = ToastPolicy.EvictionsNeeded(_toasts.Count); i > 0; i--) _toasts.RemoveAt(0);
+
+        var item = new ToastItem
+        {
+            Message = notification.Message,
+            AccentBrush = AccentFor(notification.Type),
+        };
+        _toasts.Add(item);
+
+        // 首条提示时才把集合挂上去（省掉 MainWindow 起步阶段的一次绑定开销）
+        if (!ReferenceEquals(ToastHost.ItemsSource, _toasts)) ToastHost.ItemsSource = _toasts;
+
+        // 到时移除。用 DispatcherTimer 而不是 Task.Delay：后者回调在后台线程，
+        // 直接改 _toasts（绑定目标）会抛"集合被非拥有线程修改"。
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(Math.Max(800, notification.DurationMs)),
+        };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            _toasts.Remove(item);
+        };
+        timer.Start();
+    }
+
+    /// <summary>按提示类型取左侧色条颜色（走主题 token，明暗主题都会跟着变）。</summary>
+    private System.Windows.Media.Brush AccentFor(UMango.Core.Notifications.NotificationType type) => type switch
+    {
+        UMango.Core.Notifications.NotificationType.Error => (System.Windows.Media.Brush)FindResource("BrError"),
+        UMango.Core.Notifications.NotificationType.Warning => (System.Windows.Media.Brush)FindResource("BrWarnAmber"),
+        UMango.Core.Notifications.NotificationType.Success => (System.Windows.Media.Brush)FindResource("BrProgressSuccess"),
+        _ => (System.Windows.Media.Brush)FindResource("BrC3"),
+    };
+
+    /// <summary>提示条的数据项（只读：浮层里不需要双向绑定）。</summary>
+    public sealed class ToastItem
+    {
+        public required string Message { get; init; }
+        public required System.Windows.Media.Brush AccentBrush { get; init; }
+    }
 }

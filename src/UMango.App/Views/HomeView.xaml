@@ -167,12 +167,17 @@
           <Border Margin="0,8,0,0" Padding="10,8" CornerRadius="4"
                   Background="{DynamicResource BrG8}"
                   Visibility="{Binding HasVerificationNotes, Converter={StaticResource BoolToVis}}">
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Text="!" FontSize="12" FontWeight="Bold" Margin="0,0,8,0"
+            <!-- Grid 两列：同 DownloaderView 的理由（横向 StackPanel 使 TextWrapping 失效） -->
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="!" FontSize="12" FontWeight="Bold" Margin="0,0,8,0"
                          Foreground="{DynamicResource BrG2}"/>
-              <TextBlock Text="{Binding VerificationText}" FontSize="11" TextWrapping="Wrap"
+              <TextBlock Grid.Column="1" Text="{Binding VerificationText}" FontSize="11" TextWrapping="Wrap"
                          Foreground="{DynamicResource BrG2}"/>
-            </StackPanel>
+            </Grid>
           </Border>
         </StackPanel>
       </Border>

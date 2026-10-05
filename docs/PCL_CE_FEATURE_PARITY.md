@@ -189,13 +189,13 @@
 | 音乐播放器 | `Modules/ModMusic.cs:11`（472 行，NAudio `WaveOutEvent`） | 否 | **未做** | PCL-CE 内置播放器（`MusicControlPause:282`、`MusicControlNext:312`） |
 | 视频/动态背景 | `Modules/ModVideoBack.cs:3`（172 行） | 否 | **未做** | 依赖 WPF MediaElement + 游戏中状态判定（`IsGaming:7`） |
 | 内嵌 WebServer | `Modules/ModWebServer.cs:10`（345 行） | 部分 | **未做** | `StartWebServer:20` / `NaidCallbackServer:112`；是个通用 HTTP 服务器，但 PCL-CE 用它接 **MC 登录 OAuth 回调** |
-| 全局提示/Hint 服务 | `Modules/UI/HintService.cs:21`（`Hint`）、`:99`（`HideAll`）+ `PCL.Core/UI/HintWrapper.cs:16` | 否 | **部分** | UMango 只有**页面内联提示**（`Views/DownloadView.xaml:530` 中性提示、`:438` 空态提示、错误条），**无全局提示队列/浮层** |
+| 全局提示/Hint 服务 | `Modules/UI/HintService.cs:21`（`Hint`）、`:99`（`HideAll`）+ `PCL.Core/UI/HintWrapper.cs:16` | 否 | **已完成** | **`HintWrapper.cs`（Apache-2.0）已逐字采用**进 `src/UMango.Core/Pcl/UI/HintWrapper.cs`；`App/Services/PclUiBridge.cs` 把 `OnShow` 汇入 `NotificationService`，`MainWindow.xaml.cs` 的 `ShowToast` 渲染为右下角浮条（对应 PCL 的 `PanHint`，位置/去重/上限与 PCL 对齐）。**队列消费方仍缺**：PCL 的 `HintService.Tick` 逐条出队 + `HideAll` 尚未迁移（见下行） |
 | 系统 Toast 通知（WinRT） | `PCL.Core/UI/ToastNotification.cs:12`（`SendToast`）、`:39`（模板） | 否 | **未做** | WinRT 专用（`Utils/WinRT/`），Windows-only |
 | 主题管理（明暗 + 色相） | `Modules/UI/Theme/ThemeManager.cs:9`（`ThemeRefresh:22`、`ThemeRefreshMain:31`） | 否 | **已完成** | `src/UMango.App/Themes/ThemeManager.cs:34`（`Apply:113`、`ToggleDark:167`、`ThemeChanged:68`），4 套完整字典 `Tokens.{Light,Dark}.{Pcl,Fluent10}.xaml`，**能力更强**（PCL-CE 是单套 + 明暗） |
 | 多语言 i18n | `PCL.Core/App/Localization/Lang.cs` + `Languages/zh-CN.xaml`（**3,583 行**）×4 种实语言（zh-CN/zh-TW/en-US/en-GB）+ 3 个 12 行空壳 | 否 | **未做** | 机制通用（纯 XAML 资源字典），**文本内容高度启动器专用**；`src/` 下 `Language` 关键字仅 1 处误命中（GitHub 搜索语法注释） |
 | 动画引擎 | `PCL.Core/UI/Animation/`（`UI/` 共 129 文件 9,835 行，动画为主体：`Core/` 帧·关键帧·组合·时钟·值处理器，`Easings/` 39 个缓动类） | 否 | **部分** | UMango `src/UMango.Core/Animation/`（4 文件 386 行）：`AnimationPlanner`、`Easing`（39 缓动枚举化）、`AnimationSpec`、`AnimationSettings` + `App/Animation/AnimationPlayer.cs`。**缓动数学与方向语义已迁移**；但 PCL-CE 的**帧动画/关键帧/并联串联组合/多时钟抽象/`IAnimatable` 体系未迁移** |
 | 单实例运行 | `PCL.Core/App/Essentials/SingleInstanceService.cs` | 否 | **未做** | UMango 无单实例互斥；`grep -ril SingleInstance` = 0 |
-| 通知/对话框系统 | `PCL.Core/UI/MsgBoxWrapper.cs`、`SystemDialogs.cs`、`HintWrapper.cs` | 否 | **部分** | UMango 用原生 `MessageBox`/内联错误文本；无统一封装与主题化对话框 |
+| 通知/对话框系统 | `PCL.Core/UI/MsgBoxWrapper.cs`、`SystemDialogs.cs`、`HintWrapper.cs` | 否 | **已完成** | **`MsgBoxWrapper.cs`（Apache-2.0）已逐字采用**进 `src/UMango.Core/Pcl/UI/MsgBoxWrapper.cs`（含 `MsgBoxButtonInfo`/`MsgBoxTheme`/`MsgBoxHandler` 全套契约，`Lang.Text` 由等价桥提供）；`App/Views/PclDialog.xaml` 是主题化对话框（圆角 4、随明暗主题、支持任意按钮集合 + `OnClick` 回调、后台线程编组 + 阻塞语义）。`SystemDialogs.cs` 未迁 |
 
 ### 2.B PageLaunch（启动与登录）— 全部 MC 专属
 
@@ -301,7 +301,7 @@
 | 位图/图像处理（`MyBitmap.cs`） | `Modules/Base/MyBitmap.cs` | 否 | **未做** | UMango 无位图处理层 |
 | 自定义事件总线 | `Modules/Event/`（6 文件 741 行：`CustomEventService.cs`、`EventType.cs`、`XamlEventSanitizer.cs`） | 否 | **未做** | ⚠️ `Modules/Event` 是 CE 新增能力（见既有分析报告 §2.2）。UMango 用 MVVM 属性通知，无事件总线 |
 | 主题管理器（业务侧） | `Modules/UI/Theme/ThemeManager.cs:9`（**131 行**） | 否 | **已完成** | 见 2.A「主题管理」。⚠️ 本次首轮统计曾把该文件漏算（用了 `-maxdepth 1`），已修正：`Modules/UI` 实为 **3 文件 / 244 行** |
-| 提示服务 | `Modules/UI/HintService.cs:21` | 否 | **部分** | 见 2.A「全局提示/Hint 服务」 |
+| 提示服务 | `Modules/UI/HintService.cs:21` | 否 | **部分** | `HintWrapper` 契约已采用、界面浮层已通；`HintService` 本体的**队列/去重/Tick 出队/HideAll** 未迁（见 2.A） |
 | 启动器更新（多通道：Minio/MirrorChyan/随机/包装） | `Modules/Updates/`（11 文件 1,020 行：`UpdateManager.cs:11`、`UpdatesMinioModel.cs`、`UpdatesMirrorChyanModel.cs`、`UpdatesRandomModel.cs`、`UpdatesWrapperModel.cs`、`IUpdateSource.cs`） | 否 | **未做** | 架构清晰（多源抽象 + 包装降级），**是可迁移的非 MC 功能**（见第 4 节 P1） |
 | 公告/Announcement | `Modules/Updates/AnnouncementService.cs`、`VersionAnnouncementDataModel.cs` | 否 | **未做** | |
 

@@ -26,6 +26,7 @@ public static class UiSettings
     public const string AnimationDirectionKey = "ui.animation.direction";
     public const string AnimationSpeedKey = "ui.animation.speedFactor";
     public const string AnimationFpsKey = "ui.animation.fpsLimit";
+    public const string AnimationProfileKey = "ui.animation.profile";
 
     public const string DebugModeKey = "debug.terminalMode";
 
@@ -86,6 +87,18 @@ public static class UiSettings
             EnumType = typeof(AnimationDirectionMode),
             DefaultValue = AnimationDirectionMode.Mirrored,
             Order = 20
+        },
+        new SettingDescriptor
+        {
+            Key = AnimationProfileKey,
+            Section = SectionAnimation,
+            Title = "动效预设",
+            Description = "PCL：动效参数完整采用 PCL-CE 原版数值（切页落体回弹 250/350ms、级联 25ms）；"
+                          + "Fluent：WinUI 语义的克制短动效。随主题切换自动同步，可在此覆盖。",
+            Kind = SettingKind.Enum,
+            EnumType = typeof(MotionProfileKind),
+            DefaultValue = MotionProfileKind.Pcl,
+            Order = 25
         },
         new SettingDescriptor
         {
@@ -161,7 +174,8 @@ public static class UiSettings
         Enabled = service.Get<bool>(AnimationEnabledKey),
         Direction = service.Get<AnimationDirectionMode>(AnimationDirectionKey),
         SpeedFactor = service.Get<double>(AnimationSpeedKey),
-        FpsLimit = service.Get<int>(AnimationFpsKey)
+        FpsLimit = service.Get<int>(AnimationFpsKey),
+        Profile = service.Get<MotionProfileKind>(AnimationProfileKey)
     };
 
     /// <summary>把动画设置整体写回设置服务（用于"一键还原默认"这类场景）。</summary>
@@ -171,6 +185,7 @@ public static class UiSettings
         service.Set(AnimationDirectionKey, settings.Direction);
         service.Set(AnimationSpeedKey, Math.Clamp(settings.SpeedFactor, 0.5, 2.0));
         service.Set(AnimationFpsKey, Math.Clamp(settings.FpsLimit, 15, 240));
+        service.Set(AnimationProfileKey, settings.Profile);
     }
 }
 

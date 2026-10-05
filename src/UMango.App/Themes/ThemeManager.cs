@@ -2,6 +2,7 @@
 // 显式引用避免以后被别的工程（未开 ImplicitUsings）直接链接时编译不过。
 using System;
 using System.Windows;
+using UMango.Core.Animation;
 
 namespace UMango.App.Themes;
 
@@ -155,6 +156,12 @@ public static class ThemeManager
 
         CurrentKind = kind;
         IsDark = dark;
+
+        // 动效预设随主题同步（需求：「动效之类的在 PCL 主题中完整保留」）。
+        // 只写 profile 一个键 —— 读改写会覆盖用户单独改过的其他动画设置。
+        Services.AppSettings.Settings.Set(
+            UMango.Core.Configuration.UiSettings.AnimationProfileKey,
+            kind == ThemeKind.PclClassic ? MotionProfileKind.Pcl : MotionProfileKind.Fluent);
 
         // 字典变更本身已让所有 {DynamicResource} 引用重新求值；
         // 该事件是给"需要主动重算"的调用方（自绘、图表配色）留的钩子。

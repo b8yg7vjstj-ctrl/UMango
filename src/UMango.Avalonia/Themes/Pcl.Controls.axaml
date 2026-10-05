@@ -1,0 +1,94 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    PCL 控件观感（Avalonia 版，纯样式）。
+    与 WPF 版 Controls.Pcl.xaml 同构：圆角 3、1px 深灰边、悬停半透明白叠加、
+    列表选中左侧强调条。样式节点不能与资源混文件（AVLN3000）。
+  -->
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource PageBack}" />
+    <Setter Property="FontFamily" Value="Inter, Microsoft YaHei UI, Segoe UI, PingFang SC" />
+  </Style>
+  <Style Selector="Button.pcl">
+    <Setter Property="Background" Value="#55ffffff" />
+    <Setter Property="BorderBrush" Value="{DynamicResource C1}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Padding" Value="12,4" />
+    <Setter Property="Foreground" Value="{DynamicResource C1}" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="Button.pcl:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#bbffffff" />
+    <Setter Property="BorderBrush" Value="{DynamicResource C1}" />
+  </Style>
+  <Style Selector="Button.pcl-primary">
+    <Setter Property="Background" Value="{DynamicResource C3}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource C3}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.pcl-primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource C2}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource C2}" />
+  </Style>
+  <Style Selector="TextBox.pcl">
+    <Setter Property="Background" Value="#01eaf2fe" />
+    <Setter Property="BorderBrush" Value="{DynamicResource C1}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Padding" Value="6,3" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="TextBox.pcl:focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource C3}" />
+  </Style>
+  <Style Selector="ListBoxItem.pcl">
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{DynamicResource C1}" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBoxItem.pcl:pointerover">
+    <Setter Property="Background" Value="{DynamicResource G8}" />
+  </Style>
+  <Style Selector="ListBoxItem.pcl:selected">
+    <Setter Property="Background" Value="{DynamicResource C7}" />
+  </Style>
+  <Style Selector="Border.pcl-card">
+    <Setter Property="Background" Value="{DynamicResource CardBack}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource G6}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+  <Style Selector="TextBlock.pcl-title">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource C1}" />
+  </Style>
+  <Style Selector="TextBlock.pcl-secondary">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{DynamicResource G3}" />
+  </Style>
+  <Style Selector="TextBlock.pcl-hint">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource G5}" />
+  </Style>
+  <Style Selector="Button.banner">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="14,6" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Foreground" Value="#E8F0FF" />
+    <Setter Property="CornerRadius" Value="3" />
+  </Style>
+  <Style Selector="Button.banner:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#22FFFFFF" />
+  </Style>
+  <Style Selector="Button.banner.active /template/ ContentPresenter">
+    <Setter Property="Background" Value="#55FFFFFF" />
+  </Style>
+</Styles>

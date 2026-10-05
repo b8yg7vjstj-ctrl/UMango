@@ -361,17 +361,32 @@
     PCL 的滚动条很细且低调 —— 这是它"干净"观感的重要来源。
   -->
   <Style TargetType="ScrollBar" x:Key="PclScrollBar">
+    <!--
+      ⚠ 只设 Width 是错的：横向滚动条需要 Height=8 且宽度自适应。
+      用 Trigger 换过来（见下方），而不是把同一个值套到两个方向。
+    -->
     <Setter Property="Width" Value="8"/>
+    <Setter Property="Height" Value="Auto"/>
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ScrollBar">
           <Grid Background="Transparent">
-            <Track x:Name="PART_Track" IsDirectionReversed="True">
+            <!--
+              PART_Track 必须**显式绑定 Orientation**：
+              WPF 的 Track 默认按 Vertical 布局，不绑定的话横向滚动条会被
+              按竖向渲染成一条多余的窄条（这是实际出现过的界面缺陷）。
+              IsDirectionReversed 也要跟着方向走：竖向为 True（下=增大），
+              横向为 False（右=增大）。
+            -->
+            <Track x:Name="PART_Track"
+                   Orientation="{TemplateBinding Orientation}"
+                   IsDirectionReversed="True">
               <Track.Thumb>
                 <Thumb>
                   <Thumb.Template>
                     <ControlTemplate TargetType="Thumb">
+                      <!-- 竖向时上下留 1px、横向时左右留 1px：都由触发器切换 Margin -->
                       <Border x:Name="Tb" Background="{DynamicResource BrG5}"
                               CornerRadius="4" Margin="1,0" SnapsToDevicePixels="True"/>
                       <ControlTemplate.Triggers>
@@ -395,10 +410,11 @@
             </Track>
           </Grid>
           <ControlTemplate.Triggers>
-            <!-- 水平滚动条要反过来：宽高互换 -->
+            <!-- 横向：宽高互换 + 方向反转关闭 + 命令换成左右翻页 -->
             <Trigger Property="Orientation" Value="Horizontal">
               <Setter Property="Height" Value="8"/>
               <Setter Property="Width" Value="Auto"/>
+              <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>

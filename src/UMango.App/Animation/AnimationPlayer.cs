@@ -72,15 +72,22 @@ public static class AnimationPlayer
         FrameworkElement element, ElementMotion motion,
         AnimationSettings? settings = null, CancellationToken ct = default)
     {
-        var spec = AnimationPlanner.Plan(motion, settings ?? Services.AppSettings.Animation);
+        var eff = settings ?? Services.AppSettings.Animation;
+        var (x, y, o) = WpfAnimatable.FromElement(element);
+
+        if (TryBuildBinding(motion, eff, x, y, o, out var binding))
+        {
+            await Service.RunAsync(binding!, ct);
+            return;
+        }
+
+        var spec = AnimationPlanner.Plan(motion, eff);
         if (spec.IsInstant)
         {
             ApplyInstantState(element, spec);
             return;
         }
-
-        var (x, y, o) = WpfAnimatable.FromElement(element);
-        var binding = AnimationPlannerBinding.CreateEntrance(spec, x, y, o, fps: 60);
+        binding = AnimationPlannerBinding.CreateEntrance(spec, x, y, o, fps: 60);
         await Service.RunAsync(binding, ct);
     }
 
@@ -94,15 +101,44 @@ public static class AnimationPlayer
     public static void PlayWithEngineFireAndForget(
         FrameworkElement element, ElementMotion motion, AnimationSettings? settings = null)
     {
-        var spec = AnimationPlanner.Plan(motion, settings ?? Services.AppSettings.Animation);
-        if (spec.IsInstant) { ApplyInstantState(element, spec); return; }
-
+        var eff = settings ?? Services.AppSettings.Animation;
         var (x, y, o) = WpfAnimatable.FromElement(element);
-        var binding = AnimationPlannerBinding.CreateEntrance(spec, x, y, o, fps: 60);
+
+        if (TryBuildBinding(motion, eff, x, y, o, out var binding))
+        {
+            Service.RunFireAndForget(binding!);
+            return;
+        }
+
+        var spec = AnimationPlanner.Plan(motion, eff);
+        if (spec.IsInstant) { ApplyInstantState(element, spec); return; }
+        binding = AnimationPlannerBinding.CreateEntrance(spec, x, y, o, fps: 60);
         Service.RunFireAndForget(binding);
     }
 
     // ================= 共用工具 =================
+
+    /// <summary>
+    /// 尝试为页面切换构建 PCL 式关键帧组合（淡入 + 两段落体回弹 + 无 X 位移）。
+    /// 返回 false 表示该 motion 不适用（列表项/对话框等仍走单段 Plan）。
+    ///
+    /// 动画关掉时也不走这里 —— 关掉动画应立即到终态，单段 Plan 的 IsInstant 路径处理更直接，
+    /// 所以 enabled=false 时同样返回 false。
+    /// </summary>
+    private static bool TryBuildBinding(
+        ElementMotion motion, AnimationSettings settings,
+        UMango.Core.Animation.IAnimatable x, UMango.Core.Animation.IAnimatable y, UMango.Core.Animation.IAnimatable o,
+        out AnimationBinding? binding)
+    {
+        binding = null;
+        if (motion != ElementMotion.PageContent || !settings.Enabled) return false;
+
+        var profile = settings.Profile == MotionProfileKind.Fluent
+            ? PageMotionProfile.Fluent
+            : PageMotionProfile.Pcl;
+        binding = AnimationPlannerBinding.CreatePageEnter(profile, x, y, o, settings, fps: 60);
+        return true;
+    }
 
     private static void ApplyInstantState(FrameworkElement element, AnimationSpec spec)
     {

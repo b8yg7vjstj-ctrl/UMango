@@ -9,6 +9,7 @@ using UMango.Core.Caching;
 using UMango.Core.Configuration;
 using UMango.Core.Download;
 using UMango.Core.Logging;
+using UMango.Core.Notifications;
 using UMango.Core.Platform;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
@@ -39,6 +40,12 @@ public static class AppServices
     private static readonly Lazy<InstallRecordStore> LazyRecords = new(CreateRecords);
     private static readonly Lazy<InstallExecutor> LazyExecutor = new(() => new InstallExecutor(Registry, Records));
 
+    /// <summary>
+    /// 组合根是否已初始化（0=未初始化，1=已初始化）。
+    /// 用 int + Interlocked 而不是 bool：Initialize 会从线程池线程进入，需要跨线程可见性与原子性。
+    /// </summary>
+    private static int _initialized;
+
     /// <summary>包源注册表（已注册全部 6 个适配器，平台门控由注册表负责）。</summary>
     public static PackageManagerRegistry Registry => LazyRegistry.Value;
 
@@ -47,6 +54,13 @@ public static class AppServices
 
     /// <summary>安装执行器（复用上面两个单例）。</summary>
     public static InstallExecutor Executor => LazyExecutor.Value;
+
+    /// <summary>
+    /// 全局通知服务（提示队列）。
+    /// PCL 的 <c>HintWrapper</c> 经 <see cref="PclUiBridge"/> 汇入这里；
+    /// 界面上的消费方订阅 <see cref="UMango.Core.Notifications.NotificationService.OnShow"/> 即可。
+    /// </summary>
+    public static NotificationService Notifications { get; } = new();
 
     /// <summary>
     /// 内存日志（界面"日志"页直接读它，不必解析文件）。
@@ -118,14 +132,35 @@ public static class AppServices
         }
     }
 
+    /// <summary>
+    /// 组合根初始化。**幂等**（见 <see cref="_initialized"/> 的说明），
+    /// 可以在启动路径与页面加载路径上各调一次。
+    /// </summary>
     public static void Initialize()
     {
+        // 幂等守卫：Initialize 有两个调用方 ——
+        //   · App.OnStartup → SeedServices（保证首帧前设置已就绪，主题不会闪一下）；
+        //   · ProgressView.OnLoaded → Task.Run(AppServices.Initialize)（把同步文件 IO 挪出首帧）。
+        // 没有守卫时第二次调用会**重建日志 sink**（InitializeLogging 每次 new 一对 sink
+        // 并覆盖 Logs/LogFile），后果有两个，都是真问题：
+        //   1. LogViewModel 在构造时捕获了 AppServices.Logs —— 拿到旧实例的日志页会
+        //      永远停在旧内容上（新写入都进了新 sink），表现为"日志页卡住不更新"；
+        //   2. 旧 FileLogSink 没被释放，文件句柄泄漏，且旧日志文件句柄一直占着。
+        // 这条缺陷是真机日志暴露的：每次启动都出现**两条**"UMango 启动"，
+        // 而第二条缺了 PCL 接线行 —— 说明第二次调用确实发生了。
+        // 用 Interlocked 而不是 bool：Initialize 可能从线程池线程进入（ProgressView 那条路径）。
+        if (Interlocked.Exchange(ref _initialized, 1) == 1) return;
+
         InitializeLogging();
 
         _ = Registry;
         _ = Records;
         _ = Executor;
         AppSettings.Load();
+
+        // PCL UI 契约接线：采用 PCL 代码后，HintWrapper/MsgBoxWrapper 的调用方
+        // （PCL 侧代码）通过事件把提示与对话框交给界面层，这里接上 UMango 的实现。
+        PclUiBridge.Wire(Notifications);
     }
 
     /// <summary>
