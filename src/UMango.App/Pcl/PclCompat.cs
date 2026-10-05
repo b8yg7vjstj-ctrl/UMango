@@ -568,12 +568,31 @@ public static partial class ModBase
         return t;
     }
 
-    /// <summary>在 UI 线程执行并等待（原版经 PCL.Core；此处直用 WPF Dispatcher）。</summary>
+    /// <summary>
+    /// 在 UI 线程执行并等待（原版经 PCL.Core；此处直用 WPF Dispatcher）。
+    ///
+    /// ⚠ 两处**刻意的偏离**，都是真机缺陷换来的（详见下），不影响动画语义：
+    ///
+    /// 1) **优先级用 Render 而不是默认的 Send**。
+    ///    PCL 的动画驱动线程每帧都调用本方法（约 59 次/秒），而 Dispatcher.Invoke 的
+    ///    默认优先级是 Send —— 在 Dispatcher 优先级顺序里 **Send 高于 Input**，
+    ///    于是 UI 线程持续被动画帧抢占，**鼠标滚轮等输入事件被饿死**（表现为滚轮卡顿/失灵）。
+    ///    改用 **Input（与输入同级）**：同优先级按到达顺序处理，输入不再被动画帧插队；
+    ///    若用 Render(7) 仍高于 Input(5)，动画帧照样会排在输入前面。
+    ///
+    /// 2) **没有动画组时直接跳过这次调用**。
+    ///    PCL 原版循环无条件调用，即使 aniGroups 为空（绝大多数时间）也照样每帧跨线程
+    ///    Invoke 一次。空组时 AniTimer 什么也不会做，因此跳过是等价的，
+    ///    却把空闲期的 Dispatcher 流量从 59 次/秒降到 0。
+    /// </summary>
     public static void RunInUiWait(Action action)
     {
+        // 空闲快路径：没有任何动画组时无需打扰 UI 线程（AniTimer 对空组无操作）
+        if (ModAnimation.aniGroups.Count == 0) return;
+
         var app = System.Windows.Application.Current;
         if (app is null || app.Dispatcher.CheckAccess()) action();
-        else app.Dispatcher.Invoke(action);
+        else app.Dispatcher.Invoke(action, System.Windows.Threading.DispatcherPriority.Input);
     }
 }
 
