@@ -82,4 +82,64 @@ public class AnimationProfileTests
             return f.DurationFrames;
         return 0;
     }
+
+    // ================= 路径选择（Fluent 走经典单段，PCL 走组合） =================
+
+    [Fact]
+    public void Pcl预设走PCL式组合()
+        => Assert.True(AnimationRouting.UsePclPageCombo(new AnimationSettings
+        {
+            Profile = MotionProfileKind.Pcl
+        }));
+
+    [Fact]
+    public void Fluent预设走经典单段()
+    {
+        // 真机反馈：Fluent 主题下组合路径更拖沓（空动作段），
+        // 因此 Fluent 必须回落到经典单段（AnimationPlanner.Plan + CreateEntrance）。
+        Assert.False(AnimationRouting.UsePclPageCombo(new AnimationSettings
+        {
+            Profile = MotionProfileKind.Fluent
+        }));
+    }
+
+    [Fact]
+    public void 关闭动画时两条路径都不走()
+        => Assert.False(AnimationRouting.UsePclPageCombo(new AnimationSettings
+        {
+            Profile = MotionProfileKind.Pcl,
+            Enabled = false
+        }));
+
+    // ================= 位移段合并（空动作缺陷的回归锁） =================
+
+    [Fact]
+    public void 无过冲预设合并为单段位移()
+    {
+        // Fluent 预设中段与终态同为 0 → 第二段是 0 位移空动作，必须被合并掉，
+        // 否则会出现"位移早已结束、动画组还在空转"的拖沓（真机反馈确认过）。
+        var x = new ValueAnimatable(); var y = new ValueAnimatable(); var o = new ValueAnimatable();
+        var binding = AnimationPlannerBinding.CreatePageEnter(
+            PageMotionProfile.Fluent, x, y, o, new AnimationSettings(), fps: 60);
+
+        var group = Assert.IsType<ParallelAnimationGroup>(binding.Animation);
+        var ySeq = Assert.IsType<SequentialAnimationGroup>(group.Children[1].Animation);
+
+        Assert.Single(ySeq.Children);                              // 空动作段已合并
+        Assert.Equal(18, ySeq.Children[0].Animation.DurationFrames); // 150+150ms @60fps
+    }
+
+    [Fact]
+    public void 有过冲的预设保留两段位移()
+    {
+        // PCL 预设中段 5、终态 11 → 第二段真的会移动，必须保留两段（回弹感靠它）。
+        var x = new ValueAnimatable(); var y = new ValueAnimatable(); var o = new ValueAnimatable();
+        var binding = AnimationPlannerBinding.CreatePageEnter(
+            PageMotionProfile.Pcl, x, y, o, new AnimationSettings(), fps: 60);
+
+        var group = Assert.IsType<ParallelAnimationGroup>(binding.Animation);
+        var ySeq = Assert.IsType<SequentialAnimationGroup>(group.Children[1].Animation);
+
+        Assert.Equal(2, ySeq.Children.Count);
+    }
 }

@@ -131,12 +131,14 @@ public static class AnimationPlayer
         out AnimationBinding? binding)
     {
         binding = null;
-        if (motion != ElementMotion.PageContent || !settings.Enabled) return false;
+        if (motion != ElementMotion.PageContent) return false;
 
-        var profile = settings.Profile == MotionProfileKind.Fluent
-            ? PageMotionProfile.Fluent
-            : PageMotionProfile.Pcl;
-        binding = AnimationPlannerBinding.CreatePageEnter(profile, x, y, o, settings, fps: 60);
+        // 路径选择下沉到 Core 的 AnimationRouting（纯逻辑、可测）：
+        // 仅 PCL 预设走组合，Fluent10 走经典单段 —— 理由见该类的注释。
+        if (!AnimationRouting.UsePclPageCombo(settings)) return false;
+
+        binding = AnimationPlannerBinding.CreatePageEnter(
+            PageMotionProfile.Pcl, x, y, o, settings, fps: 60);
         return true;
     }
 

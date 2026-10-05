@@ -76,11 +76,26 @@ public static class AnimationPlannerBinding
         int Frames(int ms) => Math.Max(1, (int)Math.Round(ms / speed / 1000.0 * Math.Clamp(fps, 1, 1000)));
 
         var fade = new FromToAnimation(0.0, 1.0, Frames(profile.FadeInMs), Easing.Of(profile.FadeInEase), processors);
-        var ySeg1 = new FromToAnimation(profile.EnterFromY, profile.EnterMidY, Frames(profile.EnterMidMs), Easing.Of(profile.EnterMidEase), processors);
-        var ySeg2 = new FromToAnimation(profile.EnterMidY, 0.0, Frames(profile.EnterToMs), Easing.Of(profile.EnterToEase), processors);
+
+        // 两段位移只在"第二段真的会移动"时才成立：
+        // 若中段与终态相同（无过冲的预设，例如 Fluent），第二段是 0 位移的空动作，
+        // 却仍占满 EnterToMs —— 表现就是"位移早就结束、动画组还在空转"的拖沓感。
+        // 这种预设应当合并为一段直达，时长取两段之和。
+        var secondSegmentMoves = Math.Abs(profile.EnterToY - profile.EnterMidY) > 0.01;
         var ySeq = new SequentialAnimationGroup { Name = "PageEnter:Y" };
-        ySeq.Add(ySeg1, offsetY);
-        ySeq.Add(ySeg2, offsetY);
+        if (secondSegmentMoves)
+        {
+            ySeq.Add(new FromToAnimation(profile.EnterFromY, profile.EnterMidY,
+                Frames(profile.EnterMidMs), Easing.Of(profile.EnterMidEase), processors), offsetY);
+            ySeq.Add(new FromToAnimation(profile.EnterMidY, 0.0,
+                Frames(profile.EnterToMs), Easing.Of(profile.EnterToEase), processors), offsetY);
+        }
+        else
+        {
+            // 单段直达（缓动取中段的，保持"先快后慢"的落定感）
+            ySeq.Add(new FromToAnimation(profile.EnterFromY, 0.0,
+                Frames(profile.EnterMidMs + profile.EnterToMs), Easing.Of(profile.EnterMidEase), processors), offsetY);
+        }
 
         var group = new ParallelAnimationGroup { Name = "PageEnter" };
         group.Add(fade, opacity);
@@ -88,7 +103,10 @@ public static class AnimationPlannerBinding
         group.Add(new AnimationBinding(ySeq, offsetY));
 
         // X 不动：PCL 的切页只有纵向落体，没有横向位移（与"对话框左右滑"不同）
-        var xHold = new FromToAnimation(0.0, 0.0, Frames(profile.EnterMidMs + profile.EnterToMs), Easing.Of(EasingKind.Linear), processors);
+        // X 保持不动，但时长必须等于位移序列的实际时长 ——
+        // 否则并行组的结束时间由最长的那条决定，又会引入空转。
+        var yTotalMs = profile.EnterMidMs + (secondSegmentMoves ? profile.EnterToMs : 0);
+        var xHold = new FromToAnimation(0.0, 0.0, Frames(yTotalMs), Easing.Of(EasingKind.Linear), processors);
         group.Add(xHold, offsetX);
 
         return new AnimationBinding(group, opacity);
