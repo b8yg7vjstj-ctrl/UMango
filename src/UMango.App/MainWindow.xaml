@@ -23,7 +23,7 @@
     <!-- CaptionHeight 只能写常量：WindowChrome 不是 FrameworkElement，不在资源查找链里，
          拿不到 {DynamicResource TitleBarHeight}。数值与 token TitleBarHeight(48) 保持一致，改 token 时要一起改。 -->
     <WindowChrome CaptionHeight="48" ResizeBorderThickness="6" GlassFrameThickness="0"
-                  CornerRadius="6" UseAeroCaptionButtons="False"/>
+                  CornerRadius="0" UseAeroCaptionButtons="False"/>
   </WindowChrome.WindowChrome>
 
   <Window.Resources>
@@ -100,14 +100,12 @@
     需要的投影空间比窗口多出的边距更大，投影被窗口边缘裁断，
     露出的那圈窗口底色就成了"内容之外多出来的背景板"（实测右缘 16px 的 #F0F0F0 带）。
     PCL-CE 的做法是**根本没有这层外壳**：窗口不画背景板（Background 内容直接铺满），
-    圆角交给 WindowChrome.CornerRadius 由 DWM 实现 —— 见其 FormMain.xaml 的
-    `Background="{x:Null}"` + `WindowChrome CornerRadius="12"`。
-    照此办理：边距归零、去掉投影，圆角由上方的 CornerRadius=6 提供。
+    首次修正是照它的做法让 DWM 提供圆角；但用户明确要求
+    **用 Windows 自身的窗口边界设定、不要自造圆角**，因此这里全部归零：
+    WindowChrome.CornerRadius=0、卡片不再圆角、也不再需要圆角裁剪。
+    窗口边界完全交回 Windows（是否圆角由系统决定，不由应用决定）。
   -->
-  <Border CornerRadius="6" Background="{DynamicResource BrCard}" SnapsToDevicePixels="True">
-    <Border.Clip>
-      <RectangleGeometry Rect="0,0,10000,10000" RadiusX="6" RadiusY="6"/>
-    </Border.Clip>
+  <Border Background="{DynamicResource BrCard}" SnapsToDevicePixels="True">
 
     <Grid>
       <Grid.RowDefinitions>
