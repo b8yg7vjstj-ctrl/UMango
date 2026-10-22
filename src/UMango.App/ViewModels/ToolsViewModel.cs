@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
+using UMango.Core.Localization;
 using CommunityToolkit.Mvvm.Input;
 using UMango.App.Services;
 using UMango.Core.PackageManagers;
@@ -26,6 +27,8 @@ public partial class ToolsViewModel : ObservableObject
     private readonly ObservableCollection<PackageSourceCategory> _allSources = [];
 
     /// <summary>全部包源（不做可用性过滤，不可用的也要能看到原因）。</summary>
+    private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
+
     public IReadOnlyList<PackageSourceCategory> AllSources => _allSources;
 
     /// <summary>系统判断摘要，例如 "macOS arm64"。</summary>
@@ -90,14 +93,14 @@ public partial class ToolsViewModel : ObservableObject
 
             SystemReport = BuildReport();
             StatusMessage = refresh
-                ? $"已重新探测 {list.Count} 个包源。"
-                : $"已加载 {list.Count} 个包源。";
+                ? L("Tools.ProbeRedone", list.Count)
+                : L("Tools.ProbeLoaded", list.Count);
             return true;
         }
         catch (Exception ex)
         {
             // 诊断页不能因为"诊断失败"而失效：显示原因，保留上一份报告。
-            ErrorMessage = $"包源探测失败：{ex.Message}";
+            ErrorMessage = L("Tools.ProbeFailed", ex.Message);
             return false;
         }
         finally
@@ -113,39 +116,41 @@ public partial class ToolsViewModel : ObservableObject
         var sb = new StringBuilder();
         var records = AppServices.Records;
 
-        sb.AppendLine($"平台：{PlatformText}");
-        sb.AppendLine($"架构：{ArchitectureText}");
-        sb.AppendLine($"主目录：{HomeDirectoryText}");
-        sb.AppendLine($"记录文件：{records.StorePath}");
-        sb.AppendLine($"记录条数：{records.TotalCount}（成功 {records.SuccessCount} / 失败 {records.FailureCount}）");
+        sb.AppendLine(L("Tools.Report.Platform", PlatformText));
+        sb.AppendLine(L("Tools.Report.Architecture", ArchitectureText));
+        sb.AppendLine(L("Tools.Report.Home", HomeDirectoryText));
+        sb.AppendLine(L("Tools.Report.RecordFile", records.StorePath));
+        sb.AppendLine(L("Tools.Report.RecordCount", records.TotalCount, records.SuccessCount, records.FailureCount));
 
         var channels = TerminalBridge.ChannelNames;
-        sb.AppendLine($"终端通道：{(channels.Count == 0 ? "（无）" : string.Join("、", channels))}");
-        sb.AppendLine($"调试模式：{(TerminalBridge.DebugMode ? "开启" : "关闭")}");
+        sb.AppendLine(L("Tools.Report.Channels",
+            channels.Count == 0 ? L("Tools.Report.ChannelsNone") : string.Join(", ", channels)));
+        sb.AppendLine(L("Tools.Report.Debug",
+            TerminalBridge.DebugMode ? L("Common.On") : L("Common.Off")));
 
         // 初始化阶段被兜底吞掉的错误（包源注册表/记录存储）——不看这里就只能靠猜。
-        if (AppServices.LastError is { } initError) sb.AppendLine($"初始化警告：{initError}");
+        if (AppServices.LastError is { } initError) sb.AppendLine(L("Tools.Report.InitWarning", initError));
 
         sb.AppendLine();
         if (_allSources.Count == 0)
         {
-            sb.AppendLine("包源明细：（尚未探测，点「重新探测」获取）");
+            sb.AppendLine(L("Tools.Report.NoSources"));
             return sb.ToString().TrimEnd();
         }
 
-        sb.AppendLine("包源明细：");
+        sb.AppendLine(L("Tools.Report.SourcesHeader"));
         foreach (var category in _allSources)
         {
-            sb.AppendLine($"· {category.Title}｜安装目录：{category.Subtitle}");
-            sb.AppendLine($"    状态：{StateText(category.AvailabilityState)}"
-                          + $"｜当前平台支持：{(category.SupportedHere ? "是" : "否")}"
-                          + $"｜可用：{(category.Available ? "是" : "否")}");
+            sb.AppendLine(L("Tools.Report.SourceLine", category.Title, category.Subtitle));
+            sb.AppendLine(L("Tools.Report.StateLine", StateText(category.AvailabilityState),
+                category.SupportedHere ? L("Common.Yes") : L("Common.No"),
+                category.Available ? L("Common.Yes") : L("Common.No")));
             if (!string.IsNullOrWhiteSpace(category.VerificationNote))
-                sb.AppendLine($"    未验证：{category.VerificationNote}");
+                sb.AppendLine(L("Tools.Report.NotVerified", category.VerificationNote));
             if (!string.IsNullOrWhiteSpace(category.Detail))
-                sb.AppendLine($"    明细：{category.Detail}");
+                sb.AppendLine(L("Tools.Report.Detail", category.Detail));
             if (!string.IsNullOrWhiteSpace(category.InstallHint))
-                sb.AppendLine($"    安装指引：{category.InstallHint}");
+                sb.AppendLine(L("Tools.Report.InstallHint", category.InstallHint));
         }
 
         return sb.ToString().TrimEnd();
@@ -154,10 +159,10 @@ public partial class ToolsViewModel : ObservableObject
     /// <summary>可用性状态 → 中文说明。界面不直接显示枚举名，否则用户看不懂。</summary>
     private static string StateText(AvailabilityState state) => state switch
     {
-        AvailabilityState.Available => "可用",
-        AvailabilityState.Degraded => "可用（降级）",
-        AvailabilityState.UnsupportedPlatform => "当前平台不支持",
-        AvailabilityState.NotInstalled => "未安装命令行工具",
-        _ => "不可达"
+        AvailabilityState.Available => L("State.Available"),
+        AvailabilityState.Degraded => L("State.Degraded"),
+        AvailabilityState.UnsupportedPlatform => L("State.UnsupportedPlatform"),
+        AvailabilityState.NotInstalled => L("State.NotInstalled"),
+        _ => L("State.Unreachable")
     };
 }

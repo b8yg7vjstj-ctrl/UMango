@@ -136,7 +136,9 @@ public partial class DownloadViewModel : ObservableObject
     /// </summary>
     private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
 
-    public string ModeTitle => IsInstalledMode ? "已安装" : "搜索结果";
+    public string ModeTitle => IsInstalledMode
+        ? L("Download.Mode.Installed")
+        : L("Download.Mode.Results");
 
     /// <summary>已安装列表的一句汇总。git 的"已安装"语义不同，要如实说明。</summary>
     public string InstalledSummary
@@ -416,7 +418,7 @@ public partial class DownloadViewModel : ObservableObject
 
         try
         {
-            StatusMessage = $"正在安装 {target.Name}…子项进度与终端输出见「进度」页。";
+            StatusMessage = L("Download.Installing", target.Name);
 
             // 版本跟随搜索结果里展示的版本，保证"装的就是看到的"；
             // LatestVersion 为 null 时交给适配器自行解析最新版。
@@ -425,11 +427,11 @@ public partial class DownloadViewModel : ObservableObject
 
             if (result.Success)
             {
-                StatusMessage = $"安装完成：{target.Name}（耗时 {result.DurationMs / 1000.0:0.0} 秒）。";
+                StatusMessage = L("Download.InstallDone", target.Name, result.DurationMs / 1000.0);
                 return;
             }
 
-            ErrorMessage = result.Message ?? $"安装 {target.Name} 失败。";
+            ErrorMessage = result.Message ?? L("Download.InstallFailed", target.Name);
             ErrorAdvice = AdviceForCode(result.ErrorCode, category?.InstallHint);
         }
         catch (Exception ex)
@@ -510,12 +512,12 @@ public partial class DownloadViewModel : ObservableObject
 
             case OperationCanceledException:
                 ErrorMessage = L("Download.Canceled");
-                ErrorAdvice = "可以重新发起；已下载的内容由包管理器自行管理。";
+                ErrorAdvice = L("Download.CanceledHint");
                 break;
 
             default:
                 ErrorMessage = ex.Message;
-                ErrorAdvice = "出现未预期的错误，可重试；若持续出现请到「工具」页查看系统诊断。";
+                ErrorAdvice = L("Download.Unexpected");
                 break;
         }
     }
@@ -527,17 +529,17 @@ public partial class DownloadViewModel : ObservableObject
     private static string AdviceForCode(string? code, string? installHint) => code switch
     {
         "cli_missing" => string.IsNullOrWhiteSpace(installHint)
-            ? "未找到该包源的命令行工具，请先安装它，然后回到本页点「刷新包源」。"
-            : $"请先安装该命令行工具（{installHint}）",
-        "unsupported_feature" => "该包源不支持搜索，可换一个包源，或直接按包名安装。",
-        "unsupported_platform" => "该包源在当前系统上不可用，请换用跨平台的包源。",
-        "timeout" => "网络或源不可达，可重试；若一直失败请检查代理设置后重试。",
-        "network_error" => "网络或源不可达，可重试；若一直失败请检查代理设置后重试。",
-        "package_not_found" => "没有找到该包，请确认包名拼写或换一个关键词。",
-        "parse_error" => "命令行的输出无法解析（可能是 CLI 版本差异），可在进度页打开调试模式查看原始输出。",
-        "command_failed" => "命令执行失败，可在进度页打开调试模式查看具体输出后再重试。",
-        null => "操作未成功，可重试；若持续失败请查看进度页的终端输出。",
-        _ => "操作未成功，可重试；若持续失败请查看进度页的终端输出。"
+            ? L("Advice.CliMissing")
+            : L("Advice.CliMissingWithHint", installHint),
+        "unsupported_feature" => L("Advice.UnsupportedFeature"),
+        "unsupported_platform" => L("Advice.UnsupportedPlatform"),
+        "timeout" => L("Advice.Network"),
+        "network_error" => L("Advice.Network"),
+        "package_not_found" => L("Advice.NotFound"),
+        "parse_error" => L("Advice.ParseError"),
+        "command_failed" => L("Advice.CommandFailed"),
+        null => L("Advice.Generic"),
+        _ => L("Advice.Generic")
     };
 
     /// <summary>导出已安装列表为 JSON 文件。</summary>
@@ -551,7 +553,7 @@ public partial class DownloadViewModel : ObservableObject
             var path = Path.Combine(dir, $"umango-installed-{stamp}.json");
             var list = Installed.Select(i => new { Name = i.Name, Version = i.Version, InstallPath = i.InstallPath, OtherVersions = i.OtherVersions }).ToList();
             File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(list, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-            StatusMessage = $"已导出到桌面：{Path.GetFileName(path)}";
+            StatusMessage = L("Download.ExportedTo", Path.GetFileName(path));
         }
         catch
         {

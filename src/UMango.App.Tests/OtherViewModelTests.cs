@@ -75,9 +75,15 @@ public class OtherViewModelTests
     [Fact]
     public void 工具页报告包含平台与架构()
     {
-        var vm = new ToolsViewModel();
         var desc = UMango.Core.Platform.SystemInfo.Describe();
-        Assert.Contains(desc, vm.SystemReport);
+
+        // 报告走 L(key, args) 取文案，无 UI 环境下 Provider 是 KeyOnlyTextProvider
+        // （返回资源键本身）→ 断言具体中文会失败。用 ChineseProvider 提供真实文案。
+        using (ChineseProvider.Scope())
+        {
+            var vm = new ToolsViewModel();
+            Assert.Contains(desc, vm.SystemReport);
+        }
     }
 
     // ================= ProgressViewModel =================
