@@ -151,15 +151,15 @@
         -->
         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
                     VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
-          <RadioButton x:Name="TabHome" Content="主页" Style="{StaticResource BannerTab}"
+          <RadioButton x:Name="TabHome" Content="{DynamicResource Nav.Home}" Style="{StaticResource BannerTab}"
                        IsChecked="True" Checked="Tab_Checked" Tag="home"/>
-          <RadioButton x:Name="TabDownload" Content="下载" Style="{StaticResource BannerTab}"
+          <RadioButton x:Name="TabDownload" Content="{DynamicResource Nav.Download}" Style="{StaticResource BannerTab}"
                        Checked="Tab_Checked" Tag="download"/>
-          <RadioButton x:Name="TabProgress" Content="进度" Style="{StaticResource BannerTab}"
+          <RadioButton x:Name="TabProgress" Content="{DynamicResource Nav.Progress}" Style="{StaticResource BannerTab}"
                        Checked="Tab_Checked" Tag="progress"/>
-          <RadioButton x:Name="TabSettings" Content="设置" Style="{StaticResource BannerTab}"
+          <RadioButton x:Name="TabSettings" Content="{DynamicResource Nav.Settings}" Style="{StaticResource BannerTab}"
                        Checked="Tab_Checked" Tag="settings"/>
-          <RadioButton x:Name="TabTools" Content="工具" Style="{StaticResource BannerTab}"
+          <RadioButton x:Name="TabTools" Content="{DynamicResource Nav.Tools}" Style="{StaticResource BannerTab}"
                        Checked="Tab_Checked" Tag="tools"/>
         </StackPanel>
 

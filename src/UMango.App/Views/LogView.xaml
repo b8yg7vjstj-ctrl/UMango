@@ -30,7 +30,7 @@
         <ColumnDefinition Width="Auto"/>
       </Grid.ColumnDefinitions>
 
-      <TextBlock Grid.Column="0" Text="级别" FontSize="12" VerticalAlignment="Center"
+      <TextBlock Grid.Column="0" Text="{DynamicResource Log.Column.Level}" FontSize="12" VerticalAlignment="Center"
                  Foreground="{DynamicResource BrG3}"/>
 
       <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="120" Height="26"
@@ -44,16 +44,16 @@
                  Text="{Binding StatusMessage}"/>
 
       <StackPanel Grid.Column="3" Orientation="Horizontal">
-        <Button Content="刷新" Height="26" Padding="12,0" FontSize="12"
+        <Button Content="{DynamicResource Log.Refresh}" Height="26" Padding="12,0" FontSize="12"
                 Style="{DynamicResource DownloadSecondaryButton}"
                 Command="{Binding RefreshCommand}"/>
-        <Button Content="清空显示" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
+        <Button Content="{DynamicResource Log.Clear}" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
                 Style="{DynamicResource DownloadSecondaryButton}"
                 Command="{Binding ClearCommand}"/>
-        <Button Content="打开日志目录" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
+        <Button Content="{DynamicResource Log.OpenFolder}" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
                 Style="{DynamicResource DownloadSecondaryButton}"
                 Command="{Binding OpenFolderCommand}"/>
-        <Button Content="导出诊断包" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
+        <Button Content="{DynamicResource Log.Export}" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
                 Style="{DynamicResource DownloadPrimaryButton}"
                 Command="{Binding ExportCommand}"
                 ToolTipService.Placement="Right" ToolTip="把日志、设置、记录与系统信息打成一个 zip 放到桌面，方便整份发回"/>
@@ -63,7 +63,7 @@
     <!-- 提示与错误 -->
     <StackPanel Grid.Row="1" Margin="0,8,0,0">
       <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource BrG4}"
-                 Text="日志同时写入文件（按日期分文件，保留 7 天）。上面的列表是内存中的最近 3000 条，重启后清空；文件里的内容会保留。"/>
+                 Text="{DynamicResource Log.StorageHint}"/>
 
       <Border Margin="0,8,0,0" Padding="10,8" CornerRadius="4"
               Background="{DynamicResource BrRedBack}"

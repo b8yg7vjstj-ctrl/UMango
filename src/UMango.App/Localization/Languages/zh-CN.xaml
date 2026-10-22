@@ -46,6 +46,7 @@
     <sys:String x:Key="Home.Column.Package">包源</sys:String>
     <sys:String x:Key="Home.Column.Directory">安装目录</sys:String>
     <sys:String x:Key="Home.Column.State">状态</sys:String>
+    <sys:String x:Key="Home.AllSourcesHint">全部 6 个包源（含当前平台不支持的），标题为包管理器名、次行为其安装目录。</sys:String>
     <sys:String x:Key="Home.ProbeDetail">探测明细</sys:String>
     <sys:String x:Key="Home.Statistics.Total">总次数</sys:String>
     <sys:String x:Key="Home.Statistics.Success">成功</sys:String>
@@ -62,13 +63,41 @@
     <sys:String x:Key="Download.Title">下载</sys:String>
     <sys:String x:Key="Download.NewDownload">新建下载</sys:String>
     <sys:String x:Key="Download.SearchPlaceholder">搜索包名…</sys:String>
+    <sys:String x:Key="Download.Search">搜索</sys:String>
+    <sys:String x:Key="Download.RefreshSources">刷新包源</sys:String>
+    <sys:String x:Key="Download.Install">安装</sys:String>
+    <sys:String x:Key="Download.Retry">重试</sys:String>
+    <sys:String x:Key="Download.SearchResults">搜索结果</sys:String>
+    <sys:String x:Key="Download.Installed">已安装</sys:String>
+    <sys:String x:Key="Download.Column.Source">包源</sys:String>
+    <sys:String x:Key="Download.InstallDirectory">安装目录</sys:String>
+    <sys:String x:Key="Download.MissingCli">缺少命令行工具时</sys:String>
+    <sys:String x:Key="Download.VerificationNote">未验证说明</sys:String>
+    <sys:String x:Key="Download.NotVerified">未验证</sys:String>
+    <sys:String x:Key="Download.GithubStarsFallback">GitHub Stars 兜底</sys:String>
+    <sys:String x:Key="Download.NoSources">没有探测到可用包源</sys:String>
+    <sys:String x:Key="Download.ShowUnsupported">显示当前平台不支持的包源</sys:String>
+    <sys:String x:Key="Download.Processing">正在处理…</sys:String>
+    <sys:String x:Key="Download.NoMatch">没有找到匹配的包</sys:String>
+    <sys:String x:Key="Download.NoMatchHint">换一个关键词，或在左栏切换其它包源后再搜一次。</sys:String>
+    <sys:String x:Key="Download.EmptyPrompt">在左侧选择包源，输入关键词后按回车或点「搜索」</sys:String>
+    <sys:String x:Key="Download.EmptyHint">安装目录与包源可用性见左栏；未验证的包源会标出来。</sys:String>
     <sys:String x:Key="Download.Engine">下载引擎</sys:String>
     <sys:String x:Key="Download.TerminalOutput">终端输出</sys:String>
 
     <!-- ============ 进度页 ============ -->
-    <sys:String x:Key="Progress.Title">任务进度</sys:String>
+    <sys:String x:Key="Progress.Title">任务</sys:String>
     <sys:String x:Key="Progress.Empty">暂无任务，去下载页安装一个包试试</sys:String>
+    <sys:String x:Key="Progress.EmptyHint">安装开始后，这里会按下载方式列出每个子项的进度，并把命令行输出原生回传到对应子项下方。</sys:String>
     <sys:String x:Key="Progress.SubProgress">子项进度</sys:String>
+    <sys:String x:Key="Progress.SubProgressHint">（按下载方式/阶段划分，每个子项独立进度；命令行输出直接挂在对应子项下方）</sys:String>
+    <sys:String x:Key="Progress.NoSubItems">该任务还没有划分下载方式子项（可能仍在规划，或本身不分阶段）。命令行输出见下方「终端输出」。</sys:String>
+    <sys:String x:Key="Progress.TerminalOutput">终端输出</sys:String>
+    <sys:String x:Key="Progress.TerminalHint">命令行原样回传，普通文本呈现（与内容区同底色，非黑底终端）</sys:String>
+    <sys:String x:Key="Progress.DebugMode">调试模式</sys:String>
+    <sys:String x:Key="Progress.Clear">清空</sys:String>
+    <sys:String x:Key="Progress.Cancel">取消</sys:String>
+    <sys:String x:Key="Progress.CancelTask">取消任务</sys:String>
     <sys:String x:Key="Progress.State">状态</sys:String>
     <sys:String x:Key="Progress.State.Success">成功</sys:String>
     <sys:String x:Key="Progress.State.Failed">失败</sys:String>
@@ -113,6 +142,7 @@
 
     <!-- ============ 工具页 ============ -->
     <sys:String x:Key="Tools.Title">工具</sys:String>
+    <sys:String x:Key="Tools.Reprobe">重新探测</sys:String>
     <sys:String x:Key="Tools.Diagnostics">系统诊断</sys:String>
     <sys:String x:Key="Tools.InstallDirectory">安装目录</sys:String>
     <sys:String x:Key="Tools.ProgramDirectory">程序目录</sys:String>
@@ -146,4 +176,20 @@
     <sys:String x:Key="Log.Level.Info">信息及以上</sys:String>
     <sys:String x:Key="Log.Level.Warn">警告及以上</sys:String>
     <sys:String x:Key="Log.Level.Error">仅错误</sys:String>
+    <sys:String x:Key="Log.Column.Level">级别</sys:String>
+    <sys:String x:Key="Log.Refresh">刷新</sys:String>
+    <sys:String x:Key="Log.Clear">清空显示</sys:String>
+    <sys:String x:Key="Log.OpenFolder">打开日志目录</sys:String>
+    <sys:String x:Key="Log.Export">导出诊断包</sys:String>
+    <sys:String x:Key="Log.StorageHint">日志同时写入文件（按日期分文件，保留 7 天）。上面的列表是内存中的最近 3000 条，重启后清空；文件里的内容会保留。</sys:String>
+    <!-- ============ 下载器页 ============ -->
+    <sys:String x:Key="Downloader.Title">新建下载</sys:String>
+    <sys:String x:Key="Downloader.SaveTo">保存到</sys:String>
+    <sys:String x:Key="Downloader.Start">开始下载</sys:String>
+    <sys:String x:Key="Downloader.Cancel">取消</sys:String>
+    <sys:String x:Key="Downloader.ClearOutput">清空输出</sys:String>
+    <sys:String x:Key="Downloader.Engine">下载引擎</sys:String>
+    <sys:String x:Key="Downloader.EngineHint">引擎按协议自动选择：aria2 覆盖 HTTP/FTP/BitTorrent/元链接；eD2k 需要专用客户端；内置引擎作为兜底。</sys:String>
+    <sys:String x:Key="Downloader.TerminalOutput">终端输出</sys:String>
+    <sys:String x:Key="Downloader.TerminalHint">与页面同底色的原生回传，不是黑底嵌入终端；stderr 以红色区分。</sys:String>
 </ResourceDictionary>

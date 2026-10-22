@@ -91,13 +91,13 @@
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Home.Section.Packages}"
                        VerticalAlignment="Center"/>
-            <Button Grid.Column="1" Content="刷新" Padding="12,3" Cursor="Hand" FontSize="12"
+            <Button Grid.Column="1" Content="{DynamicResource Common.Action.Refresh}" Padding="12,3" Cursor="Hand" FontSize="12"
                     Foreground="{DynamicResource BrC1}" Background="{DynamicResource BrG8}"
                     BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
                     ToolTip="重新探测全部包源（会执行各包管理器的 CLI）"
                     Command="{Binding RefreshCommand}"/>
           </Grid>
-          <TextBlock Text="全部 6 个包源（含当前平台不支持的），标题为包管理器名、次行为其安装目录。"
+          <TextBlock Text="{DynamicResource Home.AllSourcesHint}"
                      FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG3}"/>
 

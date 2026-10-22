@@ -249,16 +249,16 @@
                        Foreground="{DynamicResource BrG3}"
                        Visibility="{Binding Detail, Converter={StaticResource NotEmptyToVis}}"/>
             <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{DynamicResource BrG2}">
-              <Run Text="安装目录："/><Run Text="{Binding Subtitle, Mode=OneWay}"/>
+              <Run Text="{DynamicResource Download.InstallDirectory}"/><Run Text="{Binding Subtitle, Mode=OneWay}"/>
             </TextBlock>
             <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{DynamicResource BrG2}"
                        Visibility="{Binding InstallHint, Converter={StaticResource NotEmptyToVis}}">
-              <Run Text="缺少命令行工具时："/><Run Text="{Binding InstallHint, Mode=OneWay}"/>
+              <Run Text="{DynamicResource Download.MissingCli}"/><Run Text="{Binding InstallHint, Mode=OneWay}"/>
             </TextBlock>
             <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
                        Foreground="{DynamicResource BrWarnAmber}"
                        Visibility="{Binding VerificationNote, Converter={StaticResource NotEmptyToVis}}">
-              <Run Text="未验证说明："/><Run Text="{Binding VerificationNote, Mode=OneWay}"/>
+              <Run Text="{DynamicResource Download.VerificationNote}"/><Run Text="{Binding VerificationNote, Mode=OneWay}"/>
             </TextBlock>
           </StackPanel>
         </Border.ToolTip>
@@ -312,7 +312,7 @@
                     VerticalAlignment="Center"
                     ToolTipService.Placement="Right" ToolTip="{Binding VerificationNote}"
                     Visibility="{Binding VerificationNote, Converter={StaticResource NotEmptyToVis}}">
-              <TextBlock Text="未验证" FontSize="10"
+              <TextBlock Text="{DynamicResource Download.NotVerified}" FontSize="10"
                          Foreground="{DynamicResource BrWarnAmberFore}"/>
             </Border>
           </Grid>
@@ -382,14 +382,14 @@
                       VerticalAlignment="Center"
                       ToolTip="该包源没有官方下载量接口，这里的数字是 GitHub 仓库 Star 数（仅供参考）"
                       Visibility="{Binding DownloadCountIsFallback, Converter={StaticResource BoolToVis}}">
-                <TextBlock Text="GitHub Stars 兜底" FontSize="10"
+                <TextBlock Text="{DynamicResource Download.GithubStarsFallback}" FontSize="10"
                            Foreground="{DynamicResource BrWarnAmberFore}"/>
               </Border>
             </WrapPanel>
           </StackPanel>
 
           <!-- 安装：命令参数直接传该卡片的数据对象（ViewModel 的 Install(PackageInfo?)） -->
-          <Button Grid.Column="2" Content="安装" VerticalAlignment="Center"
+          <Button Grid.Column="2" Content="{DynamicResource Download.Install}" VerticalAlignment="Center"
                   Style="{DynamicResource DownloadPrimaryButton}"
                   Command="{Binding DataContext.InstallCommand, RelativeSource={RelativeSource AncestorType={x:Type views:DownloadView}}}"
                   CommandParameter="{Binding}"
@@ -419,7 +419,7 @@
         </Grid.RowDefinitions>
 
         <!-- 小节标题（PclSectionTitle 是 14 号，窄栏里压到 12 号更好排） -->
-        <TextBlock Grid.Row="0" Text="包源" Margin="12,12,12,6"
+        <TextBlock Grid.Row="0" Text="{DynamicResource Download.Column.Source}" Margin="12,12,12,6"
                    Style="{DynamicResource PclSectionTitle}" FontSize="12"/>
 
         <Grid Grid.Row="1">
@@ -437,7 +437,7 @@
           </ScrollViewer>
 
           <!-- 一个包源都没探测到时的提示（否则左栏会是一片空白，看起来像坏了） -->
-          <TextBlock Text="没有探测到可用包源" Margin="12,4" FontSize="11" TextWrapping="Wrap"
+          <TextBlock Text="{DynamicResource Download.NoSources}" Margin="12,4" FontSize="11" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG3}"
                      Visibility="{Binding VisibleCategories, Converter={StaticResource EmptyToVis}}"/>
         </Grid>
@@ -446,7 +446,7 @@
                   IsChecked="{Binding ShowUnsupported, Mode=TwoWay}"
                   Style="{DynamicResource DownloadCheckBox}"
                   ToolTip="勾选后连当前系统上用不了的包源也列出来（例如 macOS 上的 winget / scoop），便于排查；它们不能安装。">
-          <TextBlock Text="显示当前平台不支持的包源" FontSize="11" TextWrapping="Wrap"
+          <TextBlock Text="{DynamicResource Download.ShowUnsupported}" FontSize="11" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG2}"/>
         </CheckBox>
       </Grid>
@@ -476,13 +476,13 @@
                  KeyDown="QueryBox_KeyDown"
                  ToolTipService.Placement="Right" ToolTip="输入包名或关键词后按回车搜索；Git 源可以直接填仓库地址"/>
 
-        <Button Grid.Column="1" Content="搜索" Margin="8,0,0,0"
+        <Button Grid.Column="1" Content="{DynamicResource Download.Search}" Margin="8,0,0,0"
                 Style="{DynamicResource DownloadPrimaryButton}"
                 Command="{Binding SearchCommand}"
                 Click="SearchButton_Click"
                 ToolTip="在左侧选中的包源里搜索"/>
 
-        <Button Grid.Column="2" Content="刷新包源" Margin="8,0,0,0"
+        <Button Grid.Column="2" Content="{DynamicResource Download.RefreshSources}" Margin="8,0,0,0"
                 Style="{DynamicResource DownloadSecondaryButton}"
                 Command="{Binding RefreshCommand}"
                 ToolTip="重新探测各包源可用性（刚装完命令行工具时点它）"/>
@@ -495,7 +495,7 @@
                      Foreground="{DynamicResource BrC3}"
                      Background="{DynamicResource BrG6}"
                      VerticalAlignment="Center"/>
-        <TextBlock Text="正在处理…" FontSize="11" Margin="8,0,0,0"
+        <TextBlock Text="{DynamicResource Download.Processing}" FontSize="11" Margin="8,0,0,0"
                    Foreground="{DynamicResource BrG3}" VerticalAlignment="Center"/>
       </StackPanel>
 
@@ -520,7 +520,7 @@
                        Foreground="{DynamicResource BrG2}" TextWrapping="Wrap"
                        Visibility="{Binding ErrorAdvice, Converter={StaticResource NotEmptyToVis}}"/>
           </StackPanel>
-          <Button Grid.Column="1" Content="重试" Margin="12,0,0,0" VerticalAlignment="Center"
+          <Button Grid.Column="1" Content="{DynamicResource Download.Retry}" Margin="12,0,0,0" VerticalAlignment="Center"
                   Style="{DynamicResource DownloadSecondaryButton}"
                   Command="{Binding SearchCommand}"
                   Click="SearchButton_Click"
@@ -545,11 +545,11 @@
              需求「应用列表读取参考 UnigetUI」在 Core 侧早已实现并有测试，
              此前缺的就是这里的入口。 -->
         <StackPanel Grid.Column="1" Orientation="Horizontal">
-          <Button Content="搜索结果" Height="24" Padding="10,0" FontSize="11"
+          <Button Content="{DynamicResource Download.SearchResults}" Height="24" Padding="10,0" FontSize="11"
                   Style="{DynamicResource DownloadSecondaryButton}"
                   Command="{Binding ShowSearchResultsCommand}"
                   ToolTip="显示当前包源的搜索结果"/>
-          <Button Content="已安装" Height="24" Padding="10,0" FontSize="11" Margin="6,0,0,0"
+          <Button Content="{DynamicResource Download.Installed}" Height="24" Padding="10,0" FontSize="11" Margin="6,0,0,0"
                   Style="{DynamicResource DownloadSecondaryButton}"
                   Command="{Binding ShowInstalledCommand}"
                   ToolTip="读取当前包源已安装的包（Git 源读的是本地仓库）"/>
@@ -573,9 +573,9 @@
       <!-- 空态：搜过但没有结果（有错误时让位给错误条，搜索中让位给进度条） -->
       <StackPanel x:Name="EmptyState" Grid.Row="4" Margin="0,40,0,0" Visibility="Collapsed"
                   VerticalAlignment="Top" HorizontalAlignment="Center">
-        <TextBlock Text="没有找到匹配的包" FontSize="13"
+        <TextBlock Text="{DynamicResource Download.NoMatch}" FontSize="13"
                    Foreground="{DynamicResource BrG2}" HorizontalAlignment="Center"/>
-        <TextBlock Text="换一个关键词，或在左栏切换其它包源后再搜一次。" FontSize="11" Margin="0,4,0,0"
+        <TextBlock Text="{DynamicResource Download.NoMatchHint}" FontSize="11" Margin="0,4,0,0"
                    Foreground="{DynamicResource BrG4}" HorizontalAlignment="Center"/>
       </StackPanel>
 
@@ -651,11 +651,11 @@
       <!-- 初始提示：还没搜过（否则右栏一片空白） -->
       <StackPanel x:Name="IdleHint" Grid.Row="4" Margin="0,40,0,0"
                   VerticalAlignment="Top" HorizontalAlignment="Center">
-        <TextBlock Text="在左侧选择包源，输入关键词后按回车或点「搜索」" FontSize="13"
+        <TextBlock Text="{DynamicResource Download.EmptyPrompt}" FontSize="13"
                    Foreground="{DynamicResource BrG2}" HorizontalAlignment="Center"/>
         <TextBlock FontSize="11" Margin="0,4,0,0" HorizontalAlignment="Center"
                    Foreground="{DynamicResource BrG4}"
-                   Text="安装目录与包源可用性见左栏；未验证的包源会标出来。"/>
+                   Text="{DynamicResource Download.EmptyHint}"/>
       </StackPanel>
     </Grid>
   </Grid>

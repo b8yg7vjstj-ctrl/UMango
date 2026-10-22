@@ -277,7 +277,7 @@
                        BorderThickness="0"/>
         </StackPanel>
 
-        <Button Grid.Column="1" Content="取消" Style="{StaticResource MiniButton}"
+        <Button Grid.Column="1" Content="{DynamicResource Progress.Cancel}" Style="{StaticResource MiniButton}"
                 Margin="8,0,0,0" VerticalAlignment="Center" Command="{Binding Cancel}"
                 ToolTip="取消该任务（未提供取消回调时自动置灰）"/>
       </Grid>
@@ -417,7 +417,7 @@
       </Grid.RowDefinitions>
 
       <Grid Grid.Row="0" Margin="2,0,2,8">
-        <TextBlock Text="任务" Style="{DynamicResource PclSectionTitle}"/>
+        <TextBlock Text="{DynamicResource Progress.Title}" Style="{DynamicResource PclSectionTitle}"/>
         <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"
                    Foreground="{DynamicResource BrG3}"
                    Text="{Binding Tasks.Count, StringFormat='共 {0} 个'}"/>
@@ -482,7 +482,7 @@
                            VerticalAlignment="Center" Foreground="{DynamicResource BrC2}"
                            Text="{Binding SelectedTask.Progress, Converter={StaticResource Percent}, StringFormat={}{0:0}%}"/>
                 <!-- 走 ViewModel 的取消命令：父任务没有回调时会退一步取消它的子项。 -->
-                <Button Content="取消任务" Style="{StaticResource MiniButton}" Margin="12,0,0,0"
+                <Button Content="{DynamicResource Progress.CancelTask}" Style="{StaticResource MiniButton}" Margin="12,0,0,0"
                         Command="{Binding CancelTaskCommand}"
                         CommandParameter="{Binding SelectedTask}"
                         ToolTip="取消该任务（父任务没有取消回调时会尝试取消其子项）"/>
@@ -506,10 +506,10 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Orientation="Horizontal">
-              <TextBlock Text="子项进度" Style="{DynamicResource PclSectionTitle}"/>
+              <TextBlock Text="{DynamicResource Progress.SubProgress}" Style="{DynamicResource PclSectionTitle}"/>
               <TextBlock FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
                          Foreground="{DynamicResource BrG4}"
-                         Text="（按下载方式/阶段划分，每个子项独立进度；命令行输出直接挂在对应子项下方）"/>
+                         Text="{DynamicResource Progress.SubProgressHint}"/>
             </StackPanel>
 
             <ScrollViewer Grid.Row="1" Margin="0,10,0,0"
@@ -527,7 +527,7 @@
             <!-- 没有子项时的说明：执行器正在规划，或这类任务本身不分阶段。 -->
             <TextBlock Grid.Row="1" Margin="0,10,0,0" FontSize="12" TextWrapping="Wrap"
                        Foreground="{DynamicResource BrG4}"
-                       Text="该任务还没有划分下载方式子项（可能仍在规划，或本身不分阶段）。命令行输出见下方「终端输出」。">
+                       Text="{DynamicResource Progress.NoSubItems}">
               <TextBlock.Style>
                 <Style TargetType="TextBlock">
                   <Setter Property="Visibility" Value="Collapsed"/>
@@ -558,18 +558,18 @@
               </Grid.ColumnDefinitions>
 
               <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <TextBlock Text="终端输出" Style="{DynamicResource PclSectionTitle}"/>
+                <TextBlock Text="{DynamicResource Progress.TerminalOutput}" Style="{DynamicResource PclSectionTitle}"/>
                 <TextBlock FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
                            Foreground="{DynamicResource BrG4}"
-                           Text="命令行原样回传，普通文本呈现（与内容区同底色，非黑底终端）"/>
+                           Text="{DynamicResource Progress.TerminalHint}"/>
               </StackPanel>
 
               <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <!-- 与设置页的「调试模式」是同一个开关（Core 的静态开关 + 落盘），两处状态一致。 -->
-                <ToggleButton x:Name="DebugToggleButton" Content="调试模式" Style="{StaticResource DebugToggle}"
+                <ToggleButton x:Name="DebugToggleButton" Content="{DynamicResource Progress.DebugMode}" Style="{StaticResource DebugToggle}"
                               IsChecked="{Binding DebugMode, Mode=TwoWay}"
                               ToolTip="等价于 PCL-CE 原菜单位置的调试模式：打开后保留并显示全部输出行，关闭时只显示最近 50 行"/>
-                <Button Content="清空" Style="{StaticResource MiniButton}" Margin="8,0,0,0"
+                <Button Content="{DynamicResource Progress.Clear}" Style="{StaticResource MiniButton}" Margin="8,0,0,0"
                         Command="{Binding ClearTerminalCommand}"
                         ToolTip="清空当前任务的终端输出（Core 缓冲与界面一起清）"/>
               </StackPanel>
@@ -608,12 +608,12 @@
           </Style>
         </StackPanel.Style>
 
-        <TextBlock Text="暂无任务，去下载页安装一个包试试" FontSize="14"
+        <TextBlock Text="{DynamicResource Progress.Empty}" FontSize="14"
                    HorizontalAlignment="Center" Foreground="{DynamicResource BrG3}"/>
         <TextBlock FontSize="12" Margin="0,8,0,0" HorizontalAlignment="Center"
                    TextAlignment="Center" TextWrapping="Wrap" MaxWidth="360"
                    Foreground="{DynamicResource BrG4}"
-                   Text="安装开始后，这里会按下载方式列出每个子项的进度，并把命令行输出原生回传到对应子项下方。"/>
+                   Text="{DynamicResource Progress.EmptyHint}"/>
       </StackPanel>
     </Grid>
   </Grid>

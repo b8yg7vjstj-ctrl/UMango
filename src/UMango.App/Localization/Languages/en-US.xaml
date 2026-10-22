@@ -39,6 +39,7 @@
     <sys:String x:Key="Home.Column.Package">Source</sys:String>
     <sys:String x:Key="Home.Column.Directory">Install directory</sys:String>
     <sys:String x:Key="Home.Column.State">Status</sys:String>
+    <sys:String x:Key="Home.AllSourcesHint">All 6 package sources (including those unsupported on this platform); each title is the package manager name with its install directory below.</sys:String>
     <sys:String x:Key="Home.ProbeDetail">Probe details</sys:String>
     <sys:String x:Key="Home.Statistics.Total">Total</sys:String>
     <sys:String x:Key="Home.Statistics.Success">Succeeded</sys:String>
@@ -55,13 +56,41 @@
     <sys:String x:Key="Download.Title">Download</sys:String>
     <sys:String x:Key="Download.NewDownload">New download</sys:String>
     <sys:String x:Key="Download.SearchPlaceholder">Search packages…</sys:String>
+    <sys:String x:Key="Download.Search">Search</sys:String>
+    <sys:String x:Key="Download.RefreshSources">Refresh sources</sys:String>
+    <sys:String x:Key="Download.Install">Install</sys:String>
+    <sys:String x:Key="Download.Retry">Retry</sys:String>
+    <sys:String x:Key="Download.SearchResults">Results</sys:String>
+    <sys:String x:Key="Download.Installed">Installed</sys:String>
+    <sys:String x:Key="Download.Column.Source">Source</sys:String>
+    <sys:String x:Key="Download.InstallDirectory">Install directory</sys:String>
+    <sys:String x:Key="Download.MissingCli">If the CLI is missing</sys:String>
+    <sys:String x:Key="Download.VerificationNote">Why not verified</sys:String>
+    <sys:String x:Key="Download.NotVerified">Not verified</sys:String>
+    <sys:String x:Key="Download.GithubStarsFallback">GitHub Stars fallback</sys:String>
+    <sys:String x:Key="Download.NoSources">No usable package source was found</sys:String>
+    <sys:String x:Key="Download.ShowUnsupported">Show sources unsupported on this platform</sys:String>
+    <sys:String x:Key="Download.Processing">Working…</sys:String>
+    <sys:String x:Key="Download.NoMatch">No matching package</sys:String>
+    <sys:String x:Key="Download.NoMatchHint">Try another keyword, or switch to a different source in the left pane.</sys:String>
+    <sys:String x:Key="Download.EmptyPrompt">Pick a source on the left, type a keyword, then press Enter or click Search</sys:String>
+    <sys:String x:Key="Download.EmptyHint">Install directories and source availability are in the left pane; unverified sources are marked.</sys:String>
     <sys:String x:Key="Download.Engine">Download engine</sys:String>
     <sys:String x:Key="Download.TerminalOutput">Terminal output</sys:String>
 
     <!-- ============ Progress ============ -->
     <sys:String x:Key="Progress.Title">Tasks</sys:String>
     <sys:String x:Key="Progress.Empty">No tasks. Install a package from the Download page.</sys:String>
+    <sys:String x:Key="Progress.EmptyHint">Once an install starts, each step's progress is listed here with its command output attached.</sys:String>
     <sys:String x:Key="Progress.SubProgress">Step progress</sys:String>
+    <sys:String x:Key="Progress.SubProgressHint">(split by download method/phase; each step has its own progress and terminal output)</sys:String>
+    <sys:String x:Key="Progress.NoSubItems">This task has no per-method steps yet (still planning, or it is not phased). Terminal output is below.</sys:String>
+    <sys:String x:Key="Progress.TerminalOutput">Terminal output</sys:String>
+    <sys:String x:Key="Progress.TerminalHint">Raw command output, rendered as plain text (same background as the content, not a black terminal)</sys:String>
+    <sys:String x:Key="Progress.DebugMode">Debug mode</sys:String>
+    <sys:String x:Key="Progress.Clear">Clear</sys:String>
+    <sys:String x:Key="Progress.Cancel">Cancel</sys:String>
+    <sys:String x:Key="Progress.CancelTask">Cancel task</sys:String>
     <sys:String x:Key="Progress.State">Status</sys:String>
     <sys:String x:Key="Progress.State.Success">Succeeded</sys:String>
     <sys:String x:Key="Progress.State.Failed">Failed</sys:String>
@@ -106,6 +135,7 @@
 
     <!-- ============ Tools ============ -->
     <sys:String x:Key="Tools.Title">Tools</sys:String>
+    <sys:String x:Key="Tools.Reprobe">Re-probe</sys:String>
     <sys:String x:Key="Tools.Diagnostics">System diagnostics</sys:String>
     <sys:String x:Key="Tools.InstallDirectory">Install directory</sys:String>
     <sys:String x:Key="Tools.ProgramDirectory">Program directory</sys:String>
@@ -139,4 +169,20 @@
     <sys:String x:Key="Log.Level.Info">Info and above</sys:String>
     <sys:String x:Key="Log.Level.Warn">Warning and above</sys:String>
     <sys:String x:Key="Log.Level.Error">Errors only</sys:String>
+    <sys:String x:Key="Log.Column.Level">Level</sys:String>
+    <sys:String x:Key="Log.Refresh">Refresh</sys:String>
+    <sys:String x:Key="Log.Clear">Clear</sys:String>
+    <sys:String x:Key="Log.OpenFolder">Open log folder</sys:String>
+    <sys:String x:Key="Log.Export">Export diagnostics</sys:String>
+    <sys:String x:Key="Log.StorageHint">Logs are also written to files (one per day, kept for 7 days). The list above is the last 3000 entries in memory, cleared on restart; files are kept.</sys:String>
+    <!-- ============ Downloader ============ -->
+    <sys:String x:Key="Downloader.Title">New download</sys:String>
+    <sys:String x:Key="Downloader.SaveTo">Save to</sys:String>
+    <sys:String x:Key="Downloader.Start">Start</sys:String>
+    <sys:String x:Key="Downloader.Cancel">Cancel</sys:String>
+    <sys:String x:Key="Downloader.ClearOutput">Clear output</sys:String>
+    <sys:String x:Key="Downloader.Engine">Download engine</sys:String>
+    <sys:String x:Key="Downloader.EngineHint">The engine is chosen by protocol: aria2 covers HTTP/FTP/BitTorrent/metalink; eD2k needs a dedicated client; the built-in engine is the fallback.</sys:String>
+    <sys:String x:Key="Downloader.TerminalOutput">Terminal output</sys:String>
+    <sys:String x:Key="Downloader.TerminalHint">Native output on the page background, not an embedded black terminal; stderr is shown in red.</sys:String>
 </ResourceDictionary>

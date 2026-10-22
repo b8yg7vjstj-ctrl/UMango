@@ -29,7 +29,7 @@
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Tools.Diagnostics}"
                        VerticalAlignment="Center"/>
-            <Button Grid.Column="1" Content="重新探测" Padding="12,3" Cursor="Hand" FontSize="12"
+            <Button Grid.Column="1" Content="{DynamicResource Tools.Reprobe}" Padding="12,3" Cursor="Hand" FontSize="12"
                     Foreground="{DynamicResource BrC1}" Background="{DynamicResource BrG8}"
                     BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
                     ToolTip="重新执行各包管理器的 CLI 探测（会启动进程，需要几秒）"
