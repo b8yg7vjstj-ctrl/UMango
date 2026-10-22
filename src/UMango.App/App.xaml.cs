@@ -24,11 +24,31 @@ public partial class App : Application
     /// 用 Interlocked 而不是 bool：OnStartup 理论上可能被重入，且要保证跨线程可见性。
     /// </summary>
     private static int _animationDriverStarted;
-    protected override void OnStartup(StartupEventArgs e)
+
+    /// <summary>
+    /// 单实例判定结果（true=本进程是唯一实例）。OnStartup 里同步等待它。
+    /// </summary>
+    private static bool _isFirstInstance = true;
+
+    protected override async void OnStartup(StartupEventArgs e)
     {
         SeedServices();
         HookGlobalExceptionHandlers();
         ApplySavedTheme();
+
+        // 单实例：第二个实例通知首个实例激活主窗口后自行退出。
+        // 思路来源：PCL-CE SingleInstanceService（Apache-2.0）—— 单例锁 + 命名管道传激活指令。
+        // 必要性：用户重复双击 EXE（或启动器/快捷方式连点）会产生第二个进程，
+        // 真机日志实测过 500ms 内两次「UMango 启动」（双窗口、双份日志、双套探测）。
+        // 锁文件在退出时删除（见 SingleInstanceService.DisposeAsync），崩溃后不会残留误判。
+        _isFirstInstance = await Services.SingleInstanceService.TryStartAsync(ActivateExistingWindowAsync)
+            .ConfigureAwait(false);
+        if (!_isFirstInstance)
+        {
+            Log.Flush();
+            Shutdown();
+            return;
+        }
 
         // 放在最后：基类负责触发 Startup 事件，StartupUri 指向的主窗口在其之后创建，
         // 因此上面两步都先于首帧完成（主题不会"先用默认色画一帧再变"）。
@@ -48,6 +68,46 @@ public partial class App : Application
         {
             PCL.ModAnimation.AniStart();
         }
+    }
+
+    /// <summary>
+    /// 激活已在运行的主窗口（由第二个实例通过命名管道触发）。
+    ///
+    /// 做法与 PCL-CE 的 activate 处理一致：最小化则还原，
+    /// 再用一次 Topmost 置真/置假把窗口"拍"到前台，最后 Activate。
+    /// 之所以要置顶闪烁：仅 Activate() 在某些情况下不会让已最小化的窗口
+    /// 抢到焦点（Windows 只允许前台进程设置前台窗口）。
+    /// </summary>
+    private Task ActivateExistingWindowAsync()
+    {
+        var window = MainWindow;
+        if (window is null) return Task.CompletedTask;
+
+        if (window.Dispatcher.CheckAccess())
+        {
+            ActivateWindow(window);
+        }
+        else
+        {
+            window.Dispatcher.Invoke(() => ActivateWindow(window));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static void ActivateWindow(Window window)
+    {
+        if (window.WindowState == WindowState.Minimized)
+            window.WindowState = WindowState.Normal;
+
+        if (!window.Topmost)
+        {
+            window.Topmost = true;
+            window.Topmost = false;
+        }
+
+        window.Activate();
+        Log.Info("SingleInstance", "已激活已在运行的主窗口");
     }
 
     /// <summary>
@@ -94,6 +154,10 @@ public partial class App : Application
             Log.Info("App", $"UMango 退出（代码 {e.ApplicationExitCode}）");
             Log.Flush();
             AppServices.LogFile?.Close();
+
+            // 释放单例锁：删掉锁文件，避免进程被强杀后残留的锁让后续启动
+            // 永远误判为"已有实例"（那时用户将永远打不开第二个窗口）。
+            Services.SingleInstanceService.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
         catch (Exception)
         {
