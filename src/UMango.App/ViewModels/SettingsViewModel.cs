@@ -37,9 +37,9 @@ public partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<ThemeOption> Themes { get; } =
     [
         new ThemeOption(ThemeKind.PclClassic, "PCL 经典",
-            "保留现有 PCL 设计数值，界面观感与录屏逐像素校验一致"),
-        new ThemeOption(ThemeKind.Fluent10, "Windows 10 Fluent",
-            "还原 Win10「设置」的方正紧凑风格（纯色标题栏、小圆角，非 Win11/WinUI3）")
+            L("Settings.Theme.PclDesc")),
+        new ThemeOption(ThemeKind.Fluent10, L("Settings.Theme.Fluent10Name"),
+            L("Settings.Theme.Fluent10Desc"))
     ];
 
     [ObservableProperty]
@@ -48,10 +48,10 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>动画方向选项：UMango 自有矢量 / 与 PCL-CE 一致</summary>
     public IReadOnlyList<AnimationDirectionOption> AnimationDirections { get; } =
     [
-        new AnimationDirectionOption(AnimationDirectionMode.Mirrored, "UMango 矢量（默认）",
-            "列表项垂直进入、对话框向右滑入 —— 与 PCL-CE 刻意镜像"),
-        new AnimationDirectionOption(AnimationDirectionMode.PclCompatible, "与 PCL-CE 一致",
-            "列表项水平进入、对话框向左滑入 —— 还原 PCL-CE 的观感")
+        new AnimationDirectionOption(AnimationDirectionMode.Mirrored, L("Settings.Anim.MirroredName"),
+            L("Settings.Anim.MirroredDesc")),
+        new AnimationDirectionOption(AnimationDirectionMode.PclCompatible, L("Settings.Anim.PclCompatibleName"),
+            L("Settings.Anim.PclCompatibleDesc"))
     ];
 
     /// <summary>
@@ -178,7 +178,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         var option = SelectedLanguage ?? Languages[0];
         AppLocalization.SetLanguage(option.Code);
-        StatusMessage = $"语言已切换：{option.DisplayName}";
+        StatusMessage = L("Settings.Language.Switched", option.DisplayName);
     }
 
     /// <summary>应用所选主题（PCL 经典 / Win10 Fluent × 浅/深）。</summary>
@@ -196,14 +196,14 @@ public partial class SettingsViewModel : ObservableObject
             AppSettings.Settings.Set(UiSettings.DarkModeKey, IsDark);
             AppSettings.Save();
 
-            StatusMessage = $"已应用主题：{option.Title}（{(IsDark ? "深色" : "浅色")}）。";
+            StatusMessage = L("Settings.Theme.Applied", option.Title, L(IsDark ? "Settings.Dark" : "Settings.Light"));
         }
         catch (Exception ex)
         {
             // 主题字典缺失/路径写错不该让设置页崩掉：给出可读原因即可。
             // 注意 Apply 内部会触发 ThemeChanged，若它在半途失败，界面可能停在旧主题上，
             // 所以这里必须把"失败了"明确说出来，而不是假装成功。
-            StatusMessage = $"主题切换失败：{ex.Message}";
+            StatusMessage = L("Settings.Theme.SwitchFailed", ex.Message);
         }
     }
 
@@ -219,7 +219,7 @@ public partial class SettingsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"清空记录失败：{ex.Message}";
+            StatusMessage = L("Settings.Records.ClearFailed", ex.Message);
         }
     }
 

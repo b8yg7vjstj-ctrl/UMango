@@ -36,10 +36,10 @@ public partial class LogViewModel : ObservableObject
 
         Levels =
         [
-            new LogLevelOption(null, "全部"),
-            new LogLevelOption(LogLevel.Info, "信息及以上"),
-            new LogLevelOption(LogLevel.Warn, "警告及以上"),
-            new LogLevelOption(LogLevel.Error, "仅错误"),
+            new LogLevelOption(null, L("Log.Level.All")),
+            new LogLevelOption(LogLevel.Info, L("Log.Level.InfoAbove")),
+            new LogLevelOption(LogLevel.Warn, L("Log.Level.WarnAbove")),
+            new LogLevelOption(LogLevel.Error, L("Log.Level.ErrorOnly")),
         ];
         _selectedLevel = Levels[0];
 
@@ -110,8 +110,8 @@ public partial class LogViewModel : ObservableObject
             var dropped = _memory.DroppedCount;
             HasMore = dropped > 0;
             StatusMessage = dropped > 0
-                ? $"显示 {Entries.Count} 条；因超出缓冲上限已丢弃 {dropped} 条较早日志（完整内容在日志文件里）。"
-                : $"共 {Entries.Count} 条日志。";
+                ? L("Log.Buffered.Dropped", Entries.Count, dropped)
+                : L("Log.Buffered.Total", Entries.Count);
         }
         catch (Exception ex)
         {
@@ -156,20 +156,20 @@ public partial class LogViewModel : ObservableObject
             Directory.CreateDirectory(desktop);
 
             var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            var zipPath = Path.Combine(desktop, $"UMango-诊断包-{stamp}.zip");
+            var zipPath = Path.Combine(desktop, L("Log.Diag.ZipName", stamp));
 
             // 先把内存日志也落盘：用户可能很早就发现问题，
             // 而内存里那份包含了比文件更晚的信息（或者文件根本写不进去）。
             var summary = new System.Text.StringBuilder();
-            summary.AppendLine("=== UMango 诊断摘要 ===");
-            summary.AppendLine($"导出时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-            summary.AppendLine($"平台：{SystemInfo.Describe()}");
-            summary.AppendLine($"应用目录：{AppContext.BaseDirectory}");
-            summary.AppendLine($"日志目录：{AppServices.LogDirectory}");
-            summary.AppendLine($"内存日志条数：{_memory?.Count ?? 0}（丢弃 {_memory?.DroppedCount ?? 0}）");
-            summary.AppendLine($"文件写入失败次数：{AppServices.LogFile?.FailedWriteCount ?? 0}");
+            summary.AppendLine(L("Log.Diag.Title"));
+            summary.AppendLine(L("Log.Diag.Time", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+            summary.AppendLine(L("Log.Diag.Platform", SystemInfo.Describe()));
+            summary.AppendLine(L("Log.Diag.AppDir", AppContext.BaseDirectory));
+            summary.AppendLine(L("Log.Diag.LogDir", AppServices.LogDirectory));
+            summary.AppendLine(L("Log.Diag.MemoryCount", _memory?.Count ?? 0, _memory?.DroppedCount ?? 0));
+            summary.AppendLine(L("Log.Diag.FailedWrites", AppServices.LogFile?.FailedWriteCount ?? 0));
             summary.AppendLine();
-            summary.AppendLine("=== 内存中的日志（最近 3000 条） ===");
+            summary.AppendLine(L("Log.Diag.MemoryTitle"));
             if (_memory is not null)
             {
                 foreach (var e in _memory.Snapshot()) summary.AppendLine(e.ToLine());
@@ -177,7 +177,7 @@ public partial class LogViewModel : ObservableObject
 
             using (var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create))
             {
-                AddText(zip, "摘要与内存日志.txt", summary.ToString());
+                AddText(zip, L("Log.Diag.TextName"), summary.ToString());
 
                 // 日志文件
                 foreach (var file in AppServices.LogFile?.ListLogFiles() ?? [])
@@ -193,14 +193,14 @@ public partial class LogViewModel : ObservableObject
                     "install-records.json");
             }
 
-            StatusMessage = $"诊断包已导出到桌面：{Path.GetFileName(zipPath)}";
+            StatusMessage = L("Log.Diag.Exported", Path.GetFileName(zipPath));
             Log.Info("App", $"已导出诊断包：{zipPath}");
             return zipPath;
         }
         catch (Exception ex)
         {
             Log.ErrorAt("App", ex, member: "ExportDiagnosticBundle");
-            ErrorMessage = $"导出失败：{ex.Message}";
+            ErrorMessage = L("Log.Diag.ExportFailed", ex.Message);
             return null;
         }
     }
@@ -228,7 +228,7 @@ public partial class LogViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"无法打开日志目录：{ex.Message}";
+            ErrorMessage = L("Log.Diag.OpenDirFailed", ex.Message);
         }
     }
 

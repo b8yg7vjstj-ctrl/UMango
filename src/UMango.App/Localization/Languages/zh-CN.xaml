@@ -288,4 +288,48 @@
     <sys:String x:Key="State.UnsupportedPlatform">当前平台不支持</sys:String>
     <sys:String x:Key="State.NotInstalled">未安装命令行工具</sys:String>
     <sys:String x:Key="State.Unreachable">不可达</sys:String>
+
+    <!-- ============ 阶段3 补：设置页选项 / 日志页诊断 / 进度页 ============ -->
+    <!-- 设置页：主题族与动画方向选项描述 -->
+    <sys:String x:Key="Settings.Theme.PclDesc">保留现有 PCL 设计数值，界面观感与录屏逐像素校验一致</sys:String>
+    <sys:String x:Key="Settings.Theme.Fluent10Name">Windows 10 Fluent</sys:String>
+    <sys:String x:Key="Settings.Theme.Fluent10Desc">还原 Win10「设置」的方正紧凑风格（纯色标题栏、小圆角，非 Win11/WinUI3）</sys:String>
+    <sys:String x:Key="Settings.Anim.MirroredName">UMango 矢量（默认）</sys:String>
+    <sys:String x:Key="Settings.Anim.MirroredDesc">列表项垂直进入、对话框向右滑入 —— 与 PCL-CE 刻意镜像</sys:String>
+    <sys:String x:Key="Settings.Anim.PclCompatibleName">与 PCL-CE 一致</sys:String>
+    <sys:String x:Key="Settings.Anim.PclCompatibleDesc">列表项水平进入、对话框向左滑入 —— 还原 PCL-CE 的观感</sys:String>
+    <sys:String x:Key="Settings.Language.Switched">语言已切换：{0}</sys:String>
+    <sys:String x:Key="Settings.Theme.Applied">已应用主题：{0}（{1}）。</sys:String>
+    <sys:String x:Key="Settings.Theme.SwitchFailed">主题切换失败：{0}</sys:String>
+    <sys:String x:Key="Settings.Records.ClearFailed">清空记录失败：{0}</sys:String>
+    <!-- 设置页：深色/浅色 -->
+    <sys:String x:Key="Settings.Dark">深色</sys:String>
+    <sys:String x:Key="Settings.Light">浅色</sys:String>
+    <!-- 日志页：等级筛选 -->
+    <sys:String x:Key="Log.Level.All">全部</sys:String>
+    <sys:String x:Key="Log.Level.InfoAbove">信息及以上</sys:String>
+    <sys:String x:Key="Log.Level.WarnAbove">警告及以上</sys:String>
+    <sys:String x:Key="Log.Level.ErrorOnly">仅错误</sys:String>
+    <!-- 日志页：缓冲与诊断包 -->
+    <sys:String x:Key="Log.Buffered.Dropped">显示 {0} 条；因超出缓冲上限已丢弃 {1} 条较早日志（完整内容在日志文件里）。</sys:String>
+    <sys:String x:Key="Log.Buffered.Total">共 {0} 条日志。</sys:String>
+    <sys:String x:Key="Log.Diag.ZipName">UMango-诊断包-{0}.zip</sys:String>
+    <sys:String x:Key="Log.Diag.Title">=== UMango 诊断摘要 ===</sys:String>
+    <sys:String x:Key="Log.Diag.Time">导出时间：{0}</sys:String>
+    <sys:String x:Key="Log.Diag.Platform">平台：{0}</sys:String>
+    <sys:String x:Key="Log.Diag.AppDir">应用目录：{0}</sys:String>
+    <sys:String x:Key="Log.Diag.LogDir">日志目录：{0}</sys:String>
+    <sys:String x:Key="Log.Diag.MemoryCount">内存日志条数：{0}（丢弃 {1}）</sys:String>
+    <sys:String x:Key="Log.Diag.FailedWrites">文件写入失败次数：{0}</sys:String>
+    <sys:String x:Key="Log.Diag.MemoryTitle">=== 内存中的日志（最近 3000 条） ===</sys:String>
+    <sys:String x:Key="Log.Diag.TextName">摘要与内存日志.txt</sys:String>
+    <sys:String x:Key="Log.Diag.Exported">诊断包已导出到桌面：{0}</sys:String>
+    <sys:String x:Key="Log.Diag.ExportFailed">导出失败：{0}</sys:String>
+    <sys:String x:Key="Log.Diag.OpenDirFailed">无法打开日志目录：{0}</sys:String>
+    <!-- 进度页 -->
+    <sys:String x:Key="Progress.UnattributedStep">其他输出</sys:String>
+    <sys:String x:Key="Progress.CancelRequested">已请求取消：{0}</sys:String>
+    <sys:String x:Key="Progress.NotCancelable">「{0}」当前不可取消（该任务未提供取消回调）。</sys:String>
+    <!-- 下载页：分类不可用兜底 -->
+    <sys:String x:Key="Download.CategoryUnavailableNow">{0} 当前不可用</sys:String>
 </ResourceDictionary>

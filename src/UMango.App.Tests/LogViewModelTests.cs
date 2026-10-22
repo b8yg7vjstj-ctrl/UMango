@@ -119,7 +119,11 @@ public class LogViewModelTests
         var vm = new LogViewModel(sink);
 
         Assert.True(vm.HasMore);
-        Assert.Contains("已丢弃", vm.StatusMessage);
+        // StatusMessage 走 L() 取文案，无 UI 环境下 Provider 返回资源键本身
+        using (ChineseProvider.Scope())
+        {
+            Assert.Contains("已丢弃", vm.StatusMessage);
+        }
     }
 
     // ================= 导出诊断包 =================
@@ -142,15 +146,21 @@ public class LogViewModelTests
             var names = zip.Entries.Select(e => e.FullName).ToList();
 
             // 摘要与内存日志必须在包里 —— 这是最重要的一份
-            Assert.Contains(names, n => n.Contains("摘要"));
+            // 文件名也走 L()，无 UI 环境下是资源键，故用 ChineseProvider 提供真实文案
+            using (ChineseProvider.Scope())
+            {
+                var bundleName = UMango.Core.Localization.LocalizationService.Text("Log.Diag.TextName");
+                Assert.Contains(names, n => n.Contains("摘要"));
 
-            var summary = ReadEntry(zip, names.First(n => n.Contains("摘要")));
-            Assert.Contains("启动正常", summary);
-            Assert.Contains("某处出错了", summary);     // 错误必须带上，否则包就失去意义
-            Assert.Contains("平台", summary);
+                var summary = ReadEntry(zip, names.First(n => n.Contains("摘要")));
+                Assert.Contains("启动正常", summary);
+                Assert.Contains("某处出错了", summary);     // 错误必须带上，否则包就失去意义
+                Assert.Contains("平台", summary);
 
-            Assert.Null(vm.ErrorMessage);
-            Assert.Contains("诊断包已导出", vm.StatusMessage);
+                Assert.Null(vm.ErrorMessage);
+                Assert.Contains("诊断包已导出", vm.StatusMessage);
+                Assert.False(string.IsNullOrWhiteSpace(bundleName));
+            }
         }
         finally
         {

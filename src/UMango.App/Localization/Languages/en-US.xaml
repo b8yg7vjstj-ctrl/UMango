@@ -281,4 +281,42 @@
     <sys:String x:Key="State.UnsupportedPlatform">Not supported on this platform</sys:String>
     <sys:String x:Key="State.NotInstalled">CLI tool not installed</sys:String>
     <sys:String x:Key="State.Unreachable">Unreachable</sys:String>
+
+    <!-- ============ 阶段3 补：设置页选项 / 日志页诊断 / 进度页 ============ -->
+    <sys:String x:Key="Settings.Theme.PclDesc">Keeps the existing PCL design values; matches the reference capture pixel for pixel</sys:String>
+    <sys:String x:Key="Settings.Theme.Fluent10Name">Windows 10 Fluent</sys:String>
+    <sys:String x:Key="Settings.Theme.Fluent10Desc">Restores the square, compact Windows 10 Settings look (solid title bar, small corners; not Win11/WinUI3)</sys:String>
+    <sys:String x:Key="Settings.Anim.MirroredName">UMango vector (default)</sys:String>
+    <sys:String x:Key="Settings.Anim.MirroredDesc">List items enter vertically and dialogs slide in from the right — deliberately mirrored from PCL-CE</sys:String>
+    <sys:String x:Key="Settings.Anim.PclCompatibleName">Same as PCL-CE</sys:String>
+    <sys:String x:Key="Settings.Anim.PclCompatibleDesc">List items enter horizontally and dialogs slide in from the left — restores the PCL-CE feel</sys:String>
+    <sys:String x:Key="Settings.Language.Switched">Language switched to: {0}</sys:String>
+    <sys:String x:Key="Settings.Theme.Applied">Theme applied: {0} ({1}).</sys:String>
+    <sys:String x:Key="Settings.Theme.SwitchFailed">Failed to switch theme: {0}</sys:String>
+    <sys:String x:Key="Settings.Records.ClearFailed">Failed to clear records: {0}</sys:String>
+    <sys:String x:Key="Settings.Dark">Dark</sys:String>
+    <sys:String x:Key="Settings.Light">Light</sys:String>
+    <sys:String x:Key="Log.Level.All">All</sys:String>
+    <sys:String x:Key="Log.Level.InfoAbove">Info and above</sys:String>
+    <sys:String x:Key="Log.Level.WarnAbove">Warning and above</sys:String>
+    <sys:String x:Key="Log.Level.ErrorOnly">Errors only</sys:String>
+    <sys:String x:Key="Log.Buffered.Dropped">Showing {0} entries; {1} earlier entries were dropped after the buffer limit (full history is in the log file).</sys:String>
+    <sys:String x:Key="Log.Buffered.Total">{0} log entries in total.</sys:String>
+    <sys:String x:Key="Log.Diag.ZipName">UMango-diagnostics-{0}.zip</sys:String>
+    <sys:String x:Key="Log.Diag.Title">=== UMango diagnostics summary ===</sys:String>
+    <sys:String x:Key="Log.Diag.Time">Exported at: {0}</sys:String>
+    <sys:String x:Key="Log.Diag.Platform">Platform: {0}</sys:String>
+    <sys:String x:Key="Log.Diag.AppDir">App directory: {0}</sys:String>
+    <sys:String x:Key="Log.Diag.LogDir">Log directory: {0}</sys:String>
+    <sys:String x:Key="Log.Diag.MemoryCount">In-memory entries: {0} ({1} dropped)</sys:String>
+    <sys:String x:Key="Log.Diag.FailedWrites">Failed file writes: {0}</sys:String>
+    <sys:String x:Key="Log.Diag.MemoryTitle">=== In-memory log (latest 3000 entries) ===</sys:String>
+    <sys:String x:Key="Log.Diag.TextName">summary-and-log.txt</sys:String>
+    <sys:String x:Key="Log.Diag.Exported">Diagnostics package exported to the desktop: {0}</sys:String>
+    <sys:String x:Key="Log.Diag.ExportFailed">Export failed: {0}</sys:String>
+    <sys:String x:Key="Log.Diag.OpenDirFailed">Cannot open the log directory: {0}</sys:String>
+    <sys:String x:Key="Progress.UnattributedStep">Other output</sys:String>
+    <sys:String x:Key="Progress.CancelRequested">Cancel requested: {0}</sys:String>
+    <sys:String x:Key="Progress.NotCancelable">"{0}" cannot be canceled right now (the task provides no cancel callback).</sys:String>
+    <sys:String x:Key="Download.CategoryUnavailableNow">{0} is currently unavailable</sys:String>
 </ResourceDictionary>

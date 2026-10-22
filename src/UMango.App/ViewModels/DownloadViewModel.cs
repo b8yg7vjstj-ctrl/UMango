@@ -244,7 +244,7 @@ public partial class DownloadViewModel : ObservableObject
         {
             // 平台不支持或 CLI 未安装：给出可操作的说明，而不是空列表
             Installed.Clear();
-            ErrorMessage = category.Detail ?? $"{category.Title} 当前不可用";
+            ErrorMessage = category.Detail ?? L("Download.CategoryUnavailableNow", category.Title);
             ErrorAdvice = category.SupportedHere
                 ? L("Download.Cli.Missing", category.Title, category.InstallHint)
                 : L("Download.Cli.OtherOs", category.Title);

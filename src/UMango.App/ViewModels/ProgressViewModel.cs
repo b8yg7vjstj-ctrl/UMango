@@ -38,7 +38,7 @@ public partial class ProgressViewModel : ObservableObject
     /// <summary>不属于任何子项的输出（命令行回显、退出码等）统一挂在这一组，排在子项之后。</summary>
     private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
 
-    public const string UnattributedStep = "其他输出";
+    public const string UnattributedStepKey = "Progress.UnattributedStep";
 
     /// <summary>任务列表。直接绑定 Core 的任务中心，子项进度（Children）由模板递归渲染。</summary>
     public ObservableCollection<TaskModel> Tasks { get; } = TaskCenter.Tasks;
@@ -171,7 +171,7 @@ public partial class ProgressViewModel : ObservableObject
         var rest = all.Where(l =>
             string.IsNullOrWhiteSpace(l.Step)
             || !task.Children.Any(c => string.Equals(c.Title, l.Step, StringComparison.Ordinal))).ToList();
-        if (rest.Count > 0) result.Add((UnattributedStep, rest));
+        if (rest.Count > 0) result.Add((L("Progress.UnattributedStep"), rest));
 
         return result;
     }
@@ -215,13 +215,13 @@ public partial class ProgressViewModel : ObservableObject
 
         if (TryCancel(target))
         {
-            StatusMessage = $"已请求取消：{target.Title}";
+            StatusMessage = L("Progress.CancelRequested", target.Title);
             return;
         }
 
         // 如实告知而不是静默失败：TaskModel.Cancel 只有在创建时带了取消回调才可用，
         // 而安装执行器创建的父子任务目前都没有挂回调（取消由它自己托管）。
-        StatusMessage = $"「{target.Title}」当前不可取消（该任务未提供取消回调）。";
+        StatusMessage = L("Progress.NotCancelable", target.Title);
     }
 
     private static bool TryCancel(TaskModel task)
@@ -277,7 +277,7 @@ public partial class ProgressViewModel : ObservableObject
     {
         TerminalLines.Add(line);
 
-        var step = string.IsNullOrWhiteSpace(line.Step) ? UnattributedStep : line.Step!;
+        var step = string.IsNullOrWhiteSpace(line.Step) ? L("Progress.UnattributedStep") : line.Step!;
         if (_groupIndex.TryGetValue(step, out var existing))
         {
             existing.Lines.Add(line);
