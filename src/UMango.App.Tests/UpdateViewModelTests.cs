@@ -71,21 +71,19 @@ public class UpdateViewModelTests
     [Fact]
     public async Task 发现新版后置位HasUpdate并显示版本号()
     {
-        var vm = new UpdateViewModel();
-        Services.AppServices.Update = new Services.UpdateService(new FakeHttp(NewerFeed));
-
-        await vm.CheckCommand.ExecuteAsync(null);
-
-        Assert.True(vm.HasUpdate, $"本地版本={Services.UpdateService.LocalVersion}，状态={vm.StatusMessage}");
-
-        // 状态文案走 L()，无 UI 环境返回资源键；断言具体内容前装中文 Provider
+        // Provider 必须在 new VM 之前装好：构造期不求值，但 CheckCommand 一跑就会
+        // 把 L() 的结果写进 StatusMessage —— 装晚了读到的就是资源键。
         using (ChineseProvider.Scope())
         {
+            var vm = new UpdateViewModel();
+            Services.AppServices.Update = new Services.UpdateService(new FakeHttp(NewerFeed));
+
             await vm.CheckCommand.ExecuteAsync(null);
+
+            Assert.True(vm.HasUpdate, vm.StatusMessage);
+            Assert.False(vm.IsBusy);
             Assert.Contains("99.0.0", vm.StatusMessage);
         }
-        Assert.False(vm.IsBusy);
-        Assert.Contains("99.0.0", vm.StatusMessage);
     }
 
     /// <summary>
@@ -111,14 +109,18 @@ public class UpdateViewModelTests
     [Fact]
     public async Task 检查失败后解除忙碌态并显示原因()
     {
-        var vm = new UpdateViewModel();
-        Services.AppServices.Update = new Services.UpdateService(new ThrowingHttp());
+        using (ChineseProvider.Scope())
+        {
+            var vm = new UpdateViewModel();
+            Services.AppServices.Update = new Services.UpdateService(new ThrowingHttp());
 
-        await vm.CheckCommand.ExecuteAsync(null);
+            await vm.CheckCommand.ExecuteAsync(null);
 
-        Assert.False(vm.HasUpdate);
-        Assert.False(vm.IsBusy);
-        Assert.NotEmpty(vm.StatusMessage);
+            Assert.False(vm.HasUpdate);
+            Assert.False(vm.IsBusy);
+            // 失败原因要透出（状态行是唯一的反馈渠道 —— 这里刻意不弹窗）
+            Assert.Contains("offline", vm.StatusMessage);
+        }
     }
 
     /// <summary>
