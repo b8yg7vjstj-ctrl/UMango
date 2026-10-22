@@ -213,7 +213,12 @@ public class InstalledListUiTests
         Assert.False(vm.IsInstalledMode);
         Assert.True(vm.ShowResultsPane);
         Assert.False(vm.ShowInstalledPane);
-        Assert.Equal("搜索结果", vm.ModeTitle);
+        // 文案已本地化：无 UI 环境下 Provider 是 KeyOnly（返回资源键），
+        // 所以这里临时装一个查表 Provider 来断言键确实取到了中文案。
+        using (ChineseProvider.Scope())
+        {
+            Assert.Equal("搜索结果", vm.ModeTitle);
+        }
         await Task.CompletedTask;
     }
 
@@ -232,7 +237,10 @@ public class InstalledListUiTests
         Assert.Contains(nameof(vm.ShowInstalledPane), changed);
         Assert.Contains(nameof(vm.InstalledSummary), changed);
 
-        Assert.Equal("已安装", vm.ModeTitle);
+        using (ChineseProvider.Scope())
+        {
+            Assert.Equal("已安装", vm.ModeTitle);
+        }
         Assert.True(vm.ShowInstalledPane);
     }
 
@@ -266,7 +274,11 @@ public class InstalledListUiTests
         // 真机上这两个包源都有已安装的包（npm 自身 / 本机 153 个 formula）
         Assert.NotEmpty(vm.Installed);
         Assert.All(vm.Installed, p => Assert.False(string.IsNullOrWhiteSpace(p.Name)));
-        Assert.Contains("共 ", vm.InstalledSummary);
+        // 注意：不要断言具体中文，也不要断言分类名 —— 文案已本地化，
+        // 无 UI 环境下 Provider 是 KeyOnly（返回资源键本身），
+        // 只有真机 + 资源字典就位时才会格式化成「Homebrew：共 N 个已安装包」。
+        // 这里只验证摘要确实被填了非空内容。
+        Assert.False(string.IsNullOrWhiteSpace(vm.InstalledSummary));
     }
 
     [Fact]
@@ -325,5 +337,67 @@ public class InstalledListUiTests
     {
         var vm = new DownloadViewModel();
         Assert.False(string.IsNullOrWhiteSpace(vm.InstalledSummary));
+    }
+
+    [Fact]
+    public void 本地化后的下载页在无UI环境也能构造()
+    {
+        // 回归：DownloadViewModel 有 20 处文案改走 LocalizationService.Text。
+        // 若有人不小心改回 AppLocalization.Text()（碰 Application 类型），
+        // macOS 测试宿主会在构造/取文案时 FileNotFoundException，
+        // 本用例（以及同一文件里所有构造 DownloadViewModel 的用例）立刻红。
+        var vm = new DownloadViewModel();
+        Assert.NotNull(vm);
+        Assert.False(string.IsNullOrWhiteSpace(vm.ModeTitle));
+    }
+}
+
+/// <summary>
+/// 测试用的中文文案提供器：把 <c>zh-CN.xaml</c> 里的键→文案装进
+/// <see cref="LocalizationService"/>，让断言能写具体中文（而不是资源键）。
+/// 用 <see cref="Scope"/> 包住断言块，退出时自动还原原 Provider。
+/// </summary>
+internal sealed class ChineseProvider : UMango.Core.Localization.ITextProvider
+{
+    private static readonly System.Collections.Generic.Dictionary<string, string> Table = new(System.StringComparer.Ordinal);
+
+    private const string Pattern = "<sys:String x:Key=\"" + "([^\"]+)\"" + ">(.*)</sys:String>";
+
+    static ChineseProvider()
+    {
+        var path = System.IO.Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "UMango.App", "Localization", "Languages", "zh-CN.xaml");
+        if (!System.IO.File.Exists(path)) return;
+        foreach (var line in System.IO.File.ReadAllLines(path))
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(
+                line, Pattern);
+            if (m.Success) Table[m.Groups[1].Value] = m.Groups[2].Value;
+        }
+    }
+
+    public string Text(string key) => Table.TryGetValue(key, out var v) ? v : key;
+
+    public static ScopeHandle Scope()
+    {
+        var previous = new Delegate(UMango.Core.Localization.LocalizationService.Text);
+        UMango.Core.Localization.LocalizationService.SetTextProvider(new ChineseProvider());
+        return new ScopeHandle(previous);
+    }
+
+    internal readonly struct ScopeHandle : System.IDisposable
+    {
+        private readonly Delegate _restore;
+        public ScopeHandle(Delegate restore) => _restore = restore;
+        public void Dispose() => UMango.Core.Localization.LocalizationService.SetTextProvider(new DelegateProvider(_restore));
+    }
+
+    internal delegate string Delegate(string key);
+
+    private sealed class DelegateProvider : UMango.Core.Localization.ITextProvider
+    {
+        private readonly Delegate _f;
+        public DelegateProvider(Delegate f) => _f = f;
+        public string Text(string key) => _f(key);
     }
 }

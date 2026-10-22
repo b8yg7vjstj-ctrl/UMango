@@ -46,6 +46,16 @@ public static class LocalizationService
         lock (Gate) { return _text.Text(key); }
     }
 
+    /// <summary>
+    /// 取文案并按 <paramref name="args"/> 格式化（等价 <c>string.Format(Text(key), args)</c>）。
+    /// 用于「未检测到 {0} 的命令行工具」这类带占位符的句子。
+    /// </summary>
+    public static string Text(string key, params object?[] args)
+    {
+        var template = Text(key);
+        return args.Length == 0 ? template : string.Format(template, args);
+    }
+
     /// <summary>当前 UI 语言。</summary>
     public static LocalizationLanguage CurrentLanguage
     {

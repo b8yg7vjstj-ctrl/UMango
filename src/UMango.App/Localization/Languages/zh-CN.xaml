@@ -60,6 +60,34 @@
     <sys:String x:Key="Home.Platform.Linux">Linux</sys:String>
 
     <!-- ============ 下载页 ============ -->
+    <sys:String x:Key="Download.Mode.Installed">已安装</sys:String>
+    <sys:String x:Key="Download.Mode.Results">搜索结果</sys:String>
+    <sys:String x:Key="Download.LoadingInstalled">正在读取已安装列表…</sys:String>
+    <sys:String x:Key="Download.Empty.NeedSource">请先在左栏选择一个包源</sys:String>
+    <sys:String x:Key="Download.Noun.GitRepo">个本地仓库</sys:String>
+    <sys:String x:Key="Download.Noun.Installed">个已安装包</sys:String>
+    <sys:String x:Key="Download.Empty.NoInstalled">{0} 下没有已安装的{1}</sys:String>
+    <sys:String x:Key="Download.Count.Installed">{0}：共 {1} {2}</sys:String>
+    <sys:String x:Key="Download.ReprobeDone">已重新探测 {0} 个包源。</sys:String>
+    <sys:String x:Key="Download.Cli.Missing">未检测到 {0} 的命令行工具。{1}</sys:String>
+    <sys:String x:Key="Download.Cli.OtherOs">{0} 只在其它操作系统上可用。</sys:String>
+    <sys:String x:Key="Download.Error.NeedCategory">请先在左侧选择一个包源分类。</sys:String>
+    <sys:String x:Key="Download.Error.CategoryHint">每个分类对应一个包管理器，安装目录显示在分类名下方。</sys:String>
+    <sys:String x:Key="Download.Error.NeedKeyword">请输入要搜索的包名或关键词。</sys:String>
+    <sys:String x:Key="Download.Error.SearchExample">例如在 {0} 里搜索 express、tokio；Git 源可以直接填仓库地址。</sys:String>
+    <sys:String x:Key="Download.Error.NoSearch">{0} 不支持搜索。</sys:String>
+    <sys:String x:Key="Download.Error.NoSearchHint">该包源只能按已知名称安装，可切换到其它包源搜索。</sys:String>
+    <sys:String x:Key="Download.Error.NoAdapter">未注册 {0} 的适配器。</sys:String>
+    <sys:String x:Key="Download.Error.ReprobeHint">请点「刷新包源」重新探测。</sys:String>
+    <sys:String x:Key="Download.Error.NoMatch">没有找到与「{0}」匹配的包。</sys:String>
+    <sys:String x:Key="Download.Info.MatchCount">在 {0} 中找到 {1} 个结果。</sys:String>
+    <sys:String x:Key="Download.Error.NeedTarget">请先选择要安装的包。</sys:String>
+    <sys:String x:Key="Download.Error.NeedTargetHint">点选一张结果卡片，或直接点卡片上的「安装」。</sys:String>
+    <sys:String x:Key="Download.Error.NotOnThisOs">{0} 在当前系统上不可用。</sys:String>
+    <sys:String x:Key="Download.Error.OtherOsOnly">该包源只支持其它操作系统。</sys:String>
+    <sys:String x:Key="Download.Error.NoCliDetail">未探测到可用的命令行工具</sys:String>
+    <sys:String x:Key="Download.Error.CategoryUnavailable">{0} 当前不可用（{1}）。</sys:String>
+
     <sys:String x:Key="Download.Title">下载</sys:String>
     <sys:String x:Key="Download.NewDownload">新建下载</sys:String>
     <sys:String x:Key="Download.SearchPlaceholder">搜索包名…</sys:String>

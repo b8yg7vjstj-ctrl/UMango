@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using UMango.App.Services;
 using UMango.Core.Execution;
 using UMango.Core.Install;
+using UMango.Core.Localization;
 using UMango.Core.PackageManagers;
 
 namespace UMango.App.ViewModels;
@@ -128,6 +129,13 @@ public partial class DownloadViewModel : ObservableObject
     public bool ShowInstalledPane => IsInstalledMode;
 
     /// <summary>结果区标题（随模式变化）</summary>
+    /// <summary>
+    /// 本地化文案简写。走 <see cref="LocalizationService"/>（可替换 Provider），
+    /// **不引用 Application 类型** —— 这样 ViewModel 在 macOS 测试宿主里也能构造
+    /// （App.Tests 有 56 处 new ViewModel；直接调 AppLocalization.Text 会拖垮它们）。
+    /// </summary>
+    private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
+
     public string ModeTitle => IsInstalledMode ? "已安装" : "搜索结果";
 
     /// <summary>已安装列表的一句汇总。git 的"已安装"语义不同，要如实说明。</summary>
@@ -135,15 +143,17 @@ public partial class DownloadViewModel : ObservableObject
     {
         get
         {
-            if (_loadingInstalled) return "正在读取已安装列表…";
+            if (_loadingInstalled) return L("Download.LoadingInstalled");
             var category = SelectedCategory;
-            if (category is null) return "请先在左栏选择一个包源";
+            if (category is null) return L("Download.Empty.NeedSource");
 
             var count = Installed.Count;
-            var noun = category.Kind == PackageSourceKind.Git ? "个本地仓库" : "个已安装包";
+            var noun = category.Kind == PackageSourceKind.Git
+                ? L("Download.Noun.GitRepo")
+                : L("Download.Noun.Installed");
             return count == 0
-                ? $"{category.Title} 下没有已安装的{noun[1..]}"
-                : $"{category.Title}：共 {count} {noun}";
+                ? L("Download.Empty.NoInstalled", category.Title, noun[1..])
+                : L("Download.Count.Installed", category.Title, count, noun);
         }
     }
 
@@ -183,7 +193,7 @@ public partial class DownloadViewModel : ObservableObject
         try
         {
             if (await LoadCategoriesAsync(refresh: true))
-                StatusMessage = $"已重新探测 {Categories.Count} 个包源。";
+                StatusMessage = L("Download.ReprobeDone", Categories.Count);
         }
         catch (Exception ex)
         {
@@ -234,8 +244,8 @@ public partial class DownloadViewModel : ObservableObject
             Installed.Clear();
             ErrorMessage = category.Detail ?? $"{category.Title} 当前不可用";
             ErrorAdvice = category.SupportedHere
-                ? $"未检测到 {category.Title} 的命令行工具。{category.InstallHint}"
-                : $"{category.Title} 只在其它操作系统上可用。";
+                ? L("Download.Cli.Missing", category.Title, category.InstallHint)
+                : L("Download.Cli.OtherOs", category.Title);
             OnPropertyChanged(nameof(InstalledSummary));
             OnPropertyChanged(nameof(ExportInstalledJsonCommand));
             return;
@@ -302,16 +312,16 @@ public partial class DownloadViewModel : ObservableObject
         var category = SelectedCategory;
         if (category is null)
         {
-            ErrorMessage = "请先在左侧选择一个包源分类。";
-            ErrorAdvice = "每个分类对应一个包管理器，安装目录显示在分类名下方。";
+            ErrorMessage = L("Download.Error.NeedCategory");
+            ErrorAdvice = L("Download.Error.CategoryHint");
             return;
         }
 
         var keyword = Query.Trim();
         if (keyword.Length == 0)
         {
-            ErrorMessage = "请输入要搜索的包名或关键词。";
-            ErrorAdvice = $"例如在 {category.Title} 里搜索 express、tokio；Git 源可以直接填仓库地址。";
+            ErrorMessage = L("Download.Error.NeedKeyword");
+            ErrorAdvice = L("Download.Error.SearchExample", category.Title);
             return;
         }
 
@@ -319,16 +329,16 @@ public partial class DownloadViewModel : ObservableObject
         // 而且提示文案不如这里直接（用户想知道的是"这个源不能搜，换一个"）。
         if (!category.Capabilities.Search)
         {
-            ErrorMessage = $"{category.Title} 不支持搜索。";
-            ErrorAdvice = "该包源只能按已知名称安装，可切换到其它包源搜索。";
+            ErrorMessage = L("Download.Error.NoSearch", category.Title);
+            ErrorAdvice = L("Download.Error.NoSearchHint");
             return;
         }
 
         var manager = AppServices.Registry.Find(category.Kind);
         if (manager is null)
         {
-            ErrorMessage = $"未注册 {category.Title} 的适配器。";
-            ErrorAdvice = "请点「刷新包源」重新探测。";
+            ErrorMessage = L("Download.Error.NoAdapter", category.Title);
+            ErrorAdvice = L("Download.Error.ReprobeHint");
             return;
         }
 
@@ -350,8 +360,8 @@ public partial class DownloadViewModel : ObservableObject
                 Results.Add(item);
             }
             StatusMessage = found.Count == 0
-                ? $"没有找到与「{keyword}」匹配的包。"
-                : $"在 {category.Title} 中找到 {found.Count} 个结果。";
+                ? L("Download.Error.NoMatch", keyword)
+                : L("Download.Info.MatchCount", category.Title, found.Count);
         }
         catch (Exception ex)
         {
@@ -382,8 +392,8 @@ public partial class DownloadViewModel : ObservableObject
         var target = package ?? SelectedResult;
         if (target is null)
         {
-            ErrorMessage = "请先选择要安装的包。";
-            ErrorAdvice = "点选一张结果卡片，或直接点卡片上的「安装」。";
+            ErrorMessage = L("Download.Error.NeedTarget");
+            ErrorAdvice = L("Download.Error.NeedTargetHint");
             return;
         }
 
@@ -392,13 +402,14 @@ public partial class DownloadViewModel : ObservableObject
         // 预检：CLI 缺失/平台不支持的包源直接给出可执行建议，不必白起一次注定失败的进程。
         if (category is not null && !category.SupportedHere)
         {
-            ErrorMessage = $"{category.Title} 在当前系统上不可用。";
-            ErrorAdvice = category.Detail ?? "该包源只支持其它操作系统。";
+            ErrorMessage = L("Download.Error.NotOnThisOs", category.Title);
+            ErrorAdvice = category.Detail ?? L("Download.Error.OtherOsOnly");
             return;
         }
         if (category is not null && !category.Available)
         {
-            ErrorMessage = $"{category.Title} 当前不可用（{category.Detail ?? "未探测到可用的命令行工具"}）。";
+            ErrorMessage = L("Download.Error.CategoryUnavailable", category.Title,
+                category.Detail ?? L("Download.Error.NoCliDetail"));
             ErrorAdvice = AdviceForCode("cli_missing", category.InstallHint);
             return;
         }

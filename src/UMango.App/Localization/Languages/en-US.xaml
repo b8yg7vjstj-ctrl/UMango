@@ -53,6 +53,34 @@
     <sys:String x:Key="Home.Platform.Linux">Linux</sys:String>
 
     <!-- ============ Download ============ -->
+    <sys:String x:Key="Download.Mode.Installed">Installed</sys:String>
+    <sys:String x:Key="Download.Mode.Results">Results</sys:String>
+    <sys:String x:Key="Download.LoadingInstalled">Reading installed list…</sys:String>
+    <sys:String x:Key="Download.Empty.NeedSource">Pick a package source in the left pane first</sys:String>
+    <sys:String x:Key="Download.Noun.GitRepo">local repositories</sys:String>
+    <sys:String x:Key="Download.Noun.Installed">installed packages</sys:String>
+    <sys:String x:Key="Download.Empty.NoInstalled">Nothing installed under {0}</sys:String>
+    <sys:String x:Key="Download.Count.Installed">{0}: {1} {2}</sys:String>
+    <sys:String x:Key="Download.ReprobeDone">Re-probed {0} package sources.</sys:String>
+    <sys:String x:Key="Download.Cli.Missing">No CLI tool found for {0}. {1}</sys:String>
+    <sys:String x:Key="Download.Cli.OtherOs">{0} is only available on other operating systems.</sys:String>
+    <sys:String x:Key="Download.Error.NeedCategory">Pick a package source category on the left first.</sys:String>
+    <sys:String x:Key="Download.Error.CategoryHint">Each category is a package manager; its install directory is shown below the name.</sys:String>
+    <sys:String x:Key="Download.Error.NeedKeyword">Type a package name or keyword to search.</sys:String>
+    <sys:String x:Key="Download.Error.SearchExample">e.g. search express or tokio in {0}; Git sources accept a repository address directly.</sys:String>
+    <sys:String x:Key="Download.Error.NoSearch">{0} does not support search.</sys:String>
+    <sys:String x:Key="Download.Error.NoSearchHint">This source can only install known names; switch to another source to search.</sys:String>
+    <sys:String x:Key="Download.Error.NoAdapter">No adapter is registered for {0}.</sys:String>
+    <sys:String x:Key="Download.Error.ReprobeHint">Click "Refresh sources" to re-probe.</sys:String>
+    <sys:String x:Key="Download.Error.NoMatch">No package matches "{0}".</sys:String>
+    <sys:String x:Key="Download.Info.MatchCount">Found {1} results in {0}.</sys:String>
+    <sys:String x:Key="Download.Error.NeedTarget">Pick a package to install first.</sys:String>
+    <sys:String x:Key="Download.Error.NeedTargetHint">Select a result card, or click Install on it directly.</sys:String>
+    <sys:String x:Key="Download.Error.NotOnThisOs">{0} is not available on this system.</sys:String>
+    <sys:String x:Key="Download.Error.OtherOsOnly">This source only supports other operating systems.</sys:String>
+    <sys:String x:Key="Download.Error.NoCliDetail">No usable CLI tool was found</sys:String>
+    <sys:String x:Key="Download.Error.CategoryUnavailable">{0} is unavailable ({1}).</sys:String>
+
     <sys:String x:Key="Download.Title">Download</sys:String>
     <sys:String x:Key="Download.NewDownload">New download</sys:String>
     <sys:String x:Key="Download.SearchPlaceholder">Search packages…</sys:String>
