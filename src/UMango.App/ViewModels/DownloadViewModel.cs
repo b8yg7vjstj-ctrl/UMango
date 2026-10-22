@@ -509,7 +509,7 @@ public partial class DownloadViewModel : ObservableObject
                 break;
 
             case OperationCanceledException:
-                ErrorMessage = "操作已取消。";
+                ErrorMessage = L("Download.Canceled");
                 ErrorAdvice = "可以重新发起；已下载的内容由包管理器自行管理。";
                 break;
 
@@ -555,7 +555,7 @@ public partial class DownloadViewModel : ObservableObject
         }
         catch
         {
-            StatusMessage = "导出失败";
+            StatusMessage = L("Download.ExportFailed");
         }
     }
 }

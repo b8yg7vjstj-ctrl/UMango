@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using UMango.Core.Localization;
 using CommunityToolkit.Mvvm.Input;
 using UMango.App.Services;
 using UMango.App.Themes;
@@ -31,6 +32,8 @@ public sealed record AnimationDirectionOption(
 public partial class SettingsViewModel : ObservableObject
 {
     /// <summary>可选主题。深浅是独立开关，所以这里只有两族。</summary>
+    private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
+
     public IReadOnlyList<ThemeOption> Themes { get; } =
     [
         new ThemeOption(ThemeKind.PclClassic, "PCL 经典",
@@ -212,7 +215,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             AppServices.Records.Clear();
             RefreshRecords();
-            StatusMessage = "已清空全部管理记录与次数记录。";
+            StatusMessage = L("Settings.Records.Cleared");
         }
         catch (Exception ex)
         {

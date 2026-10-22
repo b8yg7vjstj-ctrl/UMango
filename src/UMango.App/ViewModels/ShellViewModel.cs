@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using UMango.Core.Localization;
 using CommunityToolkit.Mvvm.Input;
 
 namespace UMango.App.ViewModels;
@@ -102,38 +103,40 @@ public partial class ShellViewModel : ObservableObject
     /// <summary>
     /// 各选项卡对应的菜单项。Key 用稳定的英文标识（页面据此切换内容），Title 是界面文案。
     /// </summary>
+    private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
+
     private static NavItem[] MenuFor(AppTab tab) => tab switch
     {
         AppTab.Home =>
         [
-            new NavItem("overview", "概览"),
-            new NavItem("records", "管理记录")
+            new NavItem("overview", L("Nav.Overview")),
+            new NavItem("records", L("Nav.Records"))
         ],
         AppTab.Download =>
         [
-            new NavItem("sources", "包源"),
-            new NavItem("results", "搜索结果"),
-            new NavItem("favorites", "收藏")
+            new NavItem("sources", L("Nav.Sources")),
+            new NavItem("results", L("Nav.Results")),
+            new NavItem("favorites", L("Nav.Favorites"))
         ],
         AppTab.Progress =>
         [
-            new NavItem("running", "进行中"),
-            new NavItem("finished", "已完成")
+            new NavItem("running", L("Nav.Running")),
+            new NavItem("finished", L("Nav.Finished"))
         ],
         AppTab.Settings =>
         [
-            new NavItem("theme", "主题与外观"),
-            new NavItem("debug", "调试"),
-            new NavItem("recordManage", "记录管理")
+            new NavItem("theme", L("Nav.Theme")),
+            new NavItem("debug", L("Nav.Debug")),
+            new NavItem("recordManage", L("Nav.RecordManage"))
         ],
         _ =>
         [
             // 下载器放在工具页下，对应 PCL-CE 的「百宝箱」位置
-            new NavItem("downloader", "下载器"),
-            new NavItem("logs", "日志"),
-            new NavItem("diagnostics", "系统诊断"),
-            new NavItem("licenses", "合规与许可"),
-            new NavItem("about", "关于")
+            new NavItem("downloader", L("Nav.Downloader")),
+            new NavItem("logs", L("Nav.Logs")),
+            new NavItem("diagnostics", L("Nav.Diagnostics")),
+            new NavItem("licenses", L("Nav.Licenses")),
+            new NavItem("about", L("Nav.About"))
         ]
     };
 }

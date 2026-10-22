@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO.Compression;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using UMango.Core.Localization;
 using CommunityToolkit.Mvvm.Input;
 using UMango.App.Services;
 using UMango.Core.Logging;
@@ -25,6 +26,8 @@ public sealed record LogLevelOption(LogLevel? Level, string Title);
 public partial class LogViewModel : ObservableObject
 {
     private readonly MemoryLogSink? _memory;
+
+    private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
 
     public LogViewModel(MemoryLogSink? memory = null)
     {
@@ -96,7 +99,7 @@ public partial class LogViewModel : ObservableObject
             Entries.Clear();
             if (_memory is null)
             {
-                StatusMessage = "日志系统未初始化。";
+                StatusMessage = L("Log.NotInitialized");
                 return;
             }
 
@@ -122,7 +125,7 @@ public partial class LogViewModel : ObservableObject
         {
             _memory?.Clear();
             Entries.Clear();
-            StatusMessage = "已清空内存日志（日志文件不受影响）。";
+            StatusMessage = L("Log.Cleared");
         }
         catch (Exception ex)
         {
@@ -221,7 +224,7 @@ public partial class LogViewModel : ObservableObject
 
             psi.UseShellExecute = true;
             System.Diagnostics.Process.Start(psi);
-            StatusMessage = "已打开日志目录。";
+            StatusMessage = L("Log.OpenedFolder");
         }
         catch (Exception ex)
         {

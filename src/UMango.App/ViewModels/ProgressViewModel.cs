@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using UMango.Core.Localization;
 using CommunityToolkit.Mvvm.Input;
 using UMango.App.Services;
 using UMango.Core.App.Tasks;
@@ -35,6 +36,8 @@ public sealed class TerminalGroup
 public partial class ProgressViewModel : ObservableObject
 {
     /// <summary>不属于任何子项的输出（命令行回显、退出码等）统一挂在这一组，排在子项之后。</summary>
+    private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
+
     public const string UnattributedStep = "其他输出";
 
     /// <summary>任务列表。直接绑定 Core 的任务中心，子项进度（Children）由模板递归渲染。</summary>
@@ -179,7 +182,7 @@ public partial class ProgressViewModel : ObservableObject
     {
         if (_selectedTask is null || _ownerTask is null)
         {
-            StatusMessage = "请先在任务列表里选择一个任务。";
+            StatusMessage = L("Progress.Error.NeedTask");
             return;
         }
 
@@ -196,7 +199,7 @@ public partial class ProgressViewModel : ObservableObject
         if (_selectedTask.State is not TaskState.Running and not TaskState.Waiting)
             TerminalBridge.Remove(_ownerTask.Title);
 
-        StatusMessage = "已清空该任务的终端输出。";
+        StatusMessage = L("Progress.Cleared");
     }
 
     /// <summary>取消任务（参数缺省时用选中项）。</summary>
@@ -206,7 +209,7 @@ public partial class ProgressViewModel : ObservableObject
         var target = task ?? SelectedTask;
         if (target is null)
         {
-            StatusMessage = "请先选择要取消的任务。";
+            StatusMessage = L("Progress.Error.NeedCancelTask");
             return;
         }
 
