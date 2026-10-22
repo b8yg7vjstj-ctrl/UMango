@@ -27,6 +27,10 @@ public partial class HomeView : UserControl
         ViewModel = new HomeViewModel();
         DataContext = ViewModel;
 
+        // 语言切换 → 重建代码侧拼的本地化句子（XAML 的 DynamicResource 会自动更新，不用管）
+        Unloaded += (_, _) => Localization.AppLocalization.LocalizedTextRefreshRequested -= ViewModel.RefreshLocalizedText;
+        Localization.AppLocalization.LocalizedTextRefreshRequested += ViewModel.RefreshLocalizedText;
+
         // 用 Loaded 而不是构造函数：构造函数里 await 不了（会阻塞 UI 线程），
         // 而 .Result/.Wait() 在 UI 线程上等 CLI 探测会直接死锁。
         Loaded += OnLoaded;
@@ -94,6 +98,24 @@ public partial class HomeViewModel : ObservableObject
     /// 而 Describe() 的文案将来可能调整，界面不该跟着改。
     /// </summary>
     public bool IsWindows { get; } = SystemInfo.IsWindows;
+
+    /// <summary>
+    /// "运行在 Windows："/"Running on Windows:" 这类带参数的句子。
+    ///
+    /// 为什么在 ViewModel 里拼而不用 XAML 的 <c>{DynamicResource Home.RunningOn}</c> 直接取：
+    /// <c>DynamicResource</c> 只做查表、**不做 string.Format**，占位符 <c>{0}</c> 会原样显示。
+    /// 带参数的本地化句子必须经代码侧格式化（对应 PCL 的 <c>Lang.Text(key, args)</c>）。
+    /// 语言切换时由 <see cref="RefreshLocalizedText"/> 重建本属性。
+    /// </summary>
+    public string RunningOnText =>
+        string.Format(Localization.AppLocalization.Text("Home.RunningOn"),
+            Localization.AppLocalization.Text("Home.Platform.Windows"));
+
+    /// <summary>语言切换后重建本地化文本属性。</summary>
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(RunningOnText));
+    }
 
     [ObservableProperty]
     private bool _isBusy;

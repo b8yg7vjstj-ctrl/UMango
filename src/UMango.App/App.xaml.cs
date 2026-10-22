@@ -35,6 +35,7 @@ public partial class App : Application
         SeedServices();
         HookGlobalExceptionHandlers();
         ApplySavedTheme();
+        ApplySavedLanguage();
 
         // 单实例：第二个实例通知首个实例激活主窗口后自行退出。
         // 思路来源：PCL-CE SingleInstanceService（Apache-2.0）—— 单例锁 + 命名管道传激活指令。
@@ -192,6 +193,26 @@ public partial class App : Application
     /// 启动时把前者读出来交给后者，就实现了"恢复上次的主题"。
     /// 没有保存过设置时读到的是描述符里的默认值 = PCL 经典 + 浅色，正是需求要求的缺省。
     /// </summary>
+    /// <summary>
+    /// 应用已保存的语言（在主题之后、主窗口创建之前）。
+    ///
+    /// 顺序很重要：资源字典必须在首帧之前就位，否则会"先用默认语言画一帧再跳"。
+    /// 与 <see cref="ApplySavedTheme"/> 同理。
+    /// </summary>
+    private static void ApplySavedLanguage()
+    {
+        try
+        {
+            Localization.AppLocalization.ApplySavedLanguage();
+        }
+        catch (Exception ex)
+        {
+            // 语言加载失败绝不能挡住启动：界面退回默认语言（字典缺失时
+            // DynamicResource 找不到键会显示空串，但应用仍可用）
+            Log.ErrorAt("App", ex, member: "ApplySavedLanguage");
+        }
+    }
+
     private static void ApplySavedTheme()
     {
         try

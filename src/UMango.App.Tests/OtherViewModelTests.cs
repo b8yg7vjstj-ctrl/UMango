@@ -114,6 +114,19 @@ public class OtherViewModelTests
     // ================= SettingsViewModel =================
 
     [Fact]
+    public void 设置页语言选项在无UI环境也能构造()
+    {
+        // 回归：AppLocalization.BuildOptions 原先调 Text() → 碰 Application 类型 →
+        // PresentationFramework 只存在于 Windows → macOS 测试宿主 FileNotFoundException，
+        // 7 个 SettingsViewModel 用例全军覆没。本用例保证那条路径不再依赖 WPF 类型。
+        var vm = new SettingsViewModel();
+        Assert.NotEmpty(vm.Languages);
+        Assert.Equal("auto", vm.Languages[0].Code);
+        Assert.False(string.IsNullOrWhiteSpace(vm.Languages[0].DisplayName));
+        Assert.NotNull(vm.SelectedLanguage);
+    }
+
+    [Fact]
     public void 设置页提供两种主题族与两种动画方向()
     {
         var vm = new SettingsViewModel();

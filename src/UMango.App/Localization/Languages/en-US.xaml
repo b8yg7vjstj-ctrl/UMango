@@ -1,0 +1,95 @@
+<!--
+  UMango UI text (English, US) — overlay layer.
+
+  Only keys that DIFFER from the zh-CN fallback are listed here; the rest are
+  inherited. See zh-CN.xaml header for the layering model (from PCL-CE's
+  LocalizationService, Apache-2.0).
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ============ Common ============ -->
+    <sys:String x:Key="Common.Action.Confirm">OK</sys:String>
+    <sys:String x:Key="Common.Action.Cancel">Cancel</sys:String>
+    <sys:String x:Key="Common.Action.Refresh">Refresh</sys:String>
+    <sys:String x:Key="Common.Action.Clear">Clear</sys:String>
+    <sys:String x:Key="Common.Action.Export">Export diagnostics</sys:String>
+    <sys:String x:Key="Common.Action.OpenFolder">Open log folder</sys:String>
+    <sys:String x:Key="Common.Dialog.Title">Notice</sys:String>
+    <sys:String x:Key="Common.Dialog.Warning">Warning</sys:String>
+    <sys:String x:Key="SystemDialog.Error.Title">Error</sys:String>
+
+    <!-- ============ Navigation ============ -->
+    <sys:String x:Key="Nav.Home">Home</sys:String>
+    <sys:String x:Key="Nav.Download">Download</sys:String>
+    <sys:String x:Key="Nav.Progress">Progress</sys:String>
+    <sys:String x:Key="Nav.Settings">Settings</sys:String>
+    <sys:String x:Key="Nav.Tools">Tools</sys:String>
+
+    <!-- ============ Home ============ -->
+    <sys:String x:Key="Home.Title">UMango</sys:String>
+    <sys:String x:Key="Home.Subtitle">Cross-platform package manager</sys:String>
+    <sys:String x:Key="Home.Section.System">System</sys:String>
+    <sys:String x:Key="Home.Section.Packages">Package sources</sys:String>
+    <sys:String x:Key="Home.Section.Statistics">Usage</sys:String>
+    <sys:String x:Key="Home.Platform">Platform</sys:String>
+    <sys:String x:Key="Home.Architecture">Architecture</sys:String>
+    <sys:String x:Key="Home.RunningOn">Running on {0}:</sys:String>
+    <sys:String x:Key="Home.Column.Package">Source</sys:String>
+    <sys:String x:Key="Home.Column.Directory">Install directory</sys:String>
+    <sys:String x:Key="Home.Column.State">Status</sys:String>
+    <sys:String x:Key="Home.ProbeDetail">Probe details</sys:String>
+    <sys:String x:Key="Home.Statistics.Total">Total</sys:String>
+    <sys:String x:Key="Home.Statistics.Success">Succeeded</sys:String>
+    <sys:String x:Key="Home.Statistics.Failed">Failed</sys:String>
+    <sys:String x:Key="Home.Statistics.BySource">By source</sys:String>
+    <sys:String x:Key="Home.RecentOperations">Recent activity</sys:String>
+    <sys:String x:Key="Home.Yes">Yes</sys:String>
+    <sys:String x:Key="Home.No">No</sys:String>
+    <sys:String x:Key="Home.Platform.Windows">Windows</sys:String>
+    <sys:String x:Key="Home.Platform.MacOS">macOS</sys:String>
+    <sys:String x:Key="Home.Platform.Linux">Linux</sys:String>
+
+    <!-- ============ Download ============ -->
+    <sys:String x:Key="Download.Title">Download</sys:String>
+    <sys:String x:Key="Download.NewDownload">New download</sys:String>
+    <sys:String x:Key="Download.SearchPlaceholder">Search packages…</sys:String>
+    <sys:String x:Key="Download.Engine">Download engine</sys:String>
+    <sys:String x:Key="Download.TerminalOutput">Terminal output</sys:String>
+
+    <!-- ============ Progress ============ -->
+    <sys:String x:Key="Progress.Title">Tasks</sys:String>
+    <sys:String x:Key="Progress.Empty">No tasks. Install a package from the Download page.</sys:String>
+    <sys:String x:Key="Progress.SubProgress">Step progress</sys:String>
+    <sys:String x:Key="Progress.State">Status</sys:String>
+    <sys:String x:Key="Progress.State.Success">Succeeded</sys:String>
+    <sys:String x:Key="Progress.State.Failed">Failed</sys:String>
+    <sys:String x:Key="Progress.State.Running">Running</sys:String>
+    <sys:String x:Key="Progress.State.Waiting">Waiting</sys:String>
+    <sys:String x:Key="Progress.Processing">Working…</sys:String>
+
+    <!-- ============ Settings ============ -->
+    <sys:String x:Key="Settings.Title">Settings</sys:String>
+    <sys:String x:Key="Settings.Section.Appearance">Theme &amp; appearance</sys:String>
+    <sys:String x:Key="Settings.Section.Debug">Debug mode</sys:String>
+    <sys:String x:Key="Settings.Section.Records">Records</sys:String>
+    <sys:String x:Key="Settings.Section.Language">Language</sys:String>
+    <sys:String x:Key="Settings.Language.Hint">UI language. Applies immediately and persists across restarts.</sys:String>
+    <sys:String x:Key="Settings.Language.FollowSystem">Follow system</sys:String>
+    <sys:String x:Key="Settings.DebugMode.Hint">Keep the full terminal output and expand the inline terminal pane on the progress page (per step). When off, only the last few lines are kept to avoid slowing down rendering.</sys:String>
+
+    <!-- ============ Tools ============ -->
+    <sys:String x:Key="Tools.Title">Tools</sys:String>
+    <sys:String x:Key="Tools.Diagnostics">System diagnostics</sys:String>
+    <sys:String x:Key="Tools.InstallDirectory">Install directory</sys:String>
+    <sys:String x:Key="Tools.ProbeDetail">Probe details</sys:String>
+    <sys:String x:Key="Tools.Report">Diagnostics report (copyable)</sys:String>
+
+    <!-- ============ Log ============ -->
+    <sys:String x:Key="Log.Title">Log</sys:String>
+    <sys:String x:Key="Log.AllLevels">All</sys:String>
+    <sys:String x:Key="Log.Level.Info">Info and above</sys:String>
+    <sys:String x:Key="Log.Level.Warn">Warning and above</sys:String>
+    <sys:String x:Key="Log.Level.Error">Errors only</sys:String>
+</ResourceDictionary>

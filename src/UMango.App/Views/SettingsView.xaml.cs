@@ -160,6 +160,25 @@ public partial class SettingsView : UserControl
         }
     }
 
+    // ==================== ①.7 语言 ====================
+
+    /// <summary>
+    /// 语言被选中：选中即应用。
+    ///
+    /// 与主题的差别：**不判断"是否真的变化"**就应用 —— 语言切换需要重建资源字典，
+    /// 而 <see cref="Localization.AppLocalization.SetLanguage"/> 内部由
+    /// <see cref="Core.Localization.LocalizationService.Apply"/> 负责判断变化与否
+    /// （返回 false 时重建字典是无害的等幂操作，代价是几毫秒）。
+    /// </summary>
+    private void LanguageBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LanguageBox.SelectedItem is Localization.AppLocalization.LanguageOption option)
+        {
+            ViewModel.SelectedLanguage = option;
+            ViewModel.ApplyLanguageCommand.Execute(null);
+        }
+    }
+
     // ==================== ① 主题与外观 ====================
 
     /// <summary>主题族被选中：选中即应用（SelectedItem 已 TwoWay 绑回 ViewModel）。</summary>

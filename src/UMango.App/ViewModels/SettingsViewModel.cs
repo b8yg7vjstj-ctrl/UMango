@@ -8,6 +8,8 @@ using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
 
+using UMango.App.Localization;
+
 namespace UMango.App.ViewModels;
 
 /// <summary>设置页里一个可选项：主题族（深浅由独立开关决定）。</summary>
@@ -143,17 +145,37 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>语言选项（首项 = 跟随系统）。</summary>
+    public IReadOnlyList<AppLocalization.LanguageOption> Languages { get; } =
+        AppLocalization.BuildOptions();
+
+    [ObservableProperty]
+    private AppLocalization.LanguageOption? _selectedLanguage;
+
     public SettingsViewModel()
     {
         var (kind, dark) = ReadCurrentTheme();
         _selectedTheme = Themes.FirstOrDefault(t => t.Kind == kind) ?? Themes[0];
         _isDark = dark;
 
+        // 回显当前生效的语言（保存值 → 解析成选项；解析不到时回落"跟随系统"）
+        var savedCode = AppLocalization.ReadSavedLanguageCode();
+        _selectedLanguage = Languages.FirstOrDefault(o => o.Code == savedCode) ?? Languages[0];
+
         // 主题可能被别处（快捷键/其它页面）切换：跟着走，
         // 否则设置页的选中项会与实际观感脱节。
         ThemeManager.ThemeChanged += SyncFromThemeManager;
 
         RefreshRecords();
+    }
+
+    /// <summary>切换语言（选中即应用，与主题族一致）。</summary>
+    [RelayCommand]
+    private void ApplyLanguage()
+    {
+        var option = SelectedLanguage ?? Languages[0];
+        AppLocalization.SetLanguage(option.Code);
+        StatusMessage = $"语言已切换：{option.DisplayName}";
     }
 
     /// <summary>应用所选主题（PCL 经典 / Win10 Fluent × 浅/深）。</summary>
