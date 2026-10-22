@@ -6,6 +6,11 @@
         Background="{DynamicResource BrBg}"
         FontFamily="{DynamicResource UiFont}"
         WindowStartupLocation="CenterScreen">
+  <!-- 任务栏进度：Windows 上任务栏图标显示下载/安装的总体进度。
+       不写 Description 等可选属性；ProgressState/ProgressValue 由 TaskbarProgressBridge 写。 -->
+  <Window.TaskbarItemInfo>
+    <TaskbarItemInfo x:Name="WindowTaskbar" ProgressState="None" ProgressValue="0"/>
+  </Window.TaskbarItemInfo>
   <!--
     窗口外壳：沿用 PCL-CE 的结构
       · 四周 10px 留白 + 6px 圆角的卡片式窗口

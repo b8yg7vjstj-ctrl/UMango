@@ -40,6 +40,12 @@ public partial class MainWindow : Window
     /// <summary>正在按 VM 反向设置左栏选中项（避免 SelectionChanged 回调再回写 VM 造成回环）。</summary>
     private bool _syncingNav;
 
+    /// <summary>
+    /// 任务栏进度桥接（Windows 专用）。放在字段里是为了在 Closed 时释放，
+    /// 否则 watcher 会一直订阅 TaskCenter，窗口关掉后仍在无谓重算。
+    /// </summary>
+    private Services.TaskbarProgressBridge? _taskbar;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -70,6 +76,25 @@ public partial class MainWindow : Window
         SyncTabCheck();
         SyncLeftSelection();
         ShowTabContent(_shell.CurrentTab);
+
+        // 任务栏进度：把 TaskCenter 的聚合进度同步到任务栏图标。
+        // 放在构造末尾：此时 TaskbarItemInfo 已由 InitializeComponent 建好。
+        _taskbar = new Services.TaskbarProgressBridge(this);
+        _taskbar.Start();
+        Closed += (_, _) => _ = DisposeTaskbarAsync();
+    }
+
+    /// <summary>
+    /// 释放任务栏进度桥接。异步方法在事件处理器里不 await（fire-and-forget），
+    /// 这里只需保证订阅被摘掉；真正的 DisposeAsync 内部同步完成退订。
+    /// </summary>
+    private async System.Threading.Tasks.Task DisposeTaskbarAsync()
+    {
+        if (_taskbar is not null)
+        {
+            await _taskbar.DisposeAsync();
+            _taskbar = null;
+        }
     }
 
     // ================= 顶部选项卡 =================
