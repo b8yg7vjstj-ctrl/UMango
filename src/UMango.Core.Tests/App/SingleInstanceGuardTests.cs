@@ -64,9 +64,8 @@ public class SingleInstanceGuardTests
         var ok = await SingleInstanceGuard.TryNotifyExistingAsync(lockFile, "activate");
         Assert.True(ok);
 
-        var msg = await Task.WhenAny(received.Task, Task.Delay(3000)) == received.Task
-            ? received.Task.Result
-            : "<超时>";
+        var finished = await Task.WhenAny(received.Task, Task.Delay(3000));
+        var msg = finished == received.Task ? await received.Task : "<超时>";
         Assert.Equal("activate", msg);
     }
 
@@ -82,9 +81,9 @@ public class SingleInstanceGuardTests
     public async Task 锁文件不存在时通知也安全()
     {
         var lockFile = Path.Combine(Path.GetTempPath(), "no-such-dir-xyz", "instance.lock");
-        // 不应抛异常
-        var task = SingleInstanceGuard.TryNotifyExistingAsync(lockFile, "activate");
-        Assert.True(task.IsCompletedSuccessfully && !task.Result);
+        // 不应抛异常，且必须同步返回 false（不挂住）
+        var result = await SingleInstanceGuard.TryNotifyExistingAsync(lockFile, "activate");
+        Assert.False(result);
     }
 
     [Fact]
