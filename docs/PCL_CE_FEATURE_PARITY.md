@@ -280,7 +280,7 @@
 | **关于页（含第三方许可清单）** | `PageSetupAbout.xaml.cs:203` + `PageSetupAbout.xaml`（505 行） | **否** | **已完成** | UMango `Views/ToolsView.xaml:217-274`「合规与许可」+「第三方组件」+「关于」；且 UMango 的声明比 PCL-CE 更完整（见 `THIRD-PARTY-NOTICES.md`） |
 | **启动器更新** | `PageSetupUpdate.xaml.cs:284` + `Modules/Updates/UpdateManager.cs:11`（`IsCurrentVersionBeta:26`、`GetVersionStatus:36`） | **否** | **未做** | UMango 有更新**探测提示**（`ToolsView:269` 提及 gh-proxy），但**无自更新下载与替换流程** |
 | **反馈** | `PageSetupFeedback.xaml.cs:195` + `TagId:12` | **否** | **未做** | 含标签分类提交；UMango 全库无 `Feedback` |
-| **日志设置/查看** | `PageSetupLog.xaml.cs:163` | **否** | **未做** | 同 2.A 日志页 |
+| **日志设置/查看** | `PageSetupLog.xaml.cs:163` | **否** | **未做** | 同 2.A 日志页  实现位置：App/Views/LogView.xaml（等级筛选 4 档、刷新、清空显示、打开日志目录、导出诊断包）+ ViewModels/LogViewModel.cs + Core/Logging/（FileLogSink/MemoryLogSink）。与 PCL 的 PageSetupLog 功能对齐。 |
 
 ### 2.F PageTools（工具）
 
