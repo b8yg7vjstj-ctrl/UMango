@@ -127,7 +127,7 @@ public static class AppServices
     /// **必须在其它初始化之前调用** —— 否则前面那些步骤出的问题不会留下任何痕迹，
     /// 而这正是最需要日志的地方（"启动就崩"往往发生在组合根构造期间）。
     /// </summary>
-    private static void InitializeLogging()
+    internal static void InitializeLogging()
     {
         try
         {
@@ -144,6 +144,26 @@ public static class AppServices
         catch (Exception)
         {
             // 日志系统起不来也必须能继续启动 —— 宁可不记日志，也不能打不开应用
+        }
+    }
+
+    /// <summary>
+    /// 更新助手进程专用的最小日志初始化。
+    ///
+    /// 助手进程不该知道"应用怎么启动"，但只要它去写 <see cref="LogDirectory"/>
+    /// 就得保证该目录存在 —— 否则 FileLogSink 构造失败，更新失败的原因就留不下痕迹，
+    /// 而那恰好是最难远程复现的问题。
+    /// </summary>
+    internal static void InitializeLoggingForHelper()
+    {
+        try
+        {
+            Directory.CreateDirectory(LogDirectory);
+            InitializeLogging();
+        }
+        catch (Exception)
+        {
+            /* 助手进程连日志都不要也能跑：替换文件不依赖日志 */
         }
     }
 

@@ -1,7 +1,9 @@
+using System;
 using System.Threading;
 using System.Windows;
 using UMango.App.Services;
 using UMango.App.Themes;
+using UMango.Core.App.Essentials;
 using UMango.Core.Configuration;
 using UMango.Core.Logging;
 
@@ -229,4 +231,89 @@ public partial class App : Application
             // 观感不对远好于窗口打不开。
         }
     }
+}
+
+/// <summary>
+/// 程序入口与更新助手进程分支。
+///
+/// **为什么独立成类而不是放在 <see cref="App"/> 里**：WPF 的 ApplicationDefinition
+///（App.xaml）会自动生成一个 <c>App.Main()</c>，若我们再在同一个 partial 类里写一个
+/// <c>Main</c>，编译器无法判断该用哪个（<c>/main:UMango.App.App</c> 只指定类型，
+/// 不区分同一类型里的多个入口点）→ <c>CS0017 程序定义了多个入口点</c>。
+/// 放到单独的类型里，再用 <c>&lt;StartupObject&gt;</c> 指向它，就能明确选定我们自己的版本。
+/// </summary>
+internal static class Program
+{
+/// <summary>
+/// 程序入口。
+///
+/// **为什么不用 WPF 自动生成的 Main**：自动生成的版本只会 new App + Run，
+/// 没有任何机会在创建 Application（拖入全部 WPF 资源）之前检查参数。
+/// 自更新助手进程（<c>update &lt;pid&gt; &lt;target&gt; &lt;source&gt; &lt;restart&gt;</c>）
+/// 必须**不启动主界面、不初始化主题、不抢单实例锁** —— 它只是个替换文件的小工具，
+/// 跑完就该退位。放在 Main 里分支是唯一能让它完全绕开 WPF 启动路径的位置。
+///
+/// 协议见 <see cref="UpdateCommandLine"/>（Core 层，已被单测覆盖）。
+/// </summary>
+[STAThread]
+public static void Main(string[] args)
+{
+    if (UpdateCommandLine.IsUpdateCommand(args))
+    {
+        RunUpdateHelper(args);
+        return;
+    }
+
+    var app = new App();
+    app.InitializeComponent();
+    app.Run();
+}
+
+/// <summary>
+/// 更新助手进程的三种模式：
+/// ① <c>update …</c>：等旧进程退出 → 替换文件 → 重启自己（带 update_finished）→ 本进程退位；
+/// ② <c>update_finished &lt;source&gt;</c>：删掉下载来的安装包，然后**继续正常启动**
+///    （新版本已就位，用户此刻等的是主界面打开，而不是又一个空窗口都不开的进程）；
+/// ③ <c>update_failed &lt;reason&gt;</c>：只记日志，同样继续启动 ——
+///    此时旧文件已被 UpdateHelper 还原，程序至少还能开，比闪退好。
+/// </summary>
+private static void RunUpdateHelper(string[] args)
+{
+    // 助手也要留痕：更新失败是最难远程复现的问题。
+    // 直接走 Log 而不是 AppServices.InitializeLogging()（那是 private，
+    // 且会把 sink 建到正式日志目录里）—— Log 在无 sink 时有惰性兜底。
+    AppServices.InitializeLoggingForHelper();
+
+    switch (UpdateCommandLine.Parse(args))
+    {
+        case UpdateCommandLine.ApplyRequest apply:
+            UpdateCommandLine.RunApply(apply, Environment.ProcessPath);
+            Log.Flush();
+            return;
+
+        case UpdateCommandLine.FinishedRequest finished:
+            var deleteError = UpdateCommandLine.RunFinished(finished);
+            if (deleteError is not null)
+            {
+                // 删不掉安装包只是留了个垃圾文件，不影响新版本可用性，别升级成弹窗
+                Log.Warn("Update", $"清理安装包失败：{deleteError.Message}");
+            }
+            break;
+
+        case UpdateCommandLine.FailedRequest failed:
+            Log.Error("Update", $"更新失败：{failed.Reason}");
+            break;
+
+        default:
+            Log.Error("Update", $"更新参数无法解析：{string.Join(' ', args)}");
+            return;
+    }
+
+    Log.Flush();
+
+    // ②/③ 都要接着启动主界面
+    var app = new App();
+    app.InitializeComponent();
+    app.Run();
+}
 }

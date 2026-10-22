@@ -5,6 +5,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>UMango</AssemblyName>
     <RootNamespace>UMango.App</RootNamespace>
+    <!-- 自写 Main（更新助手进程分支）：WPF 自动生成的 Main 仍在，
+         必须显式指定入口点，否则 CS0017「程序定义了多个入口点」。 -->
+    <StartupObject>UMango.App.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <!-- 显式引用 CommunityToolkit.Mvvm 的原因（版本与 UMango.Core 保持一致，不引入新依赖）：
