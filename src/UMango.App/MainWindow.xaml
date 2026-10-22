@@ -166,11 +166,11 @@
         <!-- 右：三大金刚键（Windows 原生风格：46x32、hover 高亮、关闭为红） -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
           <Button x:Name="BtnMin" Content="&#xE949;" Style="{StaticResource CaptionButton}"
-                  Click="BtnMin_Click" ToolTip="最小化"/>
+                  Click="BtnMin_Click" ToolTip="{DynamicResource Window.Minimize}"/>
           <Button x:Name="BtnMax" Content="&#xE739;" Style="{StaticResource CaptionButton}"
-                  Click="BtnMax_Click" ToolTip="最大化"/>
+                  Click="BtnMax_Click" ToolTip="{DynamicResource Window.Maximize}"/>
           <Button x:Name="BtnClose" Content="&#xE8BB;" Style="{StaticResource CaptionButtonClose}"
-                  Click="BtnClose_Click" ToolTip="关闭"/>
+                  Click="BtnClose_Click" ToolTip="{DynamicResource Window.Close}"/>
         </StackPanel>
       </Grid>
 

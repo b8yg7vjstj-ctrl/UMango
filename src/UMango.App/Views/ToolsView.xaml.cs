@@ -11,6 +11,8 @@ using UMango.App.Services;
 using UMango.Core.PackageManagers;
 using UMango.Core.Platform;
 using UMango.Core.Terminal;
+using UMango.Core.Localization;
+using UMango.App.Localization;
 
 namespace UMango.App.Views;
 
@@ -72,7 +74,7 @@ public partial class ToolsView : UserControl
         catch (Exception ex)
         {
             // 与其它 UI 事件处理器同理：异常漏出去会终止进程，这里退化成一行可读提示。
-            ViewModel.StatusMessage = $"刷新记录显示失败：{ex.Message}";
+            ViewModel.StatusMessage = ViewText.L("Settings.Records.RefreshFailed", ex.Message);
         }
     }
 
@@ -107,13 +109,13 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
     public IReadOnlyList<ThirdPartyComponent> ThirdPartyComponents { get; } =
     [
         new("CommunityToolkit.Mvvm", "MIT",
-            "MVVM 基础设施（ObservableObject / RelayCommand 与源生成器）",
+            ViewText.L("Tools.Dependency.Mvvm"),
             "https://github.com/CommunityToolkit/dotnet"),
         new("lucide", "ISC",
-            "界面全部矢量图标（PCL-CE 亦使用同一图标集）",
+            ViewText.L("Tools.Dependency.VectorIcons"),
             "https://lucide.dev/"),
         new("simple-icons", "CC0 1.0",
-            "npm / pnpm / git / Homebrew 品牌图标（winget 与 scoop 用自绘字母徽章）",
+            ViewText.L("Tools.Dependency.BrandIcons"),
             "https://github.com/simple-icons/simple-icons")
     ];
 
@@ -149,8 +151,8 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
 
     /// <summary>已记录的操作次数摘要。</summary>
     public string RecordsCountText =>
-        $"共 {AppServices.Records.TotalCount} 次（成功 {AppServices.Records.SuccessCount} / "
-        + $"失败 {AppServices.Records.FailureCount}）";
+        ViewText.L("Tools.Records.Summary", AppServices.Records.TotalCount,
+                    AppServices.Records.SuccessCount, AppServices.Records.FailureCount);
 
     /// <summary>本次诊断的时间戳（"探测结果是什么时候的"必须写在界面上）。</summary>
     [ObservableProperty]
@@ -249,10 +251,10 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
                 .ToList();
             VerificationText = notes.Count == 0
                 ? ""
-                : "以下包源的解析逻辑尚未在真机验证，显示结果仅供参考：\n" + string.Join("\n", notes);
+                : ViewText.L("Tools.UnverifiedIntro") + string.Join("\n", notes);
             HasVerificationNotes = notes.Count > 0;
 
-            ProbeTimeText = $"探测时间：{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}";
+            ProbeTimeText = ViewText.L("Tools.ProbeTime", DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             RefreshDiagnosticsText();
 
             // 记录数字也随这次加载一起刷新：RecordsPathText / RecordsCountText 是计算属性，
@@ -264,14 +266,14 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
             InitializationWarningText = AppServices.LastError ?? "";
 
             StatusMessage = refresh
-                ? $"已重新探测 {SourceRows.Count} 个包源。"
-                : $"已加载 {SourceRows.Count} 个包源的探测结果。";
+                ? ViewText.L("Tools.ProbeRedone", SourceRows.Count)
+                : ViewText.L("Tools.ProbeLoaded", SourceRows.Count);
             return true;
         }
         catch (Exception ex)
         {
             // 诊断失败本身也是结论：把原因显示出来，并保留上一份报告（不把页面清空）。
-            ErrorMessage = $"包源探测失败：{ex.Message}";
+            ErrorMessage = ViewText.L("Tools.ProbeFailed", ex.Message);
             return false;
         }
         finally
@@ -297,27 +299,28 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"{VersionText}｜{PlatformSummaryText}｜{HostText}");
-        sb.AppendLine($"主目录：{HomeDirectoryText}");
-        sb.AppendLine($"记录文件：{RecordsPathText}");
-        sb.AppendLine($"记录条数：{RecordsCountText}");
-        sb.AppendLine($"调试输出：{(TerminalBridge.DebugMode ? "开启" : "关闭")}");
-        if (AppServices.LastError is { } initError) sb.AppendLine($"初始化警告：{initError}");
+        sb.AppendLine(ViewText.L("Tools.Report.HomeDir", HomeDirectoryText));
+        sb.AppendLine(ViewText.L("Tools.Report.RecordPath", RecordsPathText));
+        sb.AppendLine(ViewText.L("Tools.Report.RecordCount", RecordsCountText));
+        sb.AppendLine(ViewText.L("Tools.Report.DebugOut", ViewText.L(TerminalBridge.DebugMode ? "Common.On" : "Common.Off")));
+        if (AppServices.LastError is { } initError) sb.AppendLine(ViewText.L("Tools.Report.InitWarning", initError));
         sb.AppendLine();
-        sb.AppendLine("包源明细：");
+        sb.AppendLine(ViewText.L("Tools.Report.SourceDetail"));
 
         if (SourceRows.Count == 0)
         {
-            sb.AppendLine("（尚未探测，点「重新探测」获取）");
+            sb.AppendLine(ViewText.L("Tools.Report.NotProbed"));
             return sb.ToString().TrimEnd();
         }
 
         foreach (var row in SourceRows)
         {
-            sb.AppendLine($"· {row.Title}｜{row.StateText}｜当前平台支持：{(row.SupportedHere ? "是" : "否")}");
-            sb.AppendLine($"    CLI：{row.CliPathText}｜版本：{row.CliVersionText}");
-            sb.AppendLine($"    安装目录：{row.InstallDirectory}");
-            if (row.HasDetail) sb.AppendLine($"    明细：{row.Detail}");
-            if (row.HasVerificationNote) sb.AppendLine($"    未在真机验证：{row.VerificationNote}");
+            sb.AppendLine(ViewText.L("Tools.Report.SourceRow", row.Title, row.StateText,
+                    ViewText.L(row.SupportedHere ? "Common.Yes" : "Common.No")));
+            sb.AppendLine(ViewText.L("Tools.Report.CliRow", row.CliPathText, row.CliVersionText));
+            sb.AppendLine(ViewText.L("Tools.Report.InstallDirRow", row.InstallDirectory));
+            if (row.HasDetail) sb.AppendLine(ViewText.L("Tools.Report.DetailRow", row.Detail));
+            if (row.HasVerificationNote) sb.AppendLine(ViewText.L("Tools.Report.VerificationRow", row.VerificationNote));
         }
 
         return sb.ToString().TrimEnd();
@@ -328,8 +331,8 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
         // macOS/Linux 上运行的是 CrossOver/Wine 托管的 Windows 目标，
         // 探测结论（尤其是路径与 CLI 发现）与真机 Windows 不同，必须写清楚。
         if (SystemInfo.IsWindows)
-            return OperatingSystem.IsWindows() ? "Windows 原生" : "Wine 兼容层（Windows 目标）";
-        return $"非 Windows 宿主（{RuntimeInformation.RuntimeIdentifier}）";
+            return ViewText.L(OperatingSystem.IsWindows() ? "Tools.Platform.WindowsNative" : "Tools.Platform.Wine");
+        return ViewText.L("Tools.Platform.OtherHost", RuntimeInformation.RuntimeIdentifier);
     }
 
     private static string BuildVersionText()
@@ -341,10 +344,10 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
             var assembly = Application.ResourceAssembly ?? Assembly.GetEntryAssembly();
             var informational = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
             if (!string.IsNullOrWhiteSpace(informational))
-                return $"版本 {informational.Split('+')[0]}";   // 去掉 SourceLink 附加的 +commit 后缀
+                return ViewText.L("Tools.AppVersion", informational.Split('+')[0]);   // 去掉 SourceLink 附加的 +commit 后缀
 
             var version = assembly?.GetName().Version?.ToString(3);
-            return string.IsNullOrWhiteSpace(version) ? "UMango" : $"版本 {version}";
+            return string.IsNullOrWhiteSpace(version) ? ViewText.L("Tools.AppName") : ViewText.L("Tools.AppVersion", version);
         }
         catch (Exception)
         {
@@ -359,15 +362,15 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
             : null;
 
         var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(framework)) parts.Add($"目标框架：{framework}");
-        parts.Add($"运行时：{RuntimeInformation.FrameworkDescription}");
-        parts.Add($"操作系统：{RuntimeInformation.OSDescription}");
-        parts.Add($"进程架构：{RuntimeInformation.ProcessArchitecture}");
+        if (!string.IsNullOrWhiteSpace(framework)) parts.Add(ViewText.L("Tools.TargetFramework", framework));
+        parts.Add(ViewText.L("Tools.Runtime", RuntimeInformation.FrameworkDescription));
+        parts.Add(ViewText.L("Tools.OS", RuntimeInformation.OSDescription));
+        parts.Add(ViewText.L("Tools.ProcessArch", RuntimeInformation.ProcessArchitecture));
 
         try
         {
             var location = Process.GetCurrentProcess().MainModule?.FileName;
-            if (!string.IsNullOrWhiteSpace(location)) parts.Add($"可执行文件：{location}");
+            if (!string.IsNullOrWhiteSpace(location)) parts.Add(ViewText.L("Tools.Executable", location));
         }
         catch (Exception)
         {
@@ -385,7 +388,7 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
         }
         catch (Exception)
         {
-            return "（不可用）";
+            return ViewText.L("Tools.Unavailable");
         }
     }
 }
@@ -420,8 +423,8 @@ public sealed class DiagnosticSourceRow
 
         // CLI 路径/版本探测不到时给出**可读**的占位，而不是空白单元格：
         // 空白既可能是"没探到"也可能是"界面坏了"，写清楚才不产生歧义。
-        CliPathText = string.IsNullOrWhiteSpace(availability.CliPath) ? "（未找到）" : availability.CliPath!;
-        CliVersionText = string.IsNullOrWhiteSpace(availability.CliVersion) ? "（未知）" : availability.CliVersion!;
+        CliPathText = string.IsNullOrWhiteSpace(availability.CliPath) ? ViewText.L("Tools.CliNotFound") : availability.CliPath!;
+        CliVersionText = string.IsNullOrWhiteSpace(availability.CliVersion) ? ViewText.L("Tools.CliVersionUnknown") : availability.CliVersion!;
 
         Detail = availability.Detail ?? category?.Detail;
         VerificationNote = availability.VerificationNote ?? category?.VerificationNote ?? manager.VerificationNote;
@@ -457,11 +460,11 @@ public sealed class DiagnosticSourceRow
 
     private static string StateToText(AvailabilityState state) => state switch
     {
-        AvailabilityState.Available => "可用",
-        AvailabilityState.Degraded => "可用（降级）",
-        AvailabilityState.UnsupportedPlatform => "当前平台不支持",
-        AvailabilityState.NotInstalled => "未安装命令行工具",
-        _ => "不可达"
+        AvailabilityState.Available => ViewText.L("State.Available"),
+        AvailabilityState.Degraded => ViewText.L("State.Degraded"),
+        AvailabilityState.UnsupportedPlatform => ViewText.L("State.UnsupportedPlatform"),
+        AvailabilityState.NotInstalled => ViewText.L("State.NotInstalled"),
+        _ => ViewText.L("State.Unreachable")
     };
 
     private static Brush StateToBrush(AvailabilityState state) => state switch
@@ -482,7 +485,7 @@ public sealed class ThirdPartyComponent
         License = license;
         Purpose = purpose;
         Url = url;
-        LicenseText = $"许可：{license}";
+        LicenseText = ViewText.L("Tools.License", license);
     }
 
     public string Name { get; }

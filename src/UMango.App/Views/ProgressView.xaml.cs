@@ -11,8 +11,11 @@ using UMango.App.Services;
 using UMango.App.ViewModels;
 using UMango.Core.App.Tasks;
 using UMango.Core.Terminal;
+using UMango.Core.Localization;
+using UMango.App.Localization;
 
 namespace UMango.App.Views;
+
 
 /// <summary>
 /// 「0~1 分数 → 0~100 百分比」转换器。
@@ -121,7 +124,7 @@ public sealed class StepRow : ObservableObject
     {
         var omitted = _totalLines - Output.Count;
         TruncationHint = omitted > 0
-            ? $"…该子项较早的 {omitted} 行输出已省略，打开调试模式可查看全部"
+            ? ViewText.L("Progress.EarlierOmitted", omitted)
             : null;
     }
 }
@@ -500,7 +503,7 @@ public partial class ProgressView : UserControl
         }
 
         TerminalTruncationHint.Text =
-            $"已省略较早输出，打开调试模式可查看全部（当前显示最近 {TerminalTailLimit} 行，共 {_vm.TerminalLines.Count} 行）";
+            ViewText.L("Progress.OmittedTail", TerminalTailLimit, _vm.TerminalLines.Count);
         TerminalTruncationHint.Visibility = Visibility.Visible;
     }
 

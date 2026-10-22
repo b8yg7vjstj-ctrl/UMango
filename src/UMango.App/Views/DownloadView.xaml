@@ -380,7 +380,7 @@
               <Border Margin="6,0,0,0" Padding="4,0" CornerRadius="2"
                       Background="{DynamicResource BrWarnAmber}"
                       VerticalAlignment="Center"
-                      ToolTip="该包源没有官方下载量接口，这里的数字是 GitHub 仓库 Star 数（仅供参考）"
+                      ToolTip="{DynamicResource Tip.Downloads.Star}"
                       Visibility="{Binding DownloadCountIsFallback, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="{DynamicResource Download.GithubStarsFallback}" FontSize="10"
                            Foreground="{DynamicResource BrWarnAmberFore}"/>
@@ -393,7 +393,7 @@
                   Style="{DynamicResource DownloadPrimaryButton}"
                   Command="{Binding DataContext.InstallCommand, RelativeSource={RelativeSource AncestorType={x:Type views:DownloadView}}}"
                   CommandParameter="{Binding}"
-                  ToolTip="全局安装到当前包源；安装过程与子项进度见「进度」页"/>
+                  ToolTip="{DynamicResource Tip.Install}"/>
         </Grid>
       </Border>
     </DataTemplate>
@@ -445,7 +445,7 @@
         <CheckBox Grid.Row="2" Margin="10,8,8,10"
                   IsChecked="{Binding ShowUnsupported, Mode=TwoWay}"
                   Style="{DynamicResource DownloadCheckBox}"
-                  ToolTip="勾选后连当前系统上用不了的包源也列出来（例如 macOS 上的 winget / scoop），便于排查；它们不能安装。">
+                  ToolTip="{DynamicResource Tip.ShowUnsupported}">
           <TextBlock Text="{DynamicResource Download.ShowUnsupported}" FontSize="11" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG2}"/>
         </CheckBox>
@@ -474,18 +474,18 @@
                  Style="{DynamicResource DownloadSearchBox}"
                  Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
                  KeyDown="QueryBox_KeyDown"
-                 ToolTipService.Placement="Right" ToolTip="输入包名或关键词后按回车搜索；Git 源可以直接填仓库地址"/>
+                 ToolTipService.Placement="Right" ToolTip="{DynamicResource Tip.SearchInput}"/>
 
         <Button Grid.Column="1" Content="{DynamicResource Download.Search}" Margin="8,0,0,0"
                 Style="{DynamicResource DownloadPrimaryButton}"
                 Command="{Binding SearchCommand}"
                 Click="SearchButton_Click"
-                ToolTip="在左侧选中的包源里搜索"/>
+                ToolTip="{DynamicResource Tip.SearchHere}"/>
 
         <Button Grid.Column="2" Content="{DynamicResource Download.RefreshSources}" Margin="8,0,0,0"
                 Style="{DynamicResource DownloadSecondaryButton}"
                 Command="{Binding RefreshCommand}"
-                ToolTip="重新探测各包源可用性（刚装完命令行工具时点它）"/>
+                ToolTip="{DynamicResource Tip.Reprobe}"/>
       </Grid>
 
       <!-- 忙碌：探测/搜索进行中（安装不置 Busy，进度在「进度」页看） -->
@@ -524,7 +524,7 @@
                   Style="{DynamicResource DownloadSecondaryButton}"
                   Command="{Binding SearchCommand}"
                   Click="SearchButton_Click"
-                  ToolTip="按当前关键词与选中的包源重新搜索"/>
+                  ToolTip="{DynamicResource Tip.SearchAgain}"/>
         </Grid>
       </Border>
 
@@ -548,11 +548,11 @@
           <Button Content="{DynamicResource Download.SearchResults}" Height="24" Padding="10,0" FontSize="11"
                   Style="{DynamicResource DownloadSecondaryButton}"
                   Command="{Binding ShowSearchResultsCommand}"
-                  ToolTip="显示当前包源的搜索结果"/>
+                  ToolTip="{DynamicResource Tip.ShowResults}"/>
           <Button Content="{DynamicResource Download.Installed}" Height="24" Padding="10,0" FontSize="11" Margin="6,0,0,0"
                   Style="{DynamicResource DownloadSecondaryButton}"
                   Command="{Binding ShowInstalledCommand}"
-                  ToolTip="读取当前包源已安装的包（Git 源读的是本地仓库）"/>
+                  ToolTip="{DynamicResource Tip.ShowInstalled}"/>
         </StackPanel>
       </Grid>
 

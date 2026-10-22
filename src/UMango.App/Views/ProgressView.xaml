@@ -279,7 +279,7 @@
 
         <Button Grid.Column="1" Content="{DynamicResource Progress.Cancel}" Style="{StaticResource MiniButton}"
                 Margin="8,0,0,0" VerticalAlignment="Center" Command="{Binding Cancel}"
-                ToolTip="取消该任务（未提供取消回调时自动置灰）"/>
+                ToolTip="{DynamicResource Tip.CancelTask}"/>
       </Grid>
     </DataTemplate>
 
@@ -327,27 +327,27 @@
               <Style TargetType="TextBlock">
                 <Setter Property="Text" Value="○"/>
                 <Setter Property="Foreground" Value="{DynamicResource BrG4}"/>
-                <Setter Property="ToolTip" Value="等待中"/>
+                <Setter Property="ToolTip" Value="{DynamicResource TaskState.Waiting}"/>
                 <Style.Triggers>
                   <DataTrigger Binding="{Binding Child.State}" Value="Running">
                     <Setter Property="Text" Value="●"/>
                     <Setter Property="Foreground" Value="{DynamicResource BrC3}"/>
-                    <Setter Property="ToolTip" Value="进行中"/>
+                    <Setter Property="ToolTip" Value="{DynamicResource TaskState.Running}"/>
                   </DataTrigger>
                   <DataTrigger Binding="{Binding Child.State}" Value="Success">
                     <Setter Property="Text" Value="√"/>
                     <Setter Property="Foreground" Value="{DynamicResource BrProgressSuccess}"/>
-                    <Setter Property="ToolTip" Value="已完成"/>
+                    <Setter Property="ToolTip" Value="{DynamicResource TaskState.Success}"/>
                   </DataTrigger>
                   <DataTrigger Binding="{Binding Child.State}" Value="Failed">
                     <Setter Property="Text" Value="×"/>
                     <Setter Property="Foreground" Value="{DynamicResource BrRed}"/>
-                    <Setter Property="ToolTip" Value="失败"/>
+                    <Setter Property="ToolTip" Value="{DynamicResource TaskState.Failure}"/>
                   </DataTrigger>
                   <DataTrigger Binding="{Binding Child.State}" Value="Canceled">
                     <Setter Property="Text" Value="–"/>
                     <Setter Property="Foreground" Value="{DynamicResource BrG3}"/>
-                    <Setter Property="ToolTip" Value="已取消"/>
+                    <Setter Property="ToolTip" Value="{DynamicResource TaskState.Canceled}"/>
                   </DataTrigger>
                 </Style.Triggers>
               </Style>
@@ -420,7 +420,7 @@
         <TextBlock Text="{DynamicResource Progress.Title}" Style="{DynamicResource PclSectionTitle}"/>
         <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"
                    Foreground="{DynamicResource BrG3}"
-                   Text="{Binding Tasks.Count, StringFormat='共 {0} 个'}"/>
+                   Text="{Binding Tasks.Count, StringFormat='{DynamicResource Fmt.TaskCount}'}"/>
       </Grid>
 
       <!--
@@ -485,7 +485,7 @@
                 <Button Content="{DynamicResource Progress.CancelTask}" Style="{StaticResource MiniButton}" Margin="12,0,0,0"
                         Command="{Binding CancelTaskCommand}"
                         CommandParameter="{Binding SelectedTask}"
-                        ToolTip="取消该任务（父任务没有取消回调时会尝试取消其子项）"/>
+                        ToolTip="{DynamicResource Tip.CancelGroup}"/>
               </StackPanel>
             </Grid>
 
@@ -568,10 +568,10 @@
                 <!-- 与设置页的「调试模式」是同一个开关（Core 的静态开关 + 落盘），两处状态一致。 -->
                 <ToggleButton x:Name="DebugToggleButton" Content="{DynamicResource Progress.DebugMode}" Style="{StaticResource DebugToggle}"
                               IsChecked="{Binding DebugMode, Mode=TwoWay}"
-                              ToolTip="等价于 PCL-CE 原菜单位置的调试模式：打开后保留并显示全部输出行，关闭时只显示最近 50 行"/>
+                              ToolTip="{DynamicResource Tip.DebugMode}"/>
                 <Button Content="{DynamicResource Progress.Clear}" Style="{StaticResource MiniButton}" Margin="8,0,0,0"
                         Command="{Binding ClearTerminalCommand}"
-                        ToolTip="清空当前任务的终端输出（Core 缓冲与界面一起清）"/>
+                        ToolTip="{DynamicResource Tip.ClearOutput}"/>
               </StackPanel>
             </Grid>
 

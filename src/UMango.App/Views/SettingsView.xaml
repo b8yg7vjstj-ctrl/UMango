@@ -387,7 +387,7 @@
 
           <TextBlock FontSize="12" Margin="0,8,0,4"
                      Foreground="{DynamicResource BrG3}"
-                     Text="{Binding AnimationSpeedFactor, StringFormat=速度倍率：{0:0.0}x（调小可放慢观察动画细节）}"/>
+                     Text="{Binding AnimationSpeedFactor, StringFormat='{DynamicResource Fmt.SpeedFactor}'}"/>
           <Slider Minimum="0.5" Maximum="2.0" TickFrequency="0.1" IsSnapToTickEnabled="True"
                   Value="{Binding AnimationSpeedFactor, Mode=TwoWay}"
                   Foreground="{DynamicResource BrC3}"/>
@@ -523,7 +523,7 @@
                     Style="{DynamicResource PclDangerButton}"
                     Command="{Binding DataContext.ClearRecordsCommand,
                                       RelativeSource={RelativeSource AncestorType={x:Type views:SettingsView}}}"
-                    ToolTip="清空全部管理记录与次数记录（执行前会二次确认，不可撤销）"/>
+                    ToolTip="{DynamicResource Tip.ClearRecords}"/>
           </StackPanel>
         </StackPanel>
       </Border>

@@ -56,7 +56,7 @@
         <Button Content="{DynamicResource Log.Export}" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
                 Style="{DynamicResource DownloadPrimaryButton}"
                 Command="{Binding ExportCommand}"
-                ToolTipService.Placement="Right" ToolTip="把日志、设置、记录与系统信息打成一个 zip 放到桌面，方便整份发回"/>
+                ToolTipService.Placement="Right" ToolTip="{DynamicResource Tip.ExportDiag}"/>
       </StackPanel>
     </Grid>
 

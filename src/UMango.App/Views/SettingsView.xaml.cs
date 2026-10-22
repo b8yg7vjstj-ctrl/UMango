@@ -8,6 +8,8 @@ using UMango.App.Themes;
 using UMango.App.ViewModels;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
+using UMango.Core.Localization;
+using UMango.App.Localization;
 
 namespace UMango.App.Views;
 
@@ -117,7 +119,7 @@ public partial class SettingsView : UserControl
             // 读盘失败/记录文件损坏都不该让设置页崩掉（内存里的记录仍然可用），
             // 但必须把原因说出来而不是假装成功。
             // 注意这类 async void 处理器里漏出去的异常会直接终止进程，所以整段都包在 try 里。
-            ViewModel.StatusMessage = $"读取记录失败（当前显示内存中的记录）：{ex.Message}";
+            ViewModel.StatusMessage = ViewText.L("Settings.Records.ReadFailed", ex.Message);
         }
     }
 
@@ -156,7 +158,7 @@ public partial class SettingsView : UserControl
         catch (Exception ex)
         {
             // 这个方法同样在 UI 事件回调里，异常漏出去会终止进程，因此照例挡住。
-            ViewModel.StatusMessage = $"刷新记录显示失败：{ex.Message}";
+            ViewModel.StatusMessage = ViewText.L("Settings.Records.RefreshFailed", ex.Message);
         }
     }
 
@@ -235,7 +237,9 @@ public partial class SettingsView : UserControl
     {
         var family = ViewModel.SelectedTheme?.Title ?? ThemeManager.CurrentKind.ToString();
         CurrentThemeText.Text =
-            $"当前生效：{family} · {(ThemeManager.IsDark ? "深色" : "浅色")}｜{ThemeManager.CurrentDictionaryPath}";
+            ViewText.L("Settings.Records.Current", family,
+                ViewText.L(ThemeManager.IsDark ? "Settings.Dark" : "Settings.Light"),
+                ThemeManager.CurrentDictionaryPath);
     }
 
     // ==================== ③ 记录管理 ====================
@@ -251,12 +255,12 @@ public partial class SettingsView : UserControl
             // 统计、按包源次数、明细一律从 Core 存储重新取（见 RefreshRecordViews），
             // 因此"重新加载"不需要重建 ViewModel，也不会让主题选中状态/深色开关被重置。
             RefreshRecordViews();
-            ViewModel.StatusMessage = $"已重新加载记录：共 {AppServices.Records.TotalCount} 条。";
+            ViewModel.StatusMessage = ViewText.L("Settings.Records.Reloaded", AppServices.Records.TotalCount);
         }
         catch (Exception ex)
         {
             // 同 Loaded：async void 处理器里漏出的异常会终止进程，整段都要包住。
-            ViewModel.StatusMessage = $"重新加载失败：{ex.Message}";
+            ViewModel.StatusMessage = ViewText.L("Settings.Records.ReloadFailed", ex.Message);
         }
     }
 
@@ -277,8 +281,8 @@ public partial class SettingsView : UserControl
     /// </summary>
     private bool ConfirmClearRecords()
     {
-        const string message = "确定要清空全部管理记录与次数记录吗？\n\n该操作不可撤销，清空后历史记录无法恢复。";
-        const string caption = "清空记录";
+        var message = ViewText.L("Settings.Records.ClearConfirm");
+        var caption = ViewText.L("Settings.Records.ClearCaption");
 
         // 有宿主窗口时带上 owner，保证对话框模态于主窗口并居中；无窗口宿主（设计器等）退回无 owner 版本。
         var owner = Window.GetWindow(this);
@@ -318,7 +322,7 @@ public partial class SettingsView : UserControl
             var barWidth = max <= 0
                 ? MinimumBarWidth
                 : Math.Max(MinimumBarWidth, MaxBarWidth * count / max);
-            _sourceCounts.Add(new SourceCountItem(kind.DisplayName(), count, $"{count} 次", barWidth));
+            _sourceCounts.Add(new SourceCountItem(kind.DisplayName(), count, ViewText.L("Settings.Records.Times", count), barWidth));
         }
 
         SourceCountEmpty.Visibility = _sourceCounts.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -338,25 +342,25 @@ public partial class SettingsView : UserControl
                 HasVersion: version.Length > 0,
                 Action: ActionDisplayName(item.Action),
                 Success: item.Success,
-                ResultText: item.Success ? "成功" : "失败",
+                ResultText: ViewText.L(item.Success ? "Record.Result.Success" : "Record.Result.Failure"),
                 Duration: FormatDuration(item.DurationMs),
-                ErrorText: errorCode.Length == 0 ? string.Empty : $"错误码 {errorCode}",
+                ErrorText: errorCode.Length == 0 ? string.Empty : ViewText.L("Record.Detail.ErrorCode", errorCode),
                 HasError: errorCode.Length > 0));
         }
 
         RecordEmpty.Visibility = _recordItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
         // 记录文件位置：排查"记录去哪了"最常需要的一句话信息。
-        RecordStorePathText.Text = $"记录文件：{store.StorePath}";
+        RecordStorePathText.Text = ViewText.L("Home.RecordFile", store.StorePath);
         RecordStorePathText.ToolTip = store.StorePath;
     }
 
     /// <summary>操作类型中文化。未知值原样显示：Core 以后新增操作类型时界面既不会空白也不会崩。</summary>
     private static string ActionDisplayName(string action) => action switch
     {
-        "install" => "安装",
-        "uninstall" => "卸载",
-        "upgrade" => "升级",
+        "install" => ViewText.L("Record.Op.Install"),
+        "uninstall" => ViewText.L("Record.Op.Uninstall"),
+        "upgrade" => ViewText.L("Record.Op.Upgrade"),
         _ => string.IsNullOrWhiteSpace(action) ? "—" : action,
     };
 
@@ -371,8 +375,8 @@ public partial class SettingsView : UserControl
 
         var span = TimeSpan.FromMilliseconds(milliseconds);
         return span.TotalMinutes >= 1
-            ? $"{(int)span.TotalMinutes} 分 {span.Seconds} 秒"
-            : span.TotalSeconds.ToString("0.00", CultureInfo.InvariantCulture) + " 秒";
+            ? ViewText.L("Settings.Records.Duration", (int)span.TotalMinutes, span.Seconds)
+            : ViewText.L("Settings.Records.DurationSeconds", span.TotalSeconds.ToString("0.00", CultureInfo.InvariantCulture));
     }
 
     /// <summary>

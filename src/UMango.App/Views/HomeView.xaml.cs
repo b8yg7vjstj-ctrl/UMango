@@ -8,6 +8,8 @@ using UMango.App.Services;
 using UMango.Core.PackageManagers;
 using UMango.Core.Platform;
 using UMango.Core.Records;
+using UMango.Core.Localization;
+using UMango.App.Localization;
 
 namespace UMango.App.Views;
 
@@ -138,7 +140,7 @@ public partial class HomeViewModel : ObservableObject
 
     /// <summary>成功率文字，例如 "成功率 75.0%"；没有记录时给"暂无记录"。</summary>
     [ObservableProperty]
-    private string _successRateText = "暂无记录";
+    private string _successRateText = ViewText.L("Home.NoRecords");
 
     /// <summary>次数统计的补充说明（记录文件路径 + 按包源条数）。</summary>
     [ObservableProperty]
@@ -202,13 +204,13 @@ public partial class HomeViewModel : ObservableObject
             RefreshSources(categories);
             RefreshSourceCounts();
 
-            StatusMessage = $"已更新：{Sources.Count} 个包源，{TotalCount} 条记录。";
+            StatusMessage = ViewText.L("Home.Updated", Sources.Count, TotalCount);
             return true;
         }
         catch (Exception ex)
         {
             // 概览页不能因为"取数失败"变空白：显示原因，保留上一份数据。
-            ErrorMessage = $"概览数据加载失败：{ex.Message}";
+            ErrorMessage = ViewText.L("Home.LoadFailed", ex.Message);
             return false;
         }
         finally
@@ -257,7 +259,7 @@ public partial class HomeViewModel : ObservableObject
             .ToList();
         VerificationText = notes.Count == 0
             ? ""
-            : "以下包源的解析逻辑尚未在真机验证，结果仅供参考：\n" + string.Join("\n", notes);
+            : ViewText.L("Home.UnverifiedIntro") + string.Join("\n", notes);
         HasVerificationNotes = notes.Count > 0;
     }
 
@@ -272,16 +274,16 @@ public partial class HomeViewModel : ObservableObject
         SuccessCount = store.SuccessCount;
         FailureCount = store.FailureCount;
         SuccessRateText = TotalCount == 0
-            ? "暂无记录"
-            : $"成功率 {SuccessCount * 100.0 / TotalCount:0.0}%（失败 {FailureCount} 次）";
+            ? ViewText.L("Home.NoRecords")
+            : ViewText.L("Home.SuccessRate", SuccessCount * 100.0 / TotalCount, FailureCount);
 
         RecentRecords.Clear();
         foreach (var record in records.Take(RecentLimit))
             RecentRecords.Add(new HomeRecordRow(record));
 
         RecentHintText = TotalCount > 0
-            ? $"共 {TotalCount} 条记录，这里显示最近 {RecentRecords.Count} 条。"
-            : "还没有任何管理记录；在「下载」页安装一个包之后，这里会列出每次操作的成败与耗时。";
+            ? ViewText.L("Home.RecentDetail", TotalCount, RecentRecords.Count)
+            : ViewText.L("Home.EmptyDetail");
     }
 
     private void RefreshSourceCounts()
@@ -296,7 +298,7 @@ public partial class HomeViewModel : ObservableObject
             SourceCounts.Add(new HomeSourceCount(SourceName(kind), count, TotalCount));
         }
 
-        RecordsDetailText = $"记录文件：{AppServices.Records.StorePath}";
+        RecordsDetailText = ViewText.L("Home.RecordFile", AppServices.Records.StorePath);
     }
 
     private static string SourceName(PackageSourceKind kind) =>
@@ -318,8 +320,8 @@ public sealed class HomeSourceStatus
 
     /// <summary>注册表里没有该包源适配器时的兜底行（如实显示原因，而不是让包源凭空消失）。</summary>
     internal HomeSourceStatus(PackageSourceKind kind)
-        : this(kind, kind.DisplayName(), "（未注册该包源适配器）", AvailabilityState.Unreachable,
-               detail: "包源注册表中没有该适配器", verificationNote: null)
+        : this(kind, kind.DisplayName(), ViewText.L("Home.NotRegistered"), AvailabilityState.Unreachable,
+               detail: ViewText.L("Home.NoAdapterDetail"), verificationNote: null)
     {
     }
 
@@ -375,11 +377,11 @@ public sealed class HomeSourceStatus
 
     private static string StateToText(AvailabilityState state) => state switch
     {
-        AvailabilityState.Available => "可用",
-        AvailabilityState.Degraded => "可用（降级）",
-        AvailabilityState.UnsupportedPlatform => "当前平台不支持",
-        AvailabilityState.NotInstalled => "未安装命令行工具",
-        _ => "不可达"
+        AvailabilityState.Available => ViewText.L("State.Available"),
+        AvailabilityState.Degraded => ViewText.L("State.Degraded"),
+        AvailabilityState.UnsupportedPlatform => ViewText.L("State.UnsupportedPlatform"),
+        AvailabilityState.NotInstalled => ViewText.L("State.NotInstalled"),
+        _ => ViewText.L("State.Unreachable")
     };
 
     private static Brush StatusToBrush(AvailabilityState state) => state switch
@@ -418,7 +420,7 @@ public sealed class HomeRecordRow
         VersionText = string.IsNullOrWhiteSpace(record.Version) ? "" : record.Version!;
         ActionText = ActionToText(record.Action);
         TimeText = record.OccurredAt.ToLocalTime().ToString("MM-dd HH:mm:ss");
-        StateText = record.Success ? "成功" : "失败";
+        StateText = ViewText.L(record.Success ? "Record.Result.Success" : "Record.Result.Failure");
         StateBrush = record.Success
             // 成功/失败色点与包源状态点共用同一套语义色，读起来才一致
             ? ThemeBrushes.Get("BrC3", "#1370F3")
@@ -446,14 +448,14 @@ public sealed class HomeRecordRow
         var parts = new List<string>
         {
             $"{record.Source.DisplayName()}｜{ActionToText(record.Action)}",
-            $"时间：{record.OccurredAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}"
+            ViewText.L("Record.Detail.Time", record.OccurredAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"))
         };
 
-        if (!string.IsNullOrWhiteSpace(record.Version)) parts.Add($"版本：{record.Version}");
-        if (!string.IsNullOrWhiteSpace(record.InstallDirectory)) parts.Add($"安装目录：{record.InstallDirectory}");
-        parts.Add($"耗时：{record.DurationMs} 毫秒");
-        if (!string.IsNullOrWhiteSpace(record.ErrorCode)) parts.Add($"错误码：{record.ErrorCode}");
-        if (!string.IsNullOrWhiteSpace(record.Detail)) parts.Add($"明细：{record.Detail}");
+        if (!string.IsNullOrWhiteSpace(record.Version)) parts.Add(ViewText.L("Record.Detail.Version", record.Version));
+        if (!string.IsNullOrWhiteSpace(record.InstallDirectory)) parts.Add(ViewText.L("Record.Detail.InstallDir", record.InstallDirectory));
+        parts.Add(ViewText.L("Record.Detail.Duration", record.DurationMs));
+        if (!string.IsNullOrWhiteSpace(record.ErrorCode)) parts.Add(ViewText.L("Record.Detail.ErrorCode", record.ErrorCode));
+        if (!string.IsNullOrWhiteSpace(record.Detail)) parts.Add(ViewText.L("Record.Detail.Detail", record.Detail));
 
         return string.Join("\n", parts);
     }
@@ -461,9 +463,9 @@ public sealed class HomeRecordRow
     /// <summary>操作类型 → 中文（记录里存的是 install / uninstall / upgrade 这类稳定标识）。</summary>
     private static string ActionToText(string action) => action switch
     {
-        "install" => "安装",
-        "uninstall" => "卸载",
-        "upgrade" => "升级",
+        "install" => ViewText.L("Record.Op.Install"),
+        "uninstall" => ViewText.L("Record.Op.Uninstall"),
+        "upgrade" => ViewText.L("Record.Op.Upgrade"),
         _ => action
     };
 }

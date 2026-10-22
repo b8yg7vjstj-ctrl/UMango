@@ -36,7 +36,7 @@ public partial class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<ThemeOption> Themes { get; } =
     [
-        new ThemeOption(ThemeKind.PclClassic, "PCL 经典",
+        new ThemeOption(ThemeKind.PclClassic, L("Settings.Theme.PclName"),
             L("Settings.Theme.PclDesc")),
         new ThemeOption(ThemeKind.Fluent10, L("Settings.Theme.Fluent10Name"),
             L("Settings.Theme.Fluent10Desc"))

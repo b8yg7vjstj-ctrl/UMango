@@ -10,8 +10,10 @@ using System.Windows.Data;
 using System.Windows.Input;
 using UMango.App.ViewModels;
 using UMango.Core.PackageManagers;
-
+using UMango.Core.Localization;
+using UMango.App.Localization;
 namespace UMango.App.Views;
+
 
 /// <summary>
 /// 下载页：左栏包源分类（第一行=包管理器名、第二行=安装目录）+ 右栏搜索与结果卡片。
@@ -236,7 +238,7 @@ public sealed class JoinToTextConverter : IValueConverter
             if (item?.ToString() is { Length: > 0 } text) parts.Add(text);
         }
 
-        return parts.Count == 0 ? "" : "其它版本：" + string.Join(" / ", parts);
+        return parts.Count == 0 ? "" : ViewText.L("Download.OtherVersions") + string.Join(" / ", parts);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -275,7 +277,7 @@ public sealed class EmptyCollectionToVisibilityConverter : IValueConverter
 public sealed class VersionLabelConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is string version && !string.IsNullOrWhiteSpace(version) ? $"版本 {version}" : "版本未知";
+        => value is string version && !string.IsNullOrWhiteSpace(version) ? ViewText.L("Download.Version", version) : ViewText.L("Download.VersionUnknown");
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException("只用于单向显示。");
@@ -285,7 +287,7 @@ public sealed class VersionLabelConverter : IValueConverter
 public sealed class LicenseLabelConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is string license && !string.IsNullOrWhiteSpace(license) ? $"许可证 {license}" : "许可证未知";
+        => value is string license && !string.IsNullOrWhiteSpace(license) ? ViewText.L("Download.License", license) : ViewText.L("Download.LicenseUnknown");
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException("只用于单向显示。");
@@ -310,8 +312,8 @@ public sealed class DownloadCountLabelConverter : IValueConverter
         };
 
         return count is > 0
-            ? $"下载量 {count.Value.ToString("N0", CultureInfo.InvariantCulture)}"
-            : "下载量 暂无数据";
+            ? ViewText.L("Download.Downloads", count.Value.ToString("N0", CultureInfo.InvariantCulture))
+            : ViewText.L("Download.DownloadsNone");
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using PCL.Core.UI;
+using UMango.Core.Localization;
 
 namespace UMango.App.Views;
 
@@ -20,6 +21,9 @@ namespace UMango.App.Views;
 /// </summary>
 public partial class PclDialog : Window
 {
+    private static string L(string key, params object?[] args)
+        => UMango.Core.Localization.LocalizationService.Text(key, args);
+
     private int _result;
 
     private PclDialog(string caption, string message, MsgBoxTheme theme,
@@ -85,7 +89,7 @@ public partial class PclDialog : Window
         {
             var ok = new Button
             {
-                Content = "确定",
+                Content = L("Dialog.Confirm"),
                 MinWidth = 76,
                 Margin = new Thickness(ButtonHost.Children.Count > 0 ? 8 : 0, 0, 0, 0),
                 Style = (Style)FindResource("PclPrimaryButton"),

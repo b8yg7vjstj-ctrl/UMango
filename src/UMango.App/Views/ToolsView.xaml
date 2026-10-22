@@ -32,7 +32,7 @@
             <Button Grid.Column="1" Content="{DynamicResource Tools.Reprobe}" Padding="12,3" Cursor="Hand" FontSize="12"
                     Foreground="{DynamicResource BrC1}" Background="{DynamicResource BrG8}"
                     BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
-                    ToolTip="重新执行各包管理器的 CLI 探测（会启动进程，需要几秒）"
+                    ToolTip="{DynamicResource Tip.ReprobeCli}"
                     Command="{Binding ReproCommand}"/>
           </Grid>
           <TextBlock Text="{Binding ProbeTimeText}" FontSize="11" Margin="0,6,0,0"

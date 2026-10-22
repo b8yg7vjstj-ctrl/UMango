@@ -94,7 +94,7 @@
             <Button Grid.Column="1" Content="{DynamicResource Common.Action.Refresh}" Padding="12,3" Cursor="Hand" FontSize="12"
                     Foreground="{DynamicResource BrC1}" Background="{DynamicResource BrG8}"
                     BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
-                    ToolTip="重新探测全部包源（会执行各包管理器的 CLI）"
+                    ToolTip="{DynamicResource Tip.ReprobeAll}"
                     Command="{Binding RefreshCommand}"/>
           </Grid>
           <TextBlock Text="{DynamicResource Home.AllSourcesHint}"
