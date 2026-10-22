@@ -34,6 +34,12 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>可选主题。深浅是独立开关，所以这里只有两族。</summary>
     private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
 
+    /// <summary>
+    /// 检查更新卡片的 VM。与主题/动画这些"改完即生效"的设置项不同，
+    /// 更新有检查→下载→重启的完整生命周期，独立成一个 VM 更清楚。
+    /// </summary>
+    public UpdateViewModel Update { get; } = new();
+
     public IReadOnlyList<ThemeOption> Themes { get; } =
     [
         new ThemeOption(ThemeKind.PclClassic, L("Settings.Theme.PclName"),

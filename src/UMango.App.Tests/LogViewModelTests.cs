@@ -116,12 +116,13 @@ public class LogViewModelTests
         for (var i = 0; i < 80; i++)
             sink.Write(new LogEntry(DateTimeOffset.Now, LogLevel.Info, "T", $"第 {i} 条", null));
 
-        var vm = new LogViewModel(sink);
-
-        Assert.True(vm.HasMore);
-        // StatusMessage 走 L() 取文案，无 UI 环境下 Provider 返回资源键本身
+        // StatusMessage 走 L() 取文案，**在 VM 构造时就算好了** ——
+        // Provider 必须在 new 之前装好，否则拿到的就是资源键本身。
+        LogViewModel vm;
         using (ChineseProvider.Scope())
         {
+            vm = new LogViewModel(sink);
+            Assert.True(vm.HasMore);
             Assert.Contains("已丢弃", vm.StatusMessage);
         }
     }
@@ -134,22 +135,22 @@ public class LogViewModelTests
         var outDir = Path.Combine(Path.GetTempPath(), $"umango-diag-{Guid.NewGuid():N}");
         try
         {
-            var sink = SinkWith((LogLevel.Info, "启动正常"), (LogLevel.Error, "某处出错了"));
-            var vm = new LogViewModel(sink);
-
-            var zipPath = vm.ExportDiagnosticBundle(outDir);
-
-            Assert.NotNull(zipPath);
-            Assert.True(File.Exists(zipPath));
-
-            using var zip = ZipFile.OpenRead(zipPath!);
-            var names = zip.Entries.Select(e => e.FullName).ToList();
-
-            // 摘要与内存日志必须在包里 —— 这是最重要的一份
-            // 文件名也走 L()，无 UI 环境下是资源键，故用 ChineseProvider 提供真实文案
+            // 导出全程都要中文文案：zip 内的文件名、摘要正文、状态行都走 L()，
+            // 所以 Provider 必须在导出**之前**装好（装晚了文件名就已经是资源键了）。
             using (ChineseProvider.Scope())
             {
-                var bundleName = UMango.Core.Localization.LocalizationService.Text("Log.Diag.TextName");
+                var sink = SinkWith((LogLevel.Info, "启动正常"), (LogLevel.Error, "某处出错了"));
+                var vm = new LogViewModel(sink);
+
+                var zipPath = vm.ExportDiagnosticBundle(outDir);
+
+                Assert.NotNull(zipPath);
+                Assert.True(File.Exists(zipPath));
+
+                using var zip = ZipFile.OpenRead(zipPath!);
+                var names = zip.Entries.Select(e => e.FullName).ToList();
+
+                // 摘要与内存日志必须在包里 —— 这是最重要的一份
                 Assert.Contains(names, n => n.Contains("摘要"));
 
                 var summary = ReadEntry(zip, names.First(n => n.Contains("摘要")));
@@ -159,7 +160,6 @@ public class LogViewModelTests
 
                 Assert.Null(vm.ErrorMessage);
                 Assert.Contains("诊断包已导出", vm.StatusMessage);
-                Assert.False(string.IsNullOrWhiteSpace(bundleName));
             }
         }
         finally

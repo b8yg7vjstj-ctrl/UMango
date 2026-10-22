@@ -439,4 +439,19 @@
     <sys:String x:Key="Window.Minimize">最小化</sys:String>
     <sys:String x:Key="Window.Maximize">最大化</sys:String>
     <sys:String x:Key="Window.Close">关闭</sys:String>
+
+    <!-- ============ 检查更新 ============ -->
+    <sys:String x:Key="Settings.Update.Section">检查更新</sys:String>
+    <sys:String x:Key="Settings.Update.CurrentVersion">当前版本：{0}</sys:String>
+    <sys:String x:Key="Settings.Update.Checking">正在检查更新…</sys:String>
+    <sys:String x:Key="Settings.Update.Latest">已是最新版本。</sys:String>
+    <sys:String x:Key="Settings.Update.Found">发现新版本 {0}，可以立即更新。</sys:String>
+    <sys:String x:Key="Settings.Update.Failed">检查更新失败：{0}</sys:String>
+    <sys:String x:Key="Settings.Update.Check">检查更新</sys:String>
+    <sys:String x:Key="Settings.Update.Apply">立即更新</sys:String>
+    <sys:String x:Key="Settings.Update.Downloading">正在下载新版本…</sys:String>
+    <sys:String x:Key="Settings.Update.DownloadProgress">正在下载新版本… {0}%</sys:String>
+    <sys:String x:Key="Settings.Update.DownloadFailed">下载失败：{0}</sys:String>
+    <sys:String x:Key="Settings.Update.Restarting">准备重启以应用更新…</sys:String>
+    <sys:String x:Key="Settings.Update.ApplyFailed">无法启动更新助手：{0}</sys:String>
 </ResourceDictionary>

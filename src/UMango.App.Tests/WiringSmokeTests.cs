@@ -139,8 +139,14 @@ public class WiringSmokeTests
         Assert.Equal(originalEnabled, AppSettings.Settings.Get<bool>(UiSettings.AnimationEnabledKey));
 
         // ── 7) 工具页：报告非空且含系统信息 ──
-        Assert.False(string.IsNullOrWhiteSpace(tools.SystemReport));
-        Assert.Contains(UMango.Core.Platform.SystemInfo.Describe(), tools.SystemReport);
+        // 报告走 L() 取文案，无 UI 环境返回资源键；断言具体中文前装中文 Provider
+        // （ToolsViewModel 是构造时就生成报告的，所以 Provider 要在 new 之前装好）。
+        using (ChineseProvider.Scope())
+        {
+            var toolsWithText = new ToolsViewModel();
+            Assert.False(string.IsNullOrWhiteSpace(toolsWithText.SystemReport));
+            Assert.Contains(UMango.Core.Platform.SystemInfo.Describe(), toolsWithText.SystemReport);
+        }
 
         // ── 8) 下载器页：命令都可用 ──
         downloader.RefreshEnginesCommand.Execute(null);

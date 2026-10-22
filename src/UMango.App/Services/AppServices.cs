@@ -9,6 +9,7 @@ using UMango.Core.Caching;
 using UMango.Core.Configuration;
 using UMango.Core.Download;
 using UMango.Core.Logging;
+using UMango.Core.Network;
 using UMango.Core.Notifications;
 using UMango.Core.Platform;
 using UMango.Core.PackageManagers;
@@ -84,9 +85,23 @@ public static class AppServices
     /// </summary>
     public static DownloadEngineRegistry DownloadEngines => LazyEngines.Value;
 
+    /// <summary>
+    /// 自更新服务。**懒创建**：大多数会话不会检查更新，
+    /// 没必要在启动路径上建 HttpClient。
+    /// </summary>
+    public static UpdateService Update
+    {
+        get => _update ??= LazyUpdate.Value;
+        set => _update = value;
+    }
+
+    private static UpdateService? _update;
+
     private static readonly Lazy<DownloadEngineRegistry> LazyEngines =
         new(() => new DownloadEngineRegistry(), isThreadSafe: true);
 
+
+    private static readonly Lazy<UpdateService> LazyUpdate = new(() => new UpdateService(new HttpService()));
     /// <summary>
     /// 初始化过程中被吞掉的错误（正常为 null）。
     /// 之所以要暴露出来：错误被 try/catch 吞掉后如果完全没有痕迹，

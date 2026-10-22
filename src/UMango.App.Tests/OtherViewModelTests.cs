@@ -135,15 +135,20 @@ public class OtherViewModelTests
     [Fact]
     public void 设置页提供两种主题族与两种动画方向()
     {
-        var vm = new SettingsViewModel();
-        Assert.Equal(2, vm.Themes.Count);
-        Assert.Equal(2, vm.AnimationDirections.Count);
+        // Themes/AnimationDirections 的 Title/Description 是**字段初始化器**（构造时求值 L()），
+        // 所以 Provider 要在构造之前装好。
+        using (ChineseProvider.Scope())
+        {
+            var vm = new SettingsViewModel();
+            Assert.Equal(2, vm.Themes.Count);
+            Assert.Equal(2, vm.AnimationDirections.Count);
 
-        // 需求要求两种动画矢量都可选（默认镜像 UMango，另一项还原 PCL）
-        Assert.Contains(vm.AnimationDirections, o => o.Mode == UMango.Core.Animation.AnimationDirectionMode.Mirrored);
-        Assert.Contains(vm.AnimationDirections, o => o.Mode == UMango.Core.Animation.AnimationDirectionMode.PclCompatible);
-        Assert.Contains(vm.Themes, t => t.Title.Contains("PCL"));
-        Assert.Contains(vm.Themes, t => t.Title.Contains("Fluent"));
+            // 需求要求两种动画矢量都可选（默认镜像 UMango，另一项还原 PCL）
+            Assert.Contains(vm.AnimationDirections, o => o.Mode == UMango.Core.Animation.AnimationDirectionMode.Mirrored);
+            Assert.Contains(vm.AnimationDirections, o => o.Mode == UMango.Core.Animation.AnimationDirectionMode.PclCompatible);
+            Assert.Contains(vm.Themes, t => t.Title.Contains("PCL"));
+            Assert.Contains(vm.Themes, t => t.Title.Contains("Fluent"));
+        }
     }
 
     [Fact]
@@ -386,24 +391,21 @@ internal sealed class ChineseProvider : UMango.Core.Localization.ITextProvider
 
     public static ScopeHandle Scope()
     {
-        var previous = new Delegate(UMango.Core.Localization.LocalizationService.Text);
+        var previous = UMango.Core.Localization.LocalizationService.CurrentProvider;
         UMango.Core.Localization.LocalizationService.SetTextProvider(new ChineseProvider());
         return new ScopeHandle(previous);
     }
 
+    /// <summary>
+    /// 退出时把 **provider 实例**装回去。
+    /// ⚠ 不要包成"调旧 provider 的委托"那种形式：一旦捕获的是
+    /// <c>LocalizationService.Text</c> 本身，还原后每次取文本都会
+    /// Text → 包装 provider → Text → … 无限递归，直接栈溢出把测试进程炸掉。
+    /// </summary>
     internal readonly struct ScopeHandle : System.IDisposable
     {
-        private readonly Delegate _restore;
-        public ScopeHandle(Delegate restore) => _restore = restore;
-        public void Dispose() => UMango.Core.Localization.LocalizationService.SetTextProvider(new DelegateProvider(_restore));
-    }
-
-    internal delegate string Delegate(string key);
-
-    private sealed class DelegateProvider : UMango.Core.Localization.ITextProvider
-    {
-        private readonly Delegate _f;
-        public DelegateProvider(Delegate f) => _f = f;
-        public string Text(string key) => _f(key);
+        private readonly UMango.Core.Localization.ITextProvider _restore;
+        public ScopeHandle(UMango.Core.Localization.ITextProvider restore) => _restore = restore;
+        public void Dispose() => UMango.Core.Localization.LocalizationService.SetTextProvider(_restore);
     }
 }

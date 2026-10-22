@@ -32,6 +32,15 @@ public static class LocalizationService
     private static ITextProvider _text = KeyOnlyTextProvider.Instance;
 
     /// <summary>替换文案查找提供器（App 启动时调用；测试可随时替换）。</summary>
+    /// <summary>
+    /// 当前生效的文案提供器（供测试捕获后还原）。
+    /// 只读：替换一律走 <see cref="SetTextProvider"/>（那里做 null 回落）。
+    /// </summary>
+    public static ITextProvider CurrentProvider
+    {
+        get { lock (Gate) { return _text; } }
+    }
+
     public static void SetTextProvider(ITextProvider provider)
     {
         lock (Gate) { _text = provider ?? KeyOnlyTextProvider.Instance; }

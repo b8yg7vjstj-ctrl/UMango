@@ -426,4 +426,18 @@
     <sys:String x:Key="Window.Minimize">Minimize</sys:String>
     <sys:String x:Key="Window.Maximize">Maximize</sys:String>
     <sys:String x:Key="Window.Close">Close</sys:String>
+
+    <sys:String x:Key="Settings.Update.Section">Check for updates</sys:String>
+    <sys:String x:Key="Settings.Update.CurrentVersion">Current version: {0}</sys:String>
+    <sys:String x:Key="Settings.Update.Checking">Checking for updates…</sys:String>
+    <sys:String x:Key="Settings.Update.Latest">You are already on the latest version.</sys:String>
+    <sys:String x:Key="Settings.Update.Found">Version {0} is available — you can update now.</sys:String>
+    <sys:String x:Key="Settings.Update.Failed">Update check failed: {0}</sys:String>
+    <sys:String x:Key="Settings.Update.Check">Check for updates</sys:String>
+    <sys:String x:Key="Settings.Update.Apply">Update now</sys:String>
+    <sys:String x:Key="Settings.Update.Downloading">Downloading the new version…</sys:String>
+    <sys:String x:Key="Settings.Update.DownloadProgress">Downloading the new version… {0}%</sys:String>
+    <sys:String x:Key="Settings.Update.DownloadFailed">Download failed: {0}</sys:String>
+    <sys:String x:Key="Settings.Update.Restarting">Restarting to apply the update…</sys:String>
+    <sys:String x:Key="Settings.Update.ApplyFailed">Cannot start the update helper: {0}</sys:String>
 </ResourceDictionary>
