@@ -192,7 +192,7 @@
 | 全局提示/Hint 服务 | `Modules/UI/HintService.cs:21`（`Hint`）、`:99`（`HideAll`）+ `PCL.Core/UI/HintWrapper.cs:16` | 否 | **已完成** | **`HintWrapper.cs`（Apache-2.0）已逐字采用**进 `src/UMango.Core/Pcl/UI/HintWrapper.cs`；`App/Services/PclUiBridge.cs` 把 `OnShow` 汇入 `NotificationService`，`MainWindow.xaml.cs` 的 `ShowToast` 渲染为右下角浮条（对应 PCL 的 `PanHint`，位置/去重/上限与 PCL 对齐）。**队列消费方仍缺**：PCL 的 `HintService.Tick` 逐条出队 + `HideAll` 尚未迁移（见下行） |
 | 系统 Toast 通知（WinRT） | `PCL.Core/UI/ToastNotification.cs:12`（`SendToast`）、`:39`（模板） | 否 | **未做** | WinRT 专用（`Utils/WinRT/`），Windows-only |
 | 主题管理（明暗 + 色相） | `Modules/UI/Theme/ThemeManager.cs:9`（`ThemeRefresh:22`、`ThemeRefreshMain:31`） | 否 | **已完成** | `src/UMango.App/Themes/ThemeManager.cs:34`（`Apply:113`、`ToggleDark:167`、`ThemeChanged:68`），4 套完整字典 `Tokens.{Light,Dark}.{Pcl,Fluent10}.xaml`，**能力更强**（PCL-CE 是单套 + 明暗） |
-| 多语言 i18n | `PCL.Core/App/Localization/Lang.cs` + `Languages/zh-CN.xaml`（**3,583 行**）×4 种实语言（zh-CN/zh-TW/en-US/en-GB）+ 3 个 12 行空壳 | 否 | **未做** | 机制通用（纯 XAML 资源字典），**文本内容高度启动器专用**；`src/` 下 `Language` 关键字仅 1 处误命中（GitHub 搜索语法注释） |
+| 多语言 i18n | `PCL.Core/App/Localization/Lang.cs` + `Languages/zh-CN.xaml`（**3,583 行**）×4 种实语言（zh-CN/zh-TW/en-US/en-GB）+ 3 个 12 行空壳 | 否 | ****已完成（本地化机制 + zh-CN/en-US 双语，392/391 键）** | UMango 版：`src/UMango.Core/Localization/`（Models/Service/ITextProvider）+ `src/UMango.App/Localization/`（AppLocalization + ViewText + Languages/zh-CN.xaml 392 键 / en-US.xaml 391 键）。资源字典分层（兜底 zh-CN 恒加载 + 叠加层只写差异键）、UI 语言与展示格式区域性分离、XAML 静态文案 + ViewModel + code-behind + ToolTip 全覆盖 |（纯 XAML 资源字典），**文本内容高度启动器专用**；`src/` 下 `Language` 关键字仅 1 处误命中（GitHub 搜索语法注释） |
 | 动画引擎 | `PCL.Core/UI/Animation/`（`UI/` 共 129 文件 9,835 行，动画为主体：`Core/` 帧·关键帧·组合·时钟·值处理器，`Easings/` 39 个缓动类） | 否 | **部分** | UMango `src/UMango.Core/Animation/`（4 文件 386 行）：`AnimationPlanner`、`Easing`（39 缓动枚举化）、`AnimationSpec`、`AnimationSettings` + `App/Animation/AnimationPlayer.cs`。**缓动数学与方向语义已迁移**；但 PCL-CE 的**帧动画/关键帧/并联串联组合/多时钟抽象/`IAnimatable` 体系未迁移** |
 | 单实例运行 | `PCL.Core/App/Essentials/SingleInstanceService.cs` | 否 | **已完成** | 实现位置：Core/App/SingleInstance/SingleInstanceGuard.cs（命名互斥 Global\umango-single-instance-<hash> + 命名管道 activate）+ App/Services/SingleInstanceService.cs；App.xaml.cs 接线，OnExit 释放。未采用 PCL 原版的「独占打开文件 + FileShare.Read」——该组合只在 Windows 上互斥，Unix 上会静默失效（测试抓到）。 |0  实现位置：Core/App/SingleInstance/SingleInstanceGuard.cs（命名互斥 + 命名管道激活）+ App/Services/SingleInstanceService.cs；App.xaml.cs 接线，OnExit 释放 |
 | 通知/对话框系统 | `PCL.Core/UI/MsgBoxWrapper.cs`、`SystemDialogs.cs`、`HintWrapper.cs` | 否 | **已完成** | **`MsgBoxWrapper.cs`（Apache-2.0）已逐字采用**进 `src/UMango.Core/Pcl/UI/MsgBoxWrapper.cs`（含 `MsgBoxButtonInfo`/`MsgBoxTheme`/`MsgBoxHandler` 全套契约，`Lang.Text` 由等价桥提供）；`App/Views/PclDialog.xaml` 是主题化对话框（圆角 4、随明暗主题、支持任意按钮集合 + `OnClick` 回调、后台线程编组 + 阻塞语义）。`SystemDialogs.cs` 未迁 |
@@ -275,7 +275,7 @@
 | 游戏管理（下载源/下载版本/线程数/限速/自动选实例/忽略 Quilt/自动装依赖/MC 中文名/剪贴板识别） | `PageSetupGameManage.xaml.cs:20,50,78,100,145`；`PageSetupGameManage.xaml:28,36,44,50,66,140,143,165,168` | 是（**但含通用参数**） | **不适用** | 备注：其中**下载源/线程数/限速**（`.xaml:28,44,50`）形式上与 MC 无关，但它们是**为 MC 资源下载服务的配置项**，脱离 MC 无意义 —— 故整条仍判 MC 专属。UMango 的对应能力是 `DownloadEngineRegistry`（按协议选引擎），**不经过这类设置项** |
 | GameLink 联机设置（用户名/中继服务器/中继类型/协议优先/延迟优先/NAT 端口猜测/IPv6 + 网络测试面板） | `PageSetupGameLink.xaml.cs:27,42,100,113,120,142`；`PageSetupGameLink.xaml:39,45,54,59,65,71,103` | 是（**配置项本身通用**） | **不适用** | 备注：中继/协议/NAT/公网 IPv6 都是通用网络参数，但**服务对象是 MC 联机大厅**（见 2.F） |
 | **界面设置/自定义** | `PageSetupUI.xaml.cs:957` + `PageSetupUI.xaml`（482 行） | **否** | **部分** | UMango `Views/SettingsView.xaml`(512) + `.xaml.cs`(390) + `ViewModels/SettingsViewModel.cs`(237)；已覆盖主题/动画/调试/行为，**缺** PCL-CE 的界面自定义项（背景图、圆角开关、字体等） |
-| **启动器语言** | `PageSetupLauncherLanguage.xaml.cs:224` | **否** | **未做** | 依赖 i18n，见 2.A「多语言」 |
+| **启动器语言** | `PageSetupLauncherLanguage.xaml.cs:224` | **否** | 依赖 i18n（i18n 已完成，此项待启动器本体迁移后再定） | 见 2.A「多语言」 |
 | **启动器杂项** | `PageSetupLauncherMisc.xaml.cs:322` | **否** | **未做** | ⚠️ 未逐项展开确认具体开关（文件 322 行，本次未细读全部选项） |
 | **关于页（含第三方许可清单）** | `PageSetupAbout.xaml.cs:203` + `PageSetupAbout.xaml`（505 行） | **否** | **已完成** | UMango `Views/ToolsView.xaml:217-274`「合规与许可」+「第三方组件」+「关于」；且 UMango 的声明比 PCL-CE 更完整（见 `THIRD-PARTY-NOTICES.md`） |
 | **启动器更新** | `PageSetupUpdate.xaml.cs:284` + `Modules/Updates/UpdateManager.cs:11`（`IsCurrentVersionBeta:26`、`GetVersionStatus:36`） | **否** | **未做** | UMango 有更新**探测提示**（`ToolsView:269` 提及 gh-proxy），但**无自更新下载与替换流程** |
@@ -365,7 +365,7 @@
 ⚠️ **该 commit 的信息里直接写着「功能对照表 P0-3」** —— 即本报告的条目编号被当作工单使用了 |
 | 内部事件总线 | `App/EventBus/`（`EventBusService.cs`、`EventDataBase.cs`、`IEventHandler.cs`、`IResponsibleEventHandler.cs`） | 否 | **已完成** |  实现位置：Core/Events/ |
 | IoC / 生命周期 | `App/IoC/`（`LifecycleService.cs`、`DependencyGroup.cs`、`LifecycleFlow.cs`、`PropertyAccessor.cs` 等） | 否 | **部分** | UMango 用 `AppServices.cs:32` 的 `Lazy<T>` 静态服务定位，**无容器、无生命周期阶段** |
-| 本地化服务 | `App/Localization/`（`Lang.cs`、`LocalizationService.cs`、`LocalizationFontService.cs` + 7 个语言 XAML） | 否 | **未做** | 见 2.A |
+| 本地化服务 | `App/Localization/`（`Lang.cs`、`LocalizationService.cs`、`LocalizationFontService.cs` + 7 个语言 XAML） | 否 | ****已完成（本地化机制 + zh-CN/en-US 双语，392/391 键）** | 见 2.A；字体配置（LocalizationFontService）未做 —— UMango 用同一套 SystemFont，无逐语言字体需求 | |
 | 路径与环境 | `App/Paths.cs`、`App/Basics.cs`、`App/Metadata.cs` | 否 | **部分** | UMango `Platform/SystemInfo.cs`（`PlatformKind.cs`）、`AppServices.cs:138`（`SettingsPath`） |
 | 密钥与凭据保护 | `App/Secrets.cs`、`Utils/Secret/`（`EncryptHelper.cs`、`Identify.cs`）、`Utils/Encryption/`（AesGcm/AesCbc/ChaCha20 ×2 + 软件实现） | 否 | **未做** | ⚠️ 依赖 CNG/DPAPI（Windows）与 `System.Security.Cryptography.ProtectedData`、`PlainToolkit.CngProtectedData` |
 | 单实例 / 启动校验 / 崩溃上报 | `App/Essentials/SingleInstanceService.cs`、`StartupValidation.cs`、`TelemetryService.cs`（Sentry） | 否 | **未做** | |
@@ -579,7 +579,7 @@
 
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
-| P2-1 | **多语言 i18n** | 未做 | **高** | `App/Localization/`（`Lang.cs` + 服务 + 字体配置 + 7 语言 XAML，实语言各 3,583 行） | 否（但用 WPF 资源字典） |
+| P2-1 | **多语言 i18n** | **已完成（本地化机制 + zh-CN/en-US 双语，392/391 键）** | **高** | `App/Localization/`（`Lang.cs` + 服务 + 字体配置 + 7 语言 XAML，实语言各 3,583 行） | 否（用 WPF 资源字典，与 PCL 同路线） |
 | P2-2 | **动画系统补齐**（帧动画/关键帧/组合/时钟抽象/`IAnimatable`） | 部分 | **中**（⚠️ 由「高」下调） | `UI/Animation/`（**87 文件 / 2,742 行**） | **部分**（仅 14/87 文件触及 WPF，且 UMango 也是 WPF，故这类文件**可直接用**） |
 | P2-3 | **系统信息与硬件** | 部分 | **中** | `Utils/OS/`（14 文件） | **部分是**（注册表、`NtInterop`、`KernelInterop`、`WindowInterop`、`AumidHelper`） |
 | P2-4 | IoC / 生命周期 | 部分 | **中** | `App/IoC/`（14 文件） | 否 |
