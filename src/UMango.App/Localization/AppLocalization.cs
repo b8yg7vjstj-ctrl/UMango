@@ -110,6 +110,7 @@ private const string DictPrefix = "pack://application:,,,/umango.app;component/l
             _currentDict = LoadDictionary(languageCode);
             if (_currentDict is not null) dicts.Add(_currentDict);
         }
+        PublishTextProvider();
     }
 
     private static ResourceDictionary? LoadDictionary(string languageCode)
@@ -212,6 +213,31 @@ private const string DictPrefix = "pack://application:,,,/umango.app;component/l
 
     /// <summary>设置页下拉框的一项。</summary>
     public sealed record LanguageOption(string Code, string DisplayName);
+
+    /// <summary>
+    /// 把 WPF 资源字典包装成 <see cref="ITextProvider"/>，装进
+    /// <see cref="LocalizationService"/>。这样业务层/ViewModel 就能在**不引用
+    /// Application 类型**的前提下取本地化文案 —— 那个类型在 macOS 测试宿主里
+    /// 会让 PresentationFramework 加载失败（App.Tests 56 处构造 ViewModel）。
+    /// </summary>
+    private sealed class ResourceDictionaryTextProvider : ITextProvider
+    {
+        private readonly Func<string, string?> _lookup;
+
+        public ResourceDictionaryTextProvider(Func<string, string?> lookup) => _lookup = lookup;
+
+        public string Text(string key) => _lookup(key) ?? key;
+    }
+
+    /// <summary>
+    /// 让 <see cref="LocalizationService.Text"/> 走本类的资源字典查找。
+    /// 在 <see cref="ApplyDictionaries"/> 之后调用（字典已就位）。
+    /// </summary>
+    private static void PublishTextProvider()
+    {
+        LocalizationService.SetTextProvider(
+            new ResourceDictionaryTextProvider(key => Application.Current?.TryFindResource(key) as string));
+    }
 }
 
 /// <summary>

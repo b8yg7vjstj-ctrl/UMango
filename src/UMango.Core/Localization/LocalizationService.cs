@@ -24,6 +24,28 @@ public static class LocalizationService
     private static LocalizationLanguage _current = LocalizationModels.ResolveLanguage(LocalizationModels.Auto);
     private static CultureInfo _formatCulture = CultureInfo.CurrentCulture;
 
+    /// <summary>
+    /// 文案查找提供器。默认是 <see cref="KeyOnlyTextProvider"/>（无 UI 环境直接返回键）；
+    /// App 层启动时把它换成资源字典实现，于是一切 <c>Text(key)</c> 都走本地化文案。
+    /// 测试可以直接换成一个查表实现来断言文案键是否正确。
+    /// </summary>
+    private static ITextProvider _text = KeyOnlyTextProvider.Instance;
+
+    /// <summary>替换文案查找提供器（App 启动时调用；测试可随时替换）。</summary>
+    public static void SetTextProvider(ITextProvider provider)
+    {
+        lock (Gate) { _text = provider ?? KeyOnlyTextProvider.Instance; }
+    }
+
+    /// <summary>
+    /// 取当前语言下的文案。**不会抛异常**：键不存在时返回键本身，
+    /// 因此业务代码可以放心在构造函数里调用（不要求资源字典已就绪）。
+    /// </summary>
+    public static string Text(string key)
+    {
+        lock (Gate) { return _text.Text(key); }
+    }
+
     /// <summary>当前 UI 语言。</summary>
     public static LocalizationLanguage CurrentLanguage
     {
