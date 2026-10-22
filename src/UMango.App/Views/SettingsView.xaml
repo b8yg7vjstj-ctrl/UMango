@@ -279,9 +279,9 @@
     <StackPanel Margin="20,18,20,24">
 
       <!-- 页面标题 + 操作反馈（应用主题/清空/重新加载的结果都显示在这一行） -->
-      <TextBlock Text="设置" FontSize="16" FontWeight="Bold"
+      <TextBlock Text="{DynamicResource Settings.Title}" FontSize="16" FontWeight="Bold"
                  Foreground="{DynamicResource BrC1}"/>
-      <TextBlock Text="主题与外观、调试模式、管理记录" FontSize="12" Margin="0,4,0,0"
+      <TextBlock Text="{DynamicResource Settings.Subtitle}" FontSize="12" Margin="0,4,0,0"
                  Foreground="{DynamicResource BrG3}"/>
       <TextBlock x:Name="StatusText" Text="{Binding StatusMessage}" FontSize="12"
                  Foreground="{DynamicResource BrC2}" TextWrapping="Wrap" Margin="0,8,0,0">
@@ -301,10 +301,10 @@
       <!-- ==================== ① 主题与外观 ==================== -->
       <Border Style="{DynamicResource PclCard}" Padding="14" Margin="0,14,0,12">
         <StackPanel>
-          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="主题与外观"/>
+          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Settings.Section.Appearance}"/>
           <TextBlock FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG3}"
-                     Text="主题切换立即生效，无需重启：界面的颜色/字体全部用 DynamicResource 引用主题 token（BrC1、BrG6、UiFont…），ThemeManager 在运行时整块替换 token 字典后，所有元素自动重新取值。"/>
+                     Text="{DynamicResource Settings.Appearance.Hint}"/>
 
           <!-- 主题族：选中即应用（TwoWay 绑定 ViewModel.SelectedTheme + SelectionChanged 触发 Apply） -->
           <ListBox x:Name="ThemeList" Margin="0,10,0,0"
@@ -323,11 +323,11 @@
                   SnapsToDevicePixels="True">
             <StackPanel>
               <CheckBox x:Name="DarkToggle" Style="{DynamicResource PclSwitch}"
-                        Content="深色模式" IsChecked="{Binding IsDark, Mode=TwoWay}"
+                        Content="{DynamicResource Settings.DarkMode}" IsChecked="{Binding IsDark, Mode=TwoWay}"
                         Click="DarkToggle_Click"/>
               <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
                          Foreground="{DynamicResource BrG3}"
-                         Text="深色模式在当前主题族上即时切换（PCL 经典深色 / Windows10 Fluent 深色），对全窗口所有页面生效。"/>
+                         Text="{DynamicResource Settings.DarkMode.Hint}"/>
             </StackPanel>
           </Border>
 
@@ -345,19 +345,19 @@
       -->
       <Border Style="{DynamicResource PclCard}" Padding="14" Margin="0,0,0,12">
         <StackPanel>
-          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="动画"/>
+          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Settings.Section.Animation}"/>
           <TextBlock FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG3}"
-                     Text="动画的方向矢量是可切换的：默认使用 UMango 自有矢量（与 PCL-CE 刻意镜像），也可切回与 PCL-CE 完全一致的观感。切换后立即生效并持久化。"/>
+                     Text="{DynamicResource Settings.Animation.Hint}"/>
 
           <CheckBox x:Name="AnimationToggle" Style="{DynamicResource PclSwitch}" Margin="0,10,0,0"
-                    Content="启用动画" IsChecked="{Binding AnimationEnabled, Mode=TwoWay}"/>
+                    Content="{DynamicResource Settings.Animation.Enable}" IsChecked="{Binding AnimationEnabled, Mode=TwoWay}"/>
           <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG3}"
-                     Text="关闭后所有动画时长归零、元素直接落到终态（不会留下半透明或偏移的残影）。"/>
+                     Text="{DynamicResource Settings.Animation.DisableHint}"/>
 
           <TextBlock FontSize="12" Margin="0,12,0,4"
-                     Foreground="{DynamicResource BrG3}" Text="方向矢量"/>
+                     Foreground="{DynamicResource BrG3}" Text="{DynamicResource Settings.Animation.Direction}"/>
           <ListBox x:Name="AnimationDirectionList" BorderThickness="0" Background="Transparent"
                    ItemsSource="{Binding AnimationDirections}"
                    SelectedItem="{Binding SelectedAnimationDirection, Mode=TwoWay}">
@@ -418,7 +418,7 @@
       <!-- ==================== ② 调试 ==================== -->
       <Border Style="{DynamicResource PclCard}" Padding="14" Margin="0,0,0,12">
         <StackPanel>
-          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="调试"/>
+          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Settings.Section.Debug}"/>
           <Border Margin="0,8,0,0" Padding="10,9" CornerRadius="4"
                   Background="{DynamicResource BrCard}"
                   BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
@@ -426,10 +426,10 @@
             <StackPanel>
               <!-- 绑定写到 SettingsViewModel.DebugMode，它写穿到 Core 的静态开关 TerminalBridge.DebugMode -->
               <CheckBox x:Name="DebugToggle" Style="{DynamicResource PclSwitch}"
-                        Content="调试模式" IsChecked="{Binding DebugMode, Mode=TwoWay}"/>
+                        Content="{DynamicResource Settings.DebugMode}" IsChecked="{Binding DebugMode, Mode=TwoWay}"/>
               <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
                          Foreground="{DynamicResource BrG3}"
-                         Text="开启后保留终端的完整输出，并在进度页把内联终端输出区展开显示（可按子项步骤查看每一步的全部日志）；关闭时只保留最近若干行，避免超长输出拖慢界面渲染。该开关与进度页共用同一个 TerminalBridge.DebugMode 状态，因此两处显示永远一致，且会被持久化、下次启动保持。"/>
+                         Text="{DynamicResource Settings.DebugMode.Hint}"/>
             </StackPanel>
           </Border>
         </StackPanel>
@@ -438,7 +438,7 @@
       <!-- ==================== ③ 记录管理 ==================== -->
       <Border Style="{DynamicResource PclCard}" Padding="14">
         <StackPanel>
-          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="记录管理"/>
+          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Settings.Section.Records}"/>
 
           <!--
             统计：总次数 / 成功 / 失败。
@@ -449,36 +449,36 @@
           <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
             <StackPanel>
               <TextBlock x:Name="StatTotalText" Text="0" Style="{DynamicResource StatNumber}"/>
-              <TextBlock Text="总次数" Style="{DynamicResource StatCaption}"/>
+              <TextBlock Text="{DynamicResource Settings.Records.Total}" Style="{DynamicResource StatCaption}"/>
             </StackPanel>
             <Border Width="1" Margin="20,2,20,2" Background="{DynamicResource BrG6}"/>
             <StackPanel>
               <TextBlock x:Name="StatSuccessText" Text="0" Style="{DynamicResource StatNumber}"
                          Foreground="{DynamicResource BrC3}"/>
-              <TextBlock Text="成功" Style="{DynamicResource StatCaption}"/>
+              <TextBlock Text="{DynamicResource Settings.Records.Success}" Style="{DynamicResource StatCaption}"/>
             </StackPanel>
             <Border Width="1" Margin="20,2,20,2" Background="{DynamicResource BrG6}"/>
             <StackPanel>
               <TextBlock x:Name="StatFailureText" Text="0" Style="{DynamicResource StatNumber}"
                          Foreground="{DynamicResource BrRed}"/>
-              <TextBlock Text="失败" Style="{DynamicResource StatCaption}"/>
+              <TextBlock Text="{DynamicResource Settings.Records.Failed}" Style="{DynamicResource StatCaption}"/>
             </StackPanel>
           </StackPanel>
 
           <!-- 按包源的次数（降序，条形按最大次数等比缩放；数据由视图侧整理后赋值给 ItemsSource） -->
-          <TextBlock Text="按包源" FontSize="12" FontWeight="SemiBold" Margin="0,16,0,0"
+          <TextBlock Text="{DynamicResource Settings.Records.BySource}" FontSize="12" FontWeight="SemiBold" Margin="0,16,0,0"
                      Foreground="{DynamicResource BrC1}"/>
           <ItemsControl x:Name="SourceCountList" Margin="0,6,0,0"
                         ItemTemplate="{DynamicResource SourceCountRowTemplate}"/>
-          <TextBlock x:Name="SourceCountEmpty" Text="暂无次数记录。" FontSize="12" Margin="0,2,0,0"
+          <TextBlock x:Name="SourceCountEmpty" Text="{DynamicResource Settings.Records.EmptyCounts}" FontSize="12" Margin="0,2,0,0"
                      Foreground="{DynamicResource BrG4}" Visibility="Collapsed"/>
 
           <Border Height="1" Margin="0,16,0,0" Background="{DynamicResource BrG6}"/>
 
           <!-- 最近记录（时间倒序，最多 50 条） -->
-          <TextBlock Text="最近记录" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,0"
+          <TextBlock Text="{DynamicResource Settings.Records.Recent}" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,0"
                      Foreground="{DynamicResource BrC1}"/>
-          <TextBlock Text="时间倒序，最多显示最近 50 条。" FontSize="11" Margin="0,2,0,0"
+          <TextBlock Text="{DynamicResource Settings.Records.RecentHint}" FontSize="11" Margin="0,2,0,0"
                      Foreground="{DynamicResource BrG3}"/>
 
           <!-- 表头：列宽与 RecordRowTemplate 保持一致，改动时两处要一起改 -->
@@ -491,18 +491,18 @@
               <ColumnDefinition Width="130"/>
               <ColumnDefinition Width="70"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="时间" Style="{DynamicResource ColumnCaption}"/>
-            <TextBlock Grid.Column="1" Text="包源" Style="{DynamicResource ColumnCaption}"/>
-            <TextBlock Grid.Column="2" Text="包名" Style="{DynamicResource ColumnCaption}"/>
-            <TextBlock Grid.Column="3" Text="操作" Style="{DynamicResource ColumnCaption}"/>
-            <TextBlock Grid.Column="4" Text="结果" Style="{DynamicResource ColumnCaption}"/>
-            <TextBlock Grid.Column="5" Text="耗时" Style="{DynamicResource ColumnCaption}"
+            <TextBlock Grid.Column="0" Text="{DynamicResource Settings.Records.Column.Time}" Style="{DynamicResource ColumnCaption}"/>
+            <TextBlock Grid.Column="1" Text="{DynamicResource Settings.Records.Column.Source}" Style="{DynamicResource ColumnCaption}"/>
+            <TextBlock Grid.Column="2" Text="{DynamicResource Settings.Records.Column.Package}" Style="{DynamicResource ColumnCaption}"/>
+            <TextBlock Grid.Column="3" Text="{DynamicResource Settings.Records.Column.Action}" Style="{DynamicResource ColumnCaption}"/>
+            <TextBlock Grid.Column="4" Text="{DynamicResource Settings.Records.Column.Result}" Style="{DynamicResource ColumnCaption}"/>
+            <TextBlock Grid.Column="5" Text="{DynamicResource Settings.Records.Column.Duration}" Style="{DynamicResource ColumnCaption}"
                        HorizontalAlignment="Right"/>
           </Grid>
           <Border Height="1" Margin="0,6,0,0" Background="{DynamicResource BrG6}"/>
 
           <ItemsControl x:Name="RecordList" ItemTemplate="{DynamicResource RecordRowTemplate}"/>
-          <TextBlock x:Name="RecordEmpty" Text="暂无管理记录，完成一次安装/卸载/升级后这里会出现流水。"
+          <TextBlock x:Name="RecordEmpty" Text="{DynamicResource Settings.Records.Empty}"
                      FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG4}" Visibility="Collapsed"/>
 
@@ -512,14 +512,14 @@
 
           <!-- 操作按钮：「重新加载」重读磁盘；「清空记录」不可撤销，命令内部带二次确认 -->
           <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-            <Button x:Name="BtnReload" Content="重新加载"
+            <Button x:Name="BtnReload" Content="{DynamicResource Settings.Records.Reload}"
                     Style="{DynamicResource PclActionButton}" Click="Reload_Click"/>
             <!-- 用 RelativeSource 找页面自身，而不是 ElementName="PageRoot"：
                  根元素自身的 x:Name 是否进入本文件的名称范围属于 WPF 的灰色地带
                  （本机无法运行 WPF，只能静态推断），而 FindAncestor 是标准做法
                  （下载页的 InstallCommand 也是这么写的）。两种写法在本页都会拿到同一个实例，
                  这里选不会静默失效的那个 —— 否则「清空记录」会变成点不动的按钮。 -->
-            <Button x:Name="BtnClearRecords" Content="清空记录" Margin="10,0,0,0"
+            <Button x:Name="BtnClearRecords" Content="{DynamicResource Settings.Records.Clear}" Margin="10,0,0,0"
                     Style="{DynamicResource PclDangerButton}"
                     Command="{Binding DataContext.ClearRecordsCommand,
                                       RelativeSource={RelativeSource AncestorType={x:Type views:SettingsView}}}"

@@ -41,6 +41,7 @@ public sealed class Audit(string appRoot)
         Console.WriteLine();
 
         CheckThemeParity(files);
+        CheckLanguageParity(files);
 
         foreach (var file in files)
         {
@@ -99,6 +100,57 @@ public sealed class Audit(string appRoot)
                 f.RelativePath, 0,
                 $"缺少 {missing.Count} 个键（其它主题字典有而它没有）：{Truncate(string.Join(", ", missing), 200)}"
                 + " —— 切到这套主题时这些键会静默失效，退回 WPF 默认值"));
+        }
+    }
+
+
+    /// <summary>
+    /// 语言字典的键一致性（**对称**检查，比主题字典更严格）。
+    ///
+    /// 与 <see cref="CheckThemeParity"/> 的"并集"口径不同：语言文件是**分层叠加**的 ——
+    /// 兜底层（zh-CN）始终加载，叠加层（en-US）只写差异键。因此：
+    ///   · 叠加层缺键 → 合法（继承兜底层）；
+    ///   · 叠加层有兜底层没有的键 → **危险**：那个键在中文界面下永远找不到，
+    ///     而且说明拼错了（本意多半是覆盖兜底层的某个键）。
+    /// 这条正是手工核对时容易漏的：只要中文对，拼错的英文键不会在任何地方报错。
+    /// 曾实际发生过一次（Settings.Section.Language 被 git checkout 连带还原掉），
+    /// 故固化为静态检查。
+    /// </summary>
+    private void CheckLanguageParity(List<XamlFile> files)
+    {
+        var langFiles = files
+            .Where(f => f.RelativePath.Replace('\\', '/').Contains("Localization/Languages/", StringComparison.Ordinal))
+            .OrderBy(f => f.RelativePath, StringComparer.Ordinal)
+            .ToList();
+
+        if (langFiles.Count < 2) return;
+
+        var fallback = langFiles.FirstOrDefault(f =>
+            Path.GetFileName(f.RelativePath).StartsWith("zh-CN", StringComparison.OrdinalIgnoreCase));
+        if (fallback is null) return;
+
+        foreach (var f in langFiles.Where(f => !ReferenceEquals(f, fallback)))
+        {
+            // 叠加层越界键：兜底层没有的键
+            var extra = f.DefinedKeys.Where(k => !fallback.DefinedKeys.Contains(k)).OrderBy(k => k, StringComparer.Ordinal).ToList();
+            if (extra.Count > 0)
+            {
+                _findings.Add(new Finding("ERROR", "语言一致性",
+                    f.RelativePath, 0,
+                    $"有 {extra.Count} 个兜底层（zh-CN）不存在的键：{Truncate(string.Join(", ", extra), 200)}"
+                    + " —— 拼错的话这些键在中文界面下永远找不到，切到该语言时才暴露"));
+            }
+
+            // 兜底层缺失键：界面引用到但没有任何语言提供
+            var missing = fallback.DefinedKeys.Where(k => !f.DefinedKeys.Contains(k))
+                .OrderBy(k => k, StringComparer.Ordinal).ToList();
+            if (missing.Count > 0)
+            {
+                _findings.Add(new Finding("WARN", "语言一致性",
+                    f.RelativePath, 0,
+                    $"{Path.GetFileName(f.RelativePath)} 未覆盖 {missing.Count} 个兜底层键（合法：会继承中文文案）："
+                    + Truncate(string.Join(", ", missing), 200)));
+            }
         }
     }
 

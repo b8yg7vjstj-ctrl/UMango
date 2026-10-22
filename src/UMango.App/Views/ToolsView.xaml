@@ -27,7 +27,7 @@
               <ColumnDefinition Width="*"/>
               <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Style="{DynamicResource PclSectionTitle}" Text="系统诊断"
+            <TextBlock Grid.Column="0" Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Tools.Diagnostics}"
                        VerticalAlignment="Center"/>
             <Button Grid.Column="1" Content="重新探测" Padding="12,3" Cursor="Hand" FontSize="12"
                     Foreground="{DynamicResource BrC1}" Background="{DynamicResource BrG8}"
@@ -52,28 +52,28 @@
               <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="平台" FontSize="12" Margin="0,0,0,6"
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Tools.Platform}" FontSize="12" Margin="0,0,0,6"
                        Foreground="{DynamicResource BrG3}"/>
             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding PlatformSummaryText}" FontSize="12"
                        Margin="0,0,0,6" Foreground="{DynamicResource BrC1}"/>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="处理器架构" FontSize="12" Margin="0,0,0,6"
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Tools.Architecture}" FontSize="12" Margin="0,0,0,6"
                        Foreground="{DynamicResource BrG3}"/>
             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ArchitectureText}" FontSize="12"
                        Margin="0,0,0,6" Foreground="{DynamicResource BrC1}"/>
 
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="是否 Windows" FontSize="12" Margin="0,0,0,6"
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Tools.IsWindows}" FontSize="12" Margin="0,0,0,6"
                        Foreground="{DynamicResource BrG3}"/>
             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding HostText}" FontSize="12"
                        Margin="0,0,0,6" Foreground="{DynamicResource BrC1}"/>
 
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="用户主目录" FontSize="12" Margin="0,0,0,6"
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Tools.HomeDirectory}" FontSize="12" Margin="0,0,0,6"
                        Foreground="{DynamicResource BrG3}"/>
             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding HomeDirectoryText}" FontSize="12"
                        Margin="0,0,0,6" Foreground="{DynamicResource BrC1}"
                        TextTrimming="CharacterEllipsis" ToolTip="{Binding HomeDirectoryText}"/>
 
-            <TextBlock Grid.Row="4" Grid.Column="0" Text="记录文件" FontSize="12"
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="{DynamicResource Tools.RecordFile}" FontSize="12"
                        Foreground="{DynamicResource BrG3}"/>
             <TextBlock Grid.Row="4" Grid.Column="1" FontSize="12" Foreground="{DynamicResource BrC1}"
                        TextTrimming="CharacterEllipsis" ToolTip="{Binding RecordsPathText}">
@@ -87,7 +87,7 @@
                   Background="{DynamicResource BrG8}"
                   Visibility="{Binding HasInitializationWarning, Converter={StaticResource BoolToVis}}">
             <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource BrRed}">
-              <Run Text="初始化警告：" FontWeight="SemiBold"/><Run
+              <Run Text="{DynamicResource Tools.InitWarning}" FontWeight="SemiBold"/><Run
                 Text="{Binding InitializationWarningText, Mode=OneWay}"/>
             </TextBlock>
           </Border>
@@ -95,9 +95,9 @@
           <Border Height="1" Margin="0,12,0,10" Background="{DynamicResource BrG6}"/>
 
           <!-- 包源 CLI 探测明细：CLI 路径 / CLI 版本 / 状态 / 明细 -->
-          <TextBlock Text="包源 CLI 探测明细" FontSize="12" FontWeight="SemiBold"
+          <TextBlock Text="{DynamicResource Tools.ProbeDetail}" FontSize="12" FontWeight="SemiBold"
                      Foreground="{DynamicResource BrC1}"/>
-          <TextBlock Text="「安装目录」是该包管理器管理包的位置；「CLI」是探测到的命令行工具路径与版本。"
+          <TextBlock Text="{DynamicResource Tools.DirectoryHint}"
                      FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG3}"/>
 
@@ -108,10 +108,10 @@
               <ColumnDefinition Width="*"/>
               <ColumnDefinition Width="112"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="1" Text="包源" FontSize="11" Foreground="{DynamicResource BrG4}"/>
-            <TextBlock Grid.Column="2" Text="CLI 路径 / 版本" FontSize="11"
+            <TextBlock Grid.Column="1" Text="{DynamicResource Tools.Column.Package}" FontSize="11" Foreground="{DynamicResource BrG4}"/>
+            <TextBlock Grid.Column="2" Text="{DynamicResource Tools.CliPathVersion}" FontSize="11"
                        Foreground="{DynamicResource BrG4}"/>
-            <TextBlock Grid.Column="3" Text="状态" FontSize="11" Foreground="{DynamicResource BrG4}"/>
+            <TextBlock Grid.Column="3" Text="{DynamicResource Tools.Column.State}" FontSize="11" Foreground="{DynamicResource BrG4}"/>
           </Grid>
           <Border Height="1" Background="{DynamicResource BrG6}"/>
 
@@ -152,13 +152,13 @@
                   <!-- 第二行：安装目录 +（未验证提示）+ 探测明细 -->
                   <TextBlock FontSize="11" Margin="112,2,0,0" TextWrapping="Wrap"
                              Foreground="{DynamicResource BrG4}">
-                    <Run Text="安装目录："/><Run Text="{Binding InstallDirectory, Mode=OneWay}"/>
+                    <Run Text="{DynamicResource Tools.InstallDirectory}"/><Run Text="{Binding InstallDirectory, Mode=OneWay}"/>
                   </TextBlock>
 
                   <TextBlock FontSize="11" Margin="112,2,0,0" TextWrapping="Wrap"
                              Foreground="{DynamicResource BrG2}"
                              Visibility="{Binding HasVerificationNote, Converter={StaticResource BoolToVis}}">
-                    <Run Text="未在真机验证："/><Run Text="{Binding VerificationNote, Mode=OneWay}"/>
+                    <Run Text="{DynamicResource Tools.NotVerified}"/><Run Text="{Binding VerificationNote, Mode=OneWay}"/>
                   </TextBlock>
 
                   <TextBlock FontSize="11" Margin="112,2,0,0" TextWrapping="Wrap"
@@ -185,7 +185,7 @@
           </Border>
 
           <!-- 纯文本诊断报告：可直接复制进 issue，不必逐行截图 -->
-          <TextBlock Text="诊断报告（可复制）" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,6"
+          <TextBlock Text="{DynamicResource Tools.Report}" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,6"
                      Foreground="{DynamicResource BrC1}"/>
           <Border Padding="10,8" CornerRadius="4" Background="{DynamicResource BrG8}"
                   BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
@@ -214,7 +214,7 @@
       <!-- ===================== 2) 合规与许可卡 ===================== -->
       <Border Style="{DynamicResource PclCard}" Padding="16,14" Margin="0,12,0,0">
         <StackPanel>
-          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="合规与许可"/>
+          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Tools.Compliance}"/>
 
           <!--
             ★★★ 合规声明（逐字固定，不得改写）★★★
@@ -230,15 +230,15 @@
                   BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
             <TextBlock FontSize="12" TextWrapping="Wrap" LineHeight="20"
                        Foreground="{DynamicResource BrC1}">
-              <Run Text="UMango 是独立开发的第三方软件，与 PCL / PCL-CE 及其开发者无任何关联。"/><LineBreak/>
-              <Run Text="界面设计参照 PCL-CE，本项目未复制其源代码、XAML 或图片资源；"/><LineBreak/>
-              <Run Text="所采用 PCL-CE 代码仅限以 Apache-2.0 授权的 PCL.Core 部分，且逐文件标注了来源与变更。"/><LineBreak/>
-              <Run Text="界面图标使用 ISC 许可的 lucide。"/>
+              <Run Text="{DynamicResource Tools.Disclaimer}"/><LineBreak/>
+              <Run Text="{DynamicResource Tools.DesignReference}"/><LineBreak/>
+              <Run Text="{DynamicResource Tools.AdoptedCode}"/><LineBreak/>
+              <Run Text="{DynamicResource Tools.IconLicense}"/>
             </TextBlock>
           </Border>
 
           <!-- 第三方组件与各自许可 -->
-          <TextBlock Text="第三方组件" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,4"
+          <TextBlock Text="{DynamicResource Tools.ThirdParty}" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,4"
                      Foreground="{DynamicResource BrC1}"/>
           <ItemsControl ItemsSource="{Binding ThirdPartyComponents}">
             <ItemsControl.ItemTemplate>
@@ -266,14 +266,14 @@
 
           <TextBlock FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG3}"
-                     Text="仓库内 THIRD-PARTY-NOTICES.md 载有完整声明、被采用文件的逐项来源与变更说明；Apache-2.0 全文见 https://www.apache.org/licenses/LICENSE-2.0"/>
+                     Text="{DynamicResource Tools.Notice}"/>
         </StackPanel>
       </Border>
 
       <!-- ===================== 3) 关于卡 ===================== -->
       <Border Style="{DynamicResource PclCard}" Padding="16,14" Margin="0,12,0,0">
         <StackPanel>
-          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="关于"/>
+          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Tools.About}"/>
 
           <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
             <Border Width="40" Height="40" CornerRadius="8" Background="{DynamicResource BrC3}">
@@ -288,7 +288,7 @@
                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-              <TextBlock Text="UMango" FontSize="16" FontWeight="Bold"
+              <TextBlock Text="{DynamicResource Common.AppName}" FontSize="16" FontWeight="Bold"
                          Foreground="{DynamicResource BrC1}"/>
               <TextBlock Text="{Binding VersionText}" FontSize="12" Margin="0,2,0,0"
                          Foreground="{DynamicResource BrG3}"/>
@@ -297,16 +297,16 @@
 
           <TextBlock Margin="0,12,0,0" FontSize="12" TextWrapping="Wrap" LineHeight="20"
                      Foreground="{DynamicResource BrG2}"
-                     Text="UMango 是一个跨平台包管理器图形界面：把 npm / pnpm / Git / Scoop / WinGet / Homebrew 六个包源收进同一个界面，按不同下载方式拆分子项进度并实时显示终端输出，同时记录每一次安装/卸载/升级的次数与结果。&#x0a;技术栈为 .NET 10 + WPF；业务层（UMango.Core）独立于界面，界面只通过 Core 的公开 API 取数。"/>
+                     Text="{DynamicResource Tools.ProjectIntro}"/>
 
-          <TextBlock Text="构建信息" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,6"
+          <TextBlock Text="{DynamicResource Tools.BuildInfo}" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,6"
                      Foreground="{DynamicResource BrC1}"/>
           <Border Padding="10,8" CornerRadius="4" Background="{DynamicResource BrG8}">
             <TextBlock Text="{Binding BuildInfoText}" FontSize="11" TextWrapping="Wrap"
                        Foreground="{DynamicResource BrG2}"/>
           </Border>
 
-          <TextBlock Text="程序目录" FontSize="12" FontWeight="SemiBold" Margin="0,12,0,6"
+          <TextBlock Text="{DynamicResource Tools.ProgramDirectory}" FontSize="12" FontWeight="SemiBold" Margin="0,12,0,6"
                      Foreground="{DynamicResource BrC1}"/>
           <TextBlock Text="{Binding AppPathText}" FontSize="11" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG4}"/>

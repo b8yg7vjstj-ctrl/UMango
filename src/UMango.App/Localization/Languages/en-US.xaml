@@ -71,20 +71,67 @@
 
     <!-- ============ Settings ============ -->
     <sys:String x:Key="Settings.Title">Settings</sys:String>
+    <sys:String x:Key="Settings.Subtitle">Theme &amp; appearance, debug mode, records</sys:String>
     <sys:String x:Key="Settings.Section.Appearance">Theme &amp; appearance</sys:String>
-    <sys:String x:Key="Settings.Section.Debug">Debug mode</sys:String>
-    <sys:String x:Key="Settings.Section.Records">Records</sys:String>
+    <sys:String x:Key="Settings.Appearance.Hint">Theme changes apply immediately, no restart needed: all colors and fonts reference theme tokens (BrC1, BrG6, UiFont…) via DynamicResource, so replacing the token dictionary at runtime re-resolves every element.</sys:String>
+    <sys:String x:Key="Settings.DarkMode">Dark mode</sys:String>
+    <sys:String x:Key="Settings.DarkMode.Hint">Toggles dark mode on the current theme family (PCL Classic dark / Windows 10 Fluent dark) across every page in the window.</sys:String>
+    <sys:String x:Key="Settings.Section.Animation">Animation</sys:String>
+    <sys:String x:Key="Settings.Animation.Hint">The animation direction vector is switchable: UMango's own vector by default (deliberately mirrored from PCL-CE), or the exact PCL-CE feel. Applies immediately and persists.</sys:String>
+    <sys:String x:Key="Settings.Animation.Enable">Enable animation</sys:String>
+    <sys:String x:Key="Settings.Animation.DisableHint">When off, all animation durations become zero and elements land directly in their final state (no half-transparent or offset leftovers).</sys:String>
+    <sys:String x:Key="Settings.Animation.Direction">Direction vector</sys:String>
     <sys:String x:Key="Settings.Section.Language">Language</sys:String>
     <sys:String x:Key="Settings.Language.Hint">UI language. Applies immediately and persists across restarts.</sys:String>
-    <sys:String x:Key="Settings.Language.FollowSystem">Follow system</sys:String>
-    <sys:String x:Key="Settings.DebugMode.Hint">Keep the full terminal output and expand the inline terminal pane on the progress page (per step). When off, only the last few lines are kept to avoid slowing down rendering.</sys:String>
+    <sys:String x:Key="Settings.Section.Debug">Debug</sys:String>
+    <sys:String x:Key="Settings.DebugMode">Debug mode</sys:String>
+    <sys:String x:Key="Settings.DebugMode.Hint">Keep the full terminal output and expand the inline terminal pane on the progress page (per step). When off, only the last few lines are kept to avoid slowing down rendering. This switch shares one TerminalBridge.DebugMode state with the progress page, so the two views always agree, and it persists across restarts.</sys:String>
+    <sys:String x:Key="Settings.Section.Records">Records</sys:String>
+    <sys:String x:Key="Settings.Records.Total">Total</sys:String>
+    <sys:String x:Key="Settings.Records.Success">Succeeded</sys:String>
+    <sys:String x:Key="Settings.Records.Failed">Failed</sys:String>
+    <sys:String x:Key="Settings.Records.BySource">By source</sys:String>
+    <sys:String x:Key="Settings.Records.EmptyCounts">No records yet.</sys:String>
+    <sys:String x:Key="Settings.Records.Recent">Recent records</sys:String>
+    <sys:String x:Key="Settings.Records.RecentHint">Newest first, at most the last 50.</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Time">Time</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Source">Source</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Package">Package</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Action">Action</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Result">Result</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Duration">Duration</sys:String>
+    <sys:String x:Key="Settings.Records.Empty">No records yet. Install, uninstall or upgrade something and the history appears here.</sys:String>
+    <sys:String x:Key="Settings.Records.Reload">Reload</sys:String>
+    <sys:String x:Key="Settings.Records.Clear">Clear records</sys:String>
 
     <!-- ============ Tools ============ -->
     <sys:String x:Key="Tools.Title">Tools</sys:String>
     <sys:String x:Key="Tools.Diagnostics">System diagnostics</sys:String>
     <sys:String x:Key="Tools.InstallDirectory">Install directory</sys:String>
-    <sys:String x:Key="Tools.ProbeDetail">Probe details</sys:String>
+    <sys:String x:Key="Tools.ProgramDirectory">Program directory</sys:String>
+    <sys:String x:Key="Tools.HomeDirectory">Home directory</sys:String>
+    <sys:String x:Key="Tools.Platform">Platform</sys:String>
+    <sys:String x:Key="Tools.Architecture">Architecture</sys:String>
+    <sys:String x:Key="Tools.IsWindows">Is Windows</sys:String>
+    <sys:String x:Key="Tools.CliPathVersion">CLI path / version</sys:String>
+    <sys:String x:Key="Tools.Column.Package">Source</sys:String>
+    <sys:String x:Key="Tools.Column.State">Status</sys:String>
+    <sys:String x:Key="Tools.ProbeDetail">CLI probe details</sys:String>
+    <sys:String x:Key="Tools.NotVerified">Not verified on real hardware</sys:String>
+    <sys:String x:Key="Tools.InitWarning">Initialization warning</sys:String>
+    <sys:String x:Key="Tools.RecordFile">Record file</sys:String>
     <sys:String x:Key="Tools.Report">Diagnostics report (copyable)</sys:String>
+    <sys:String x:Key="Tools.About">About</sys:String>
+    <sys:String x:Key="Tools.ThirdParty">Third-party components</sys:String>
+    <sys:String x:Key="Tools.BuildInfo">Build information</sys:String>
+    <sys:String x:Key="Tools.Compliance">Compliance &amp; licensing</sys:String>
+    <sys:String x:Key="Tools.DirectoryHint">"Install directory" is where the package manager keeps its packages; "CLI" is the probed command-line tool path and version.</sys:String>
+    <sys:String x:Key="Tools.Disclaimer">UMango is an independent third-party application and is not affiliated with PCL / PCL-CE or its developers.</sys:String>
+    <sys:String x:Key="Tools.DesignReference">The UI is modelled on PCL-CE; this project does not copy its source code, XAML or image assets;</sys:String>
+    <sys:String x:Key="Tools.AdoptedCode">Adopted PCL-CE code is limited to the Apache-2.0 licensed PCL.Core, annotated per file with origin and changes.</sys:String>
+    <sys:String x:Key="Tools.Notice">See THIRD-PARTY-NOTICES.md in the repository for the full notice, per-file origin and change notes; the Apache-2.0 text is at https://www.apache.org/licenses/LICENSE-2.0</sys:String>
+    <sys:String x:Key="Tools.ProjectIntro">UMango is a cross-platform package manager GUI: npm / pnpm / Git / Scoop / WinGet / Homebrew in one window, with per-download-method step progress, live terminal output, and a record of every install/uninstall/upgrade.&#x0a;Built on .NET 10 + WPF; the business layer (UMango.Core) is UI-agnostic and reached only through its public API.</sys:String>
+    <sys:String x:Key="Tools.IconLicense">UI icons use lucide (ISC licensed).</sys:String>
 
     <!-- ============ Log ============ -->
     <sys:String x:Key="Log.Title">Log</sys:String>

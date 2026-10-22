@@ -78,20 +78,67 @@
 
     <!-- ============ 设置页 ============ -->
     <sys:String x:Key="Settings.Title">设置</sys:String>
+    <sys:String x:Key="Settings.Subtitle">主题与外观、调试模式、管理记录</sys:String>
     <sys:String x:Key="Settings.Section.Appearance">主题与外观</sys:String>
-    <sys:String x:Key="Settings.Section.Debug">调试模式</sys:String>
-    <sys:String x:Key="Settings.Section.Records">管理记录</sys:String>
+    <sys:String x:Key="Settings.Appearance.Hint">主题切换立即生效，无需重启：界面的颜色/字体全部用 DynamicResource 引用主题 token（BrC1、BrG6、UiFont…），ThemeManager 在运行时整块替换 token 字典后，所有元素自动重新取值。</sys:String>
+    <sys:String x:Key="Settings.DarkMode">深色模式</sys:String>
+    <sys:String x:Key="Settings.DarkMode.Hint">深色模式在当前主题族上即时切换（PCL 经典深色 / Windows10 Fluent 深色），对全窗口所有页面生效。</sys:String>
+    <sys:String x:Key="Settings.Section.Animation">动画</sys:String>
+    <sys:String x:Key="Settings.Animation.Hint">动画的方向矢量是可切换的：默认使用 UMango 自有矢量（与 PCL-CE 刻意镜像），也可切回与 PCL-CE 完全一致的观感。切换后立即生效并持久化。</sys:String>
+    <sys:String x:Key="Settings.Animation.Enable">启用动画</sys:String>
+    <sys:String x:Key="Settings.Animation.DisableHint">关闭后所有动画时长归零、元素直接落到终态（不会留下半透明或偏移的残影）。</sys:String>
+    <sys:String x:Key="Settings.Animation.Direction">方向矢量</sys:String>
     <sys:String x:Key="Settings.Section.Language">语言</sys:String>
     <sys:String x:Key="Settings.Language.Hint">界面语言。切换后立即生效，下次启动保持。</sys:String>
-    <sys:String x:Key="Settings.Language.FollowSystem">跟随系统</sys:String>
-    <sys:String x:Key="Settings.DebugMode.Hint">开启后保留终端的完整输出，并在进度页把内联终端输出区展开显示（可按子项步骤查看每一步的全部日志）；关闭时只保留最近若干行，避免超长输出拖慢界面渲染。</sys:String>
+    <sys:String x:Key="Settings.Section.Debug">调试</sys:String>
+    <sys:String x:Key="Settings.DebugMode">调试模式</sys:String>
+    <sys:String x:Key="Settings.DebugMode.Hint">开启后保留终端的完整输出，并在进度页把内联终端输出区展开显示（可按子项步骤查看每一步的全部日志）；关闭时只保留最近若干行，避免超长输出拖慢界面渲染。该开关与进度页共用同一个 TerminalBridge.DebugMode 状态，因此两处显示永远一致，且会被持久化、下次启动保持。</sys:String>
+    <sys:String x:Key="Settings.Section.Records">记录管理</sys:String>
+    <sys:String x:Key="Settings.Records.Total">总次数</sys:String>
+    <sys:String x:Key="Settings.Records.Success">成功</sys:String>
+    <sys:String x:Key="Settings.Records.Failed">失败</sys:String>
+    <sys:String x:Key="Settings.Records.BySource">按包源</sys:String>
+    <sys:String x:Key="Settings.Records.EmptyCounts">暂无次数记录。</sys:String>
+    <sys:String x:Key="Settings.Records.Recent">最近记录</sys:String>
+    <sys:String x:Key="Settings.Records.RecentHint">时间倒序，最多显示最近 50 条。</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Time">时间</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Source">包源</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Package">包名</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Action">操作</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Result">结果</sys:String>
+    <sys:String x:Key="Settings.Records.Column.Duration">耗时</sys:String>
+    <sys:String x:Key="Settings.Records.Empty">暂无管理记录，完成一次安装/卸载/升级后这里会出现流水。</sys:String>
+    <sys:String x:Key="Settings.Records.Reload">重新加载</sys:String>
+    <sys:String x:Key="Settings.Records.Clear">清空记录</sys:String>
 
     <!-- ============ 工具页 ============ -->
     <sys:String x:Key="Tools.Title">工具</sys:String>
     <sys:String x:Key="Tools.Diagnostics">系统诊断</sys:String>
     <sys:String x:Key="Tools.InstallDirectory">安装目录</sys:String>
-    <sys:String x:Key="Tools.ProbeDetail">探测明细</sys:String>
+    <sys:String x:Key="Tools.ProgramDirectory">程序目录</sys:String>
+    <sys:String x:Key="Tools.HomeDirectory">用户主目录</sys:String>
+    <sys:String x:Key="Tools.Platform">平台</sys:String>
+    <sys:String x:Key="Tools.Architecture">处理器架构</sys:String>
+    <sys:String x:Key="Tools.IsWindows">是否 Windows</sys:String>
+    <sys:String x:Key="Tools.CliPathVersion">CLI 路径 / 版本</sys:String>
+    <sys:String x:Key="Tools.Column.Package">包源</sys:String>
+    <sys:String x:Key="Tools.Column.State">状态</sys:String>
+    <sys:String x:Key="Tools.ProbeDetail">包源 CLI 探测明细</sys:String>
+    <sys:String x:Key="Tools.NotVerified">未在真机验证</sys:String>
+    <sys:String x:Key="Tools.InitWarning">初始化警告</sys:String>
+    <sys:String x:Key="Tools.RecordFile">记录文件</sys:String>
     <sys:String x:Key="Tools.Report">诊断报告（可复制）</sys:String>
+    <sys:String x:Key="Tools.About">关于</sys:String>
+    <sys:String x:Key="Tools.ThirdParty">第三方组件</sys:String>
+    <sys:String x:Key="Tools.BuildInfo">构建信息</sys:String>
+    <sys:String x:Key="Tools.Compliance">合规与许可</sys:String>
+    <sys:String x:Key="Tools.DirectoryHint">「安装目录」是该包管理器管理包的位置；「CLI」是探测到的命令行工具路径与版本。</sys:String>
+    <sys:String x:Key="Tools.Disclaimer">UMango 是独立开发的第三方软件，与 PCL / PCL-CE 及其开发者无任何关联。</sys:String>
+    <sys:String x:Key="Tools.DesignReference">界面设计参照 PCL-CE，本项目未复制其源代码、XAML 或图片资源；</sys:String>
+    <sys:String x:Key="Tools.AdoptedCode">所采用 PCL-CE 代码仅限以 Apache-2.0 授权的 PCL.Core 部分，且逐文件标注了来源与变更。</sys:String>
+    <sys:String x:Key="Tools.Notice">仓库内 THIRD-PARTY-NOTICES.md 载有完整声明、被采用文件的逐项来源与变更说明；Apache-2.0 全文见 https://www.apache.org/licenses/LICENSE-2.0</sys:String>
+    <sys:String x:Key="Tools.ProjectIntro">UMango 是一个跨平台包管理器图形界面：把 npm / pnpm / Git / Scoop / WinGet / Homebrew 六个包源收进同一个界面，按不同下载方式拆分子项进度并实时显示终端输出，同时记录每一次安装/卸载/升级的次数与结果。&#x0a;技术栈为 .NET 10 + WPF；业务层（UMango.Core）独立于界面，界面只通过 Core 的公开 API 取数。</sys:String>
+    <sys:String x:Key="Tools.IconLicense">界面图标使用 ISC 许可的 lucide。</sys:String>
 
     <!-- ============ 日志页 ============ -->
     <sys:String x:Key="Log.Title">日志</sys:String>
