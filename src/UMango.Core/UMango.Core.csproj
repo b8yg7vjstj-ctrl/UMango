@@ -43,6 +43,7 @@
   <ItemGroup>
     <!-- 唯一依赖：MVVM 基础设施（ObservableObject / RelayCommand），跨平台 -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="LiteDB" Version="5.0.21" />
   </ItemGroup>
 
   <!--

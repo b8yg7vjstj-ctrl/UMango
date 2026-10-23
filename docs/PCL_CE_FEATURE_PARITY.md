@@ -372,7 +372,7 @@
 | RPC 服务 | `App/Essentials/RpcService.cs`、`RpcFunction.cs`、`RpcProperty.cs`、`RpcResponse.cs` | 否 | **未做** | |
 | 应用/窗口服务 | `App/Essentials/ApplicationService.cs`、`MainWindowService.cs`、`PromoteService.cs` | 否 | **部分** | UMango 在 `MainWindow.xaml.cs` 内直接实现 |
 | 命令行参数解析 | `App/Cli/`（`CommandLine.cs`、`TextArgument.cs`、`DecimalArgument.cs`、`BoolArgument.cs`、`SubcommandDefinition.cs`） | 否 | **已完成** |  实现位置：Core/Utils/（--flag / --key=value） |
-| 数据库服务 | `App/Database/`（`DatabaseService.cs`、`DatabaseEntry.cs` + README） | 否 | **未做** | `grep -ril Database src/` = 0 |
+| 数据库服务 | `App/Database/`（`DatabaseService.cs`、`DatabaseEntry.cs` + README） | 否 | **已完成** | **`src/UMango.Core/Database/DatabaseService.cs` / `DatabaseEntry.cs`**（Apache-2.0 层）+ **LiteDB 5.0.21（MIT，无传染性）**。PCL 原版 48 行代码依赖其自有 IoC 生命周期体系（`GeneralService`/`LifecycleServiceAttribute`，13 文件），为 48 行引入整个框架不成比例，故**只保留语义、重写实现**（连接按路径缓存、空路径即抛、退出时统一释放）。`DatabaseEntry` 保留 PCL 的结构与命名，仅把幂等闸门从 `Dispose(bool)` 移到非虚的 `Dispose()` —— 原写法下子类 override 会绕过闸门，清理逻辑重复执行（13 测试守着） |
 | HTTP 客户端扩展（代理/缓存/路由/内容处理） | `IO/Net/Http/`（`HttpRequest.cs`、`HttpProxyManager.cs`、`HttpCacheHandler.cs`、`HttpRoute.cs`、`HttpServer.cs`、`HttpBasicExtension.cs` 等） | 否 | **已完成** | 体量大且通用；UMango 仅 `HttpClient` 裸用  实现位置：Core/Network/HttpService.cs + IHttpService |
 | DNS 查询与加权竞速 | `IO/Net/Dns/`（`DnsQuery.cs`、`WeightedDnsRacerClient.cs`、`DnsSrvResource.cs`） | 否 | **未做** | |
 | TCP 端口转发 | `IO/Net/SocketForward/`（`TcpForwardBuilder.cs`、`TcpForwardConfig.cs`、`TcpForwardWorker.cs`） | 否 | **未做** | 给 MC 联机用，但**本身是通用 TCP 转发** |
@@ -558,7 +558,7 @@
 
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
-| P0-1 | **持久化缓存服务**（SQLite + 内容寻址 + 淘汰策略） | 未做 | **中** | `IO/Storage/Cache/`（13 文件，`CacheService.cs`、`SqliteCacheStorage.cs`、`CacheEvictionService.cs`、`CachePolicy.cs`、`SchemaManager.cs`） | 否（纯 .NET）——但引入 `Microsoft.Data.Sqlite` + `SQLitePCLRaw.bundle_e_sqlite3` 两个 NuGet 包，**与"不加新依赖"约束冲突，需项目所有者裁决** |
+| P0-1 | **持久化缓存服务**（SQLite + 内容寻址 + 淘汰策略） | **已完成**（等价实现） | **中** | `IO/Storage/Cache/`（13 文件，`CacheService.cs`、`SqliteCacheStorage.cs`、`CacheEvictionService.cs`、`CachePolicy.cs`、`SchemaManager.cs`） | 否（纯 .NET）—— **不引入 `Microsoft.Data.Sqlite`**：`src/UMango.Core/Caching/AvailabilityCache.cs` 用 JSON 文件实现了同一套 `IAvailabilityCache` 抽象（数据量极小：六个包源、每天一次），依赖冲突自然消解；将来内容变复杂时替换实现即可，接口已隔离。另：本轮**数据库服务**（`App/Database/`，对应 LiteDB）已单独完成，见主表「数据库服务」行 |
 | P0-2 | **配置体系补齐**（多后端 + 源生成器 + 事件） | 部分（描述符驱动已有） | **中** | `App/Configuration/`（**28 文件 / 2,478 行**：`ConfigService.cs:19`、`Storage/` 5 种后端（JSON/YAML/CatIni/加密/动态缓存）、`ConfigStorage.cs:24`、`ConfigMigration.cs`）+ `PCL.Core.SourceGenerators/`（5 生成器 2,039 行） | 部分（`EncryptedFileConfigStorage` → `Utils/Secret/EncryptHelper` 走 Windows DPAPI/CNG；其余零 Windows 依赖） |
 | P0-3 | **日志系统** | ✅ **已完成**（commit `f2cc0b9`，Core 5 文件 429 行 + LogView 404 行） | — | 已由并发任务实现，**该 commit 明确引用本报告的条目编号「P0-3」** | 否 |
 | P0-4 | **已安装包列表接入界面** | **已完成**（commit `39f5259`，`DownloadViewModel.cs:84,245`） | — | 无需迁移 —— 是 UMango 自己的能力 | 否 |
