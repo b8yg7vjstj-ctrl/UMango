@@ -46,6 +46,9 @@ public partial class MainWindow : Window
     /// </summary>
     private Services.TaskbarProgressBridge? _taskbar;
 
+    /// <summary>系统通知桥接（Windows 专用，其它平台上是空转）。</summary>
+    private Services.ToastBridge? _toast;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -81,6 +84,10 @@ public partial class MainWindow : Window
         // 放在构造末尾：此时 TaskbarItemInfo 已由 InitializeComponent 建好。
         _taskbar = new Services.TaskbarProgressBridge(this);
         _taskbar.Start();
+
+        // 系统通知：任务做完/失败时发一条 Windows Toast（窗口不在前台也能看到）。
+        // 放在任务栏桥接旁边：两者都订阅 TaskCenter.Changed，同一时机启动、同一时机释放。
+        _toast = new Services.ToastBridge();
         Closed += (_, _) => _ = DisposeTaskbarAsync();
     }
 
@@ -94,6 +101,12 @@ public partial class MainWindow : Window
         {
             await _taskbar.DisposeAsync();
             _taskbar = null;
+        }
+
+        if (_toast is not null)
+        {
+            _toast.Dispose();
+            _toast = null;
         }
     }
 

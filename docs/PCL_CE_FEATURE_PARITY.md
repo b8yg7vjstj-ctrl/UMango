@@ -190,7 +190,7 @@
 | 视频/动态背景 | `Modules/ModVideoBack.cs:3`（172 行） | 否 | **未做** | 依赖 WPF MediaElement + 游戏中状态判定（`IsGaming:7`） |
 | 内嵌 WebServer | `Modules/ModWebServer.cs:10`（345 行） | 部分 | **未做** | `StartWebServer:20` / `NaidCallbackServer:112`；是个通用 HTTP 服务器，但 PCL-CE 用它接 **MC 登录 OAuth 回调** |
 | 全局提示/Hint 服务 | `Modules/UI/HintService.cs:21`（`Hint`）、`:99`（`HideAll`）+ `PCL.Core/UI/HintWrapper.cs:16` | 否 | **已完成** | **`HintWrapper.cs`（Apache-2.0）已逐字采用**进 `src/UMango.Core/Pcl/UI/HintWrapper.cs`；`App/Services/PclUiBridge.cs` 把 `OnShow` 汇入 `NotificationService`，`MainWindow.xaml.cs` 的 `ShowToast` 渲染为右下角浮条（对应 PCL 的 `PanHint`，位置/去重/上限与 PCL 对齐）。**队列消费方仍缺**：PCL 的 `HintService.Tick` 逐条出队 + `HideAll` 尚未迁移（见下行） |
-| 系统 Toast 通知（WinRT） | `PCL.Core/UI/ToastNotification.cs:12`（`SendToast`）、`:39`（模板） | 否 | **未做** | WinRT 专用（`Utils/WinRT/`），Windows-only |
+| 系统 Toast 通知（WinRT） | `PCL.Core/UI/ToastNotification.cs:12`（`SendToast`）、`:39`（模板） | 否 | **已完成** | **`ToastNotification.cs` + `Utils/WinRT/**`（10 文件，全部 Apache-2.0）已逐字采用**进 `src/UMango.Core/UI/ToastNotification.cs`、`src/UMango.Core/Utils/WinRT/`，含 WinRT 裸 vtable 互操作。`Utils/OS/AumidHelper.cs` 改 Aumid 为 `UMango.UMango`、主色 `FF1370F3`。`App/Services/ToastBridge.cs` 订阅 `TaskCenter.Changed`，对**进入终态**（Success/Failed）的任务去重推送，Failed 附 `StateMessage` 原因。非 Windows 在发送处短路。**注意**：`UMango.Core.csproj` 按 TFM 条件编译把这三个目录排除出 `net10.0` 支，保持 Core 的跨平台可编译性 |
 | 主题管理（明暗 + 色相） | `Modules/UI/Theme/ThemeManager.cs:9`（`ThemeRefresh:22`、`ThemeRefreshMain:31`） | 否 | **已完成** | `src/UMango.App/Themes/ThemeManager.cs:34`（`Apply:113`、`ToggleDark:167`、`ThemeChanged:68`），4 套完整字典 `Tokens.{Light,Dark}.{Pcl,Fluent10}.xaml`，**能力更强**（PCL-CE 是单套 + 明暗） |
 | 多语言 i18n | `PCL.Core/App/Localization/Lang.cs` + `Languages/zh-CN.xaml`（**3,583 行**）×4 种实语言（zh-CN/zh-TW/en-US/en-GB）+ 3 个 12 行空壳 | 否 | ****已完成（本地化机制 + zh-CN/en-US 双语，392/391 键）** | UMango 版：`src/UMango.Core/Localization/`（Models/Service/ITextProvider）+ `src/UMango.App/Localization/`（AppLocalization + ViewText + Languages/zh-CN.xaml 392 键 / en-US.xaml 391 键）。资源字典分层（兜底 zh-CN 恒加载 + 叠加层只写差异键）、UI 语言与展示格式区域性分离、XAML 静态文案 + ViewModel + code-behind + ToolTip 全覆盖 |（纯 XAML 资源字典），**文本内容高度启动器专用**；`src/` 下 `Language` 关键字仅 1 处误命中（GitHub 搜索语法注释） |
 | 动画引擎 | `PCL.Core/UI/Animation/`（`UI/` 共 129 文件 9,835 行，动画为主体：`Core/` 帧·关键帧·组合·时钟·值处理器，`Easings/` 39 个缓动类） | 否 | **部分** | UMango `src/UMango.Core/Animation/`（4 文件 386 行）：`AnimationPlanner`、`Easing`（39 缓动枚举化）、`AnimationSpec`、`AnimationSettings` + `App/Animation/AnimationPlayer.cs`。**缓动数学与方向语义已迁移**；但 PCL-CE 的**帧动画/关键帧/并联串联组合/多时钟抽象/`IAnimatable` 体系未迁移** |
@@ -278,7 +278,7 @@
 | **启动器语言** | `PageSetupLauncherLanguage.xaml.cs:224` | **否** | 依赖 i18n（i18n 已完成，此项待启动器本体迁移后再定） | 见 2.A「多语言」 |
 | **启动器杂项** | `PageSetupLauncherMisc.xaml.cs:322` | **否** | **未做** | ⚠️ 未逐项展开确认具体开关（文件 322 行，本次未细读全部选项） |
 | **关于页（含第三方许可清单）** | `PageSetupAbout.xaml.cs:203` + `PageSetupAbout.xaml`（505 行） | **否** | **已完成** | UMango `Views/ToolsView.xaml:217-274`「合规与许可」+「第三方组件」+「关于」；且 UMango 的声明比 PCL-CE 更完整（见 `THIRD-PARTY-NOTICES.md`） |
-| **启动器更新** | `PageSetupUpdate.xaml.cs:284` + `Modules/Updates/UpdateManager.cs:11`（`IsCurrentVersionBeta:26`、`GetVersionStatus:36`） | **否** | **未做** | UMango 有更新**探测提示**（`ToolsView:269` 提及 gh-proxy），但**无自更新下载与替换流程** |
+| **启动器更新** | `PageSetupUpdate.xaml.cs:284` + `Modules/Updates/UpdateManager.cs:11`（`IsCurrentVersionBeta:26`、`GetVersionStatus:36`） | **否** | **已完成** | UMango 已实现完整自更新闭环：`Core/App/Essentials/UpdateHelper.cs`（PCL Apache-2.0 逐行移植）、`UpdateChecker.cs`（GitHub Releases Feed + SemVer 严格解析 + 预发布双通道判定）、`UpdateCommandLine.cs`（助手进程协议）、`App/Services/UpdateService.cs`、`ViewModels/UpdateViewModel.cs` + 设置页「检查更新」卡 + `App.Program.Main` 的助手分支。差异：UMango 只有 GitHub Releases 单源（PCL 的 Minio/MirrorChyan/随机/包装多源架构见本表第 305 行，未迁移） |
 | **反馈** | `PageSetupFeedback.xaml.cs:195` + `TagId:12` | **否** | **未做** | 含标签分类提交；UMango 全库无 `Feedback` |
 | **日志设置/查看** | `PageSetupLog.xaml.cs:163` | **否** | **已完成** | 实现位置：App/Views/LogView.xaml（等级筛选 4 档、刷新、清空显示、打开日志目录、导出诊断包）+ ViewModels/LogViewModel.cs + Core/Logging/（FileLogSink/MemoryLogSink）。与 PCL 的 PageSetupLog 功能对齐。 |
 
@@ -368,7 +368,7 @@
 | 本地化服务 | `App/Localization/`（`Lang.cs`、`LocalizationService.cs`、`LocalizationFontService.cs` + 7 个语言 XAML） | 否 | ****已完成（本地化机制 + zh-CN/en-US 双语，392/391 键）** | 见 2.A；字体配置（LocalizationFontService）未做 —— UMango 用同一套 SystemFont，无逐语言字体需求 | |
 | 路径与环境 | `App/Paths.cs`、`App/Basics.cs`、`App/Metadata.cs` | 否 | **部分** | UMango `Platform/SystemInfo.cs`（`PlatformKind.cs`）、`AppServices.cs:138`（`SettingsPath`） |
 | 密钥与凭据保护 | `App/Secrets.cs`、`Utils/Secret/`（`EncryptHelper.cs`、`Identify.cs`）、`Utils/Encryption/`（AesGcm/AesCbc/ChaCha20 ×2 + 软件实现） | 否 | **未做** | ⚠️ 依赖 CNG/DPAPI（Windows）与 `System.Security.Cryptography.ProtectedData`、`PlainToolkit.CngProtectedData` |
-| 单实例 / 启动校验 / 崩溃上报 | `App/Essentials/SingleInstanceService.cs`、`StartupValidation.cs`、`TelemetryService.cs`（Sentry） | 否 | **未做** | |
+| 单实例 / 启动校验 / 崩溃上报 | `App/Essentials/SingleInstanceService.cs`、`StartupValidation.cs`、`TelemetryService.cs`（Sentry） | 否 | **部分** | **单实例已完成**（commit 9715e65）：改用命名互斥锁（.NET 跨进程原语）而非 PCL 的 FileShare 锁 —— 后者在 macOS/Linux 上是咨询锁，不互斥（测试抓到的真实缺陷）；激活通道用命名管道。崩溃上报（Sentry）未做（需外部服务，且 UMango 有本地日志+诊断包导出作为替代） |
 | RPC 服务 | `App/Essentials/RpcService.cs`、`RpcFunction.cs`、`RpcProperty.cs`、`RpcResponse.cs` | 否 | **未做** | |
 | 应用/窗口服务 | `App/Essentials/ApplicationService.cs`、`MainWindowService.cs`、`PromoteService.cs` | 否 | **部分** | UMango 在 `MainWindow.xaml.cs` 内直接实现 |
 | 命令行参数解析 | `App/Cli/`（`CommandLine.cs`、`TextArgument.cs`、`DecimalArgument.cs`、`BoolArgument.cs`、`SubcommandDefinition.cs`） | 否 | **已完成** |  实现位置：Core/Utils/（--flag / --key=value） |
@@ -591,7 +591,7 @@
 | P2-10 | 加密算法族 + 密钥保护 | 未做 | **中** | `Utils/Encryption/`（5 文件）、`Utils/Secret/`（3 文件）、`App/Secrets.cs` | **部分是**（DPAPI/CNG） |
 | P2-11 | 主题体系补齐（LAB 色彩、色调档、系统主题跟随） | 部分 | **中** | `UI/Theme/`（5 文件）、`UI/NColor.cs` | **部分是**（`SystemThemeHelper`） |
 | P2-12 | 统一对话框/提示封装 | 部分 | **低** | `UI/MsgBoxWrapper.cs`、`SystemDialogs.cs`、`UI/HintWrapper.cs` | 否 |
-| P2-13 | 系统 Toast 通知 | 未做 | **中** | `UI/ToastNotification.cs` + `Utils/WinRT/`（8 文件） | **是**（WinRT 专用） |
+| P2-13 | 系统 Toast 通知 | **已完成** | **中** | `src/UMango.Core/UI/ToastNotification.cs` + `Utils/WinRT/**`（10 文件）+ `Utils/OS/AumidHelper.cs`（Apache-2.0 逐字采用）+ `src/UMango.App/Services/ToastBridge.cs`（自写桥接，7 测试） | **是**（WinRT 专用，net10.0-windows 支） |
 | P2-14 | SVG 图标运行时渲染 | 部分 | **中** | `UI/Controls/SvgIcon/`（10 文件） | **是**（WPF 几何） |
 | P2-15 | 模糊/特效 | 未做 | **中** | `UI/Effects/`（4 文件） | **是**（P/Invoke） |
 | P2-16 | 灰度（哀悼日）模式 | 未做 | **低** | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | **是**（WPF 特效） |

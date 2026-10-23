@@ -30,11 +30,32 @@
         这里用复数 TargetFrameworks，SDK 会优先按复数的多目标处理 Core。）
     -->
     <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
+
+    <!--
+      WinRT Toast 互操作（Utils/WinRT/ + UI/ToastNotification.cs）是原生 unsafe 代码
+      （裸函数指针 vtable 调用）。这些文件**只参与 net10.0-windows 编译**
+      （见下方 ItemGroup 的 Condition），因此这里只需为 windows 支打开 unsafe；
+      net10.0 支保持纯净 —— 那正是"Core 真的与平台无关"的编译期证明。
+    -->
+    <AllowUnsafeBlocks Condition="'$(TargetFramework)' == 'net10.0-windows'">true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- 唯一依赖：MVVM 基础设施（ObservableObject / RelayCommand），跨平台 -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <!--
+    WinRT Toast 互操作只编进 net10.0-windows：它用的是 Windows 专属的 COM vtable
+    （IToastNotifier / IXmlDocumentIO / HString 等），net10.0 支既没有对应的
+    框架引用也不该有。排除而非 #if 的理由：这些文件里几乎每行都带指针类型，
+    用预处理包起来会让"逐字采用"变成"逐字采用但已认不出来"。
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0-windows'">
+    <Compile Remove="UI/ToastNotification.cs" />
+    <Compile Remove="Utils/WinRT/**/*.cs" />
+    <!-- AumidHelper 只用 Microsoft.Win32 注册表，同样是 Windows-only -->
+    <Compile Remove="Utils/OS/AumidHelper.cs" />
   </ItemGroup>
 
 </Project>
