@@ -32,12 +32,40 @@ public partial class App : Application
     /// </summary>
     private static bool _isFirstInstance = true;
 
+    /// <summary>
+    /// 当前生效的灰度控制器。设置页改开关时用它立即施加，
+    /// 否则光写设置项要等到下次启动或换主题才看得见效果。
+    /// 为 <c>null</c> 表示在测试宿主里没有窗口与资源字典。
+    /// </summary>
+    public static Themes.GrayModeController? Gray => _grayInstance;
+
+    /// <summary>
+    /// 当前生效的资源字典。<c>null</c> 表示无 UI 宿主（单元测试）。
+    /// 放在这里而不是让 ViewModel 碰 <c>Application.Current</c>：
+    /// 那会让 ViewModel 直接引用 WPF 类型，在 macOS 测试宿主里加载 PresentationFramework 时崩。
+    /// </summary>
+    public static ResourceDictionary? GrayResources => Current?.Resources;
+
+    /// <summary>
+    /// 灰度（哀悼日）模式控制器。必须在 <see cref="ApplySavedTheme"/> **之后**创建：
+    /// 它要改写的是「当前生效」那套 token 字典里的画笔，先换字典再脱色才对。
+    /// </summary>
+    private Themes.GrayModeController? _gray;
+
+    /// <summary>同一实例的静态可达形式，供 ViewModel 立即施加灰度。</summary>
+    private static Themes.GrayModeController? _grayInstance;
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         SeedServices();
         HookGlobalExceptionHandlers();
         ApplySavedTheme();
         ApplySavedLanguage();
+
+        // 灰度：挂在 ApplySavedTheme 之后 —— 它改的是「当前生效」那套字典的画笔。
+        _gray = _grayInstance = new Themes.GrayModeController();
+        _gray.ApplyFromSettings(Current.Resources);
+        ThemeManager.ThemeChanged += OnThemeChangedForGray;
 
         // 单实例：第二个实例通知首个实例激活主窗口后自行退出。
         // 思路来源：PCL-CE SingleInstanceService（Apache-2.0）—— 单例锁 + 命名管道传激活指令。
@@ -161,6 +189,14 @@ public partial class App : Application
             // 释放单例锁：删掉锁文件，避免进程被强杀后残留的锁让后续启动
             // 永远误判为"已有实例"（那时用户将永远打不开第二个窗口）。
             Services.SingleInstanceService.DisposeAsync().AsTask().GetAwaiter().GetResult();
+
+            // 还原灰度改写的画笔：进程虽然在退出，但画刷可能被静态引用持有，
+            // 留着脱色值会在设计器/复用场景下造成"颜色莫名其妙一直是灰的"。
+            if (_gray is not null)
+            {
+                _gray.Dispose();
+                _gray = null;
+            }
         }
         catch (Exception)
         {
@@ -214,6 +250,10 @@ public partial class App : Application
             Log.ErrorAt("App", ex, member: "ApplySavedLanguage");
         }
     }
+
+    /// <summary>主题深浅/主题族切换后，重算灰度（两套音色不同）。</summary>
+    private void OnThemeChangedForGray()
+        => _gray?.OnThemeChanged(Current.Resources);
 
     private static void ApplySavedTheme()
     {

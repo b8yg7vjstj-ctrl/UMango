@@ -40,6 +40,27 @@ public partial class SettingsViewModel : ObservableObject
     /// </summary>
     public UpdateViewModel Update { get; } = new();
 
+    /// <summary>
+    /// 灰度（哀悼日）模式开关。写到 <see cref="GrayModeController.GrayModeKey"/> 是唯一权威；
+    /// 控制器本身挂在 <c>App</c> 上并订阅 <c>ThemeManager.ThemeChanged</c>，
+    /// 所以这里只管设置项与界面状态，不必自己施加特效。
+    /// </summary>
+    public bool GrayMode
+    {
+        get => AppSettings.Settings.Get<bool>(UMango.App.Themes.GrayModeController.GrayModeKey);
+        set
+        {
+            if (value == GrayMode) return;
+            AppSettings.Settings.Set(UMango.App.Themes.GrayModeController.GrayModeKey, value);
+            AppSettings.Save();
+
+            // 立即施加，而不是只写设置项等下次启动：开关类设置项的反馈必须是即时的。
+            // 无 UI 宿主（单元测试）里 Gray 为 null，此时只落盘。
+            App.Gray?.SetEnabled(value, App.GrayResources);
+            OnPropertyChanged(nameof(GrayMode));
+        }
+    }
+
     public IReadOnlyList<ThemeOption> Themes { get; } =
     [
         new ThemeOption(ThemeKind.PclClassic, L("Settings.Theme.PclName"),

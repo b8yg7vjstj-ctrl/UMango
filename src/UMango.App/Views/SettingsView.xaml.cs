@@ -226,6 +226,15 @@ public partial class SettingsView : UserControl
         UpdateThemeCaption();
     }
 
+    /// <summary>
+    /// 灰度模式开关：只把值写回 ViewModel（进而落到设置项），
+    /// 实际脱色由 App 上的 <c>GrayModeController</c> 完成。
+    /// </summary>
+    private void GrayToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox box) ViewModel.GrayMode = box.IsChecked == true;
+    }
+
     /// <summary>ThemeManager 的事件（Apply 内部已编组到 UI 线程），刷新"当前生效字典"回显。</summary>
     private void OnThemeChanged() => UpdateThemeCaption();
 

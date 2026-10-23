@@ -440,4 +440,7 @@
     <sys:String x:Key="Settings.Update.DownloadFailed">Download failed: {0}</sys:String>
     <sys:String x:Key="Settings.Update.Restarting">Restarting to apply the update…</sys:String>
     <sys:String x:Key="Settings.Update.ApplyFailed">Cannot start the update helper: {0}</sys:String>
-</ResourceDictionary>
+
+    <!-- ============ 灰度模式 ============ -->
+    <sys:String x:Key="Settings.GrayMode">Gray mode</sys:String>
+    <sys:String x:Key="Settings.GrayMode.Hint">Strip all color and keep only the light/dark layers — commonly used on mourning days. Takes effect immediately; the matching tone is picked for the current light or dark theme.</sys:String></ResourceDictionary>

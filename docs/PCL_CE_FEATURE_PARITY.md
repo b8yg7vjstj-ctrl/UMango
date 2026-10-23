@@ -397,7 +397,7 @@
 | WPF 控件库 | `UI/Controls/SvgIcon/`（10 文件，自研 SVG 渲染）、`BlurBorder.cs`、`Tooltip.cs`、`WaterfallPanel.cs`、`MotdRenderer.xaml` | 否 | **部分** | UMango 用 lucide（ISC）图标 + 自绘样式；**未移植 SvgIcon 运行时解析器**（`SvgPathGeometryParser.cs` 等） |
 | 模糊/特效 | `UI/Effects/`（`AdaptiveBlurEffect.cs`、`EnhancedBlurEffect.cs`、`OptimizedBlurEffect.cs`、`SamplingBlurProcessor.cs`） | 否 | **未做** | Windows 专用（需 P/Invoke） |
 | 图像加载与转换 | `UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs`、`Utils/IconHelper.cs` | 否 | **未做** | |
-| 灰度/无障碍 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | 否 | **未做** | 哀悼日灰度模式 |
+| 灰度/无障碍 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | 否 | **已完成** | 哀悼日灰度模式：Core `UI/GrayProfile.cs` 迁语义（PCL 原版零消费方）+ `GrayColorPlanner<TKey>` 记账；App `Themes/GrayModeController.cs` 改写资源字典里的画笔；设置项 `ui.appearance.grayMode`。**注意 WPF 没有 ColorMatrixEffect**（只在 GDI+/WinForms 里），所以只能换画笔而非挂 Effect |
 | 后台展示器 | `UI/BackgroundPresenter.cs` | 否 | **未做** | 与视频背景配套 |
 | 图标管理 | `UI/IconManager.cs`、`IconModel.cs` | 否 | **部分** | UMango 用 lucide + simple-icons（见 `THIRD-PARTY-NOTICES.md` §2） |
 | 联机基础设施（P2P / 协议） | `Link/Scaffolding/`、`Link/EasyTier/`、`Link/Lobby/`、`Link/BroadcastLocal.cs`（59 文件 5,018 行） | 是 | **不适用** | 语义是 MC 联机（见 2.F） |
@@ -594,7 +594,7 @@
 | P2-13 | 系统 Toast 通知 | **已完成** | **中** | `src/UMango.Core/UI/ToastNotification.cs` + `Utils/WinRT/**`（10 文件）+ `Utils/OS/AumidHelper.cs`（Apache-2.0 逐字采用）+ `src/UMango.App/Services/ToastBridge.cs`（自写桥接，7 测试） | **是**（WinRT 专用，net10.0-windows 支） |
 | P2-14 | SVG 图标运行时渲染 | 部分 | **中** | `UI/Controls/SvgIcon/`（10 文件） | **是**（WPF 几何） |
 | P2-15 | 模糊/特效 | 未做 | **中** | `UI/Effects/`（4 文件） | **是**（P/Invoke） |
-| P2-16 | 灰度（哀悼日）模式 | 未做 | **低** | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | **是**（WPF 特效） |
+| P2-16 | 灰度（哀悼日）模式 | **已完成** | 低 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | **是**（WPF 画笔改写，非 Effect） |
 | P2-17 | 位图/图像处理 | 未做 | **低** | `Modules/Base/MyBitmap.cs`、`UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs` | 部分 |
 | P2-18 | 语义化版本公共类型 | 部分 | **低** | `Utils/SemVer.cs`、`Utils/VersionRange.cs` | 否 |
 | P2-19 | 相似度搜索 | 未做 | **低** | `Utils/SimilaritySearch.cs` | 否 |

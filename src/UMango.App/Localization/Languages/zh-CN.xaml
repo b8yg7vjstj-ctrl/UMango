@@ -454,4 +454,7 @@
     <sys:String x:Key="Settings.Update.DownloadFailed">下载失败：{0}</sys:String>
     <sys:String x:Key="Settings.Update.Restarting">准备重启以应用更新…</sys:String>
     <sys:String x:Key="Settings.Update.ApplyFailed">无法启动更新助手：{0}</sys:String>
-</ResourceDictionary>
+
+    <!-- ============ 灰度模式 ============ -->
+    <sys:String x:Key="Settings.GrayMode">灰度模式（哀悼日）</sys:String>
+    <sys:String x:Key="Settings.GrayMode.Hint">整体去掉颜色，只留深浅层次 —— 常用于哀悼日。开关立即生效，主题深浅不同会自动套用对应的音色。</sys:String></ResourceDictionary>

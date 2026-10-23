@@ -331,6 +331,21 @@
             </StackPanel>
           </Border>
 
+          <!-- 灰度（哀悼日）模式：与深浅色正交，四种主题组合 × 灰度开关 = 八种观感 -->
+          <Border Margin="0,4,0,0" Padding="10,9" CornerRadius="4"
+                  Background="{DynamicResource BrCard}"
+                  BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
+                  SnapsToDevicePixels="True">
+            <StackPanel>
+              <CheckBox x:Name="GrayToggle" Style="{DynamicResource PclSwitch}"
+                        Content="{DynamicResource Settings.GrayMode}" IsChecked="{Binding GrayMode, Mode=TwoWay}"
+                        Click="GrayToggle_Click"/>
+              <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrG3}"
+                         Text="{DynamicResource Settings.GrayMode.Hint}"/>
+            </StackPanel>
+          </Border>
+
           <!-- 回显当前真正生效的 token 字典：换主题时这里也会跟着变，是"确实生效了"的直接证据 -->
           <TextBlock x:Name="CurrentThemeText" FontSize="11" Margin="0,8,0,0"
                      Foreground="{DynamicResource BrG4}" TextTrimming="CharacterEllipsis"/>
