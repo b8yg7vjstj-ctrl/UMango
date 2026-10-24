@@ -45,7 +45,13 @@ public sealed record DownloadRequest(
     /// <summary>期望的校验值（可选）。aria2 支持 --checksum，交给它校验更可靠。</summary>
     string? ExpectedSha256 = null,
     /// <summary>限速（字节/秒），空表示不限。</summary>
-    long? MaxBytesPerSecond = null);
+    long? MaxBytesPerSecond = null,
+    /// <summary>
+    /// 目标文件已存在且内容正确时是否**跳过**（PCL 的 <c>DownloadFile</c> 语义）。
+    ///
+    /// 默认 false —— 保持"显式要求才跳过"，避免用户点了"重新下载"却被悄悄跳过。
+    /// </summary>
+    bool SkipExisting = false);
 
 /// <summary>下载进度快照。**拿不到就保持 null，不编造**。</summary>
 public sealed record DownloadProgress(
