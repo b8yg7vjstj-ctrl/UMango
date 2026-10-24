@@ -56,7 +56,9 @@ public static class AnimationPlayer
     /// 共享的动画服务实例。懒创建，页面切换都用它。
     /// 为什么共享而不是每次创建：避免为每个简单入场动画都起一个时钟线程。
     /// </summary>
-    private static AnimationService Service => _service ??= new AnimationService(_sharedClock);
+    private static AnimationService Service => _service ??= new AnimationService(
+        _sharedClock,
+        new UMango.Core.Animation.UIAccess.ImmediateUIAccessProvider());
 
     /// <summary>
     /// 用 Core 帧驱动引擎播放入场动画。

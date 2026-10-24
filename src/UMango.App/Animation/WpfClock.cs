@@ -15,7 +15,11 @@ namespace UMango.App.Animation;
 /// - WpfClock：直接在 UI 线程上 Tick，不需要编组
 /// 两者产生相同的帧序号，动画引擎不关心时钟的实现细节。
 /// </summary>
-public sealed class WpfClock : IClock, IDisposable
+/// <remarks>
+/// 实现 <see cref="IUIClock"/>：DispatcherTimer 天然只在 UI 线程上 Tick，
+/// 因此宿主可以据此判断"这个时钟不需要额外编组"。
+/// </remarks>
+public sealed class WpfClock : IClock, IUIClock, IDisposable
 {
     private readonly DispatcherTimer _timer;
     private long _frame;

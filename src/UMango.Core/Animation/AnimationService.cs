@@ -1,4 +1,5 @@
 using UMango.Core.Animation.Clock;
+using UMango.Core.Animation.UIAccess;
 
 namespace UMango.Core.Animation;
 
@@ -24,6 +25,18 @@ public sealed class AnimationService : IDisposable
         Clock = clock ?? new StopwatchClock(60);
         _dispatch = dispatcher ?? (action => action());
         Clock.Tick += OnTick;
+    }
+
+    /// <summary>
+    /// 用 <see cref="IUIAccessProvider"/> 编组帧回调。
+    ///
+    /// 这是**跨平台复刻的关键接线点**：WPF 宿主传 <c>Dispatcher</c> 版实现，
+    /// Avalonia 宿主传 <c>Dispatcher.UIThread</c> 版实现，
+    /// 动画引擎本身不需要知道自己在 WPF 还是 Avalonia 里。
+    /// </summary>
+    public AnimationService(IClock? clock, IUIAccessProvider uiAccess)
+        : this(clock, uiAccess is null ? null : new Action<Action>(uiAccess.Invoke))
+    {
     }
 
     public IClock Clock { get; }

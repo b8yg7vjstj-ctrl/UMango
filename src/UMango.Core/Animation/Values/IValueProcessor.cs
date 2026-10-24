@@ -112,6 +112,14 @@ public sealed class ValueProcessorRegistry
 
     public IReadOnlyList<IValueProcessor> All => _processors;
 
+    /// <summary>
+    /// 默认注册表（含 double 处理器）。
+    ///
+    /// 帧对象在构造时可能拿不到注册表（例如从别处反序列化出来的帧），
+    /// 这时用默认注册表兜底 —— 动画是表现层的东西，缺个处理器不该崩。
+    /// </summary>
+    public static ValueProcessorRegistry Default { get; } = new();
+
     public void Register(IValueProcessor processor) => _processors.Add(processor);
 
     /// <summary>找能处理该运行时类型（或其可赋值类型）的处理器。</summary>

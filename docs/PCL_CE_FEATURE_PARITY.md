@@ -594,7 +594,7 @@
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
 | P2-1 | **多语言 i18n** | **已完成（本地化机制 + zh-CN/en-US 双语，392/391 键）** | **高** | `App/Localization/`（`Lang.cs` + 服务 + 字体配置 + 7 语言 XAML，实语言各 3,583 行） | 否（用 WPF 资源字典，与 PCL 同路线） |
-| P2-2 | **动画系统补齐**（帧动画/关键帧/组合/时钟抽象/`IAnimatable`） | **已完成**（核心能力齐备） | **中**（⚠️ 由「高」下调） | `UI/Animation/`（**87 文件 / 2,742 行**） | **部分**（仅 14/87 文件触及 WPF，且 UMango 也是 WPF，故这类文件**可直接用**）。**已迁入 Core（净10.0）**：帧驱动器 + 关键帧 + 顺序/并行组 + 时钟抽象 + `IAnimatable` + 值处理器（含算术运算）+ 绝对/相对值 + `ActionAnimation` + 复合缓动 + 按名取消。**未迁**：`UIAccessProvider`（WPF 自动化桥，UMango 不需要）、`WinMMClock`（Windows 专有时钟，用 `StopwatchClock` 替代）、`Matrix/NColor/NRotateTransform/NScaleTransform/Point/Thickness` 六种专用 FromTo 动画（UMango 用通用 `FromToAnimation` + 值处理器覆盖同类需求） |
+| P2-2 | **动画系统补齐**（帧动画/关键帧/组合/时钟抽象/`IAnimatable`） | **已完成**（核心能力齐备） | **中**（⚠️ 由「高」下调） | `UI/Animation/`（**87 文件 / 2,742 行**） | **部分**（仅 14/87 文件触及 WPF；UMango 的 WPF 侧与 Avalonia 侧各提供一份 `IUIAccessProvider` 实现，Core 引擎对平台无知）。**已迁入 Core（净10.0）**：帧驱动器 + 关键帧 + 顺序/并行组 + 时钟抽象 + `IAnimatable` + 值处理器（含算术运算）+ 绝对/相对值 + `ActionAnimation` + 复合缓动 + 按名取消。**已补迁**：`UIAccessProvider`（`src/UMango.Core/Animation/UIAccess/`：`IUIAccessProvider` + `ImmediateUIAccessProvider`，**WPF 与 Avalonia 两个外壳共用**）、帧抽象（`src/UMango.Core/Animation/Frames/`：`IAnimationFrame` + `ActionAnimationFrame` + `FromToAnimationFrame<T>`）、`IUIClock` 标记接口（`src/UMango.Core/Animation/Clock/IUIClock.cs`）。**仍未迁**：`WinMMClock`（Windows 专有时钟，用 `StopwatchClock` 替代）、`Matrix/NColor/NRotateTransform/NScaleTransform/Point/Thickness` 六种专用 FromTo 动画（UMango 用通用 `FromToAnimation` + 值处理器覆盖同类需求） |
 | P2-3 | **系统信息与硬件** | **已完成**（跨平台部分） | **中** | `Utils/OS/`（14 文件） | **部分是**（注册表、`NtInterop`、`KernelInterop`、`WindowInterop`、`AumidHelper`）—— 只迁了 4 个真正跨平台的文件（`SystemInfoEx` / `SystemPaths` / `NetworkUtils` / `HardwareInfo`），其余 10 个标注「对 UMango 无落点」。`HardwareInfo` 的 WMI 部分重写为 `/proc/cpuinfo`（Linux）+ `sysctl`（macOS），并把原版「静态可变全局字段」改成不可变 `HardwareSnapshot` + 显式 `Collect()`（原版在类型首次访问时抓硬件，多线程下可能读到半初始化值） |
 | P2-4 | IoC / 生命周期 | **已完成**（生命周期编排部分） | **中** | `App/IoC/`（14 文件） | 否 —— `src/UMango.Core/App/Lifecycle/LifecycleManager.cs` 迁入**生命周期编排**这一层：阶段状态机（`LifecycleState` 8 个通用阶段，PCL 的 Minecraft 专属阶段已剔除）、同阶段按优先级降序启动、**同步服务先于异步服务启动**、停止时按**启动顺序的逆序**、停止失败不阻断其余服务释放、`LifecycleContext.RequestExit()` 退出请求。**不迁 PCL 的依赖注入部分**（`[DependencyInjectionPoint]` + 源生成器 + 反射扫描程序集）—— UMango 已有手写的 `AppServices` 静态门面在做按需创建，DI 容器会与之重复；且反射扫描在单测里会捞到测试程序集的类型，改为**显式注册**。15 个测试，注入矩阵 4 项全红后还原。 |
 | P2-5 | 内部事件总线 | **已完成** | **低** | `App/EventBus/`（4 文件 290 行） | 否 —— `src/UMango.Core/Events/EventBus.cs` 补齐 PCL 的**通道名路由**（`AddChannel`/`RemoveChannel`/`Channels`）、**异步发布**（`PublishAsync(channel, data)`）、**可赋值性匹配**（订阅 `object` 能收到 `Foo`）、**弱引用持有者**（`IEventHandler<T>`，持有者被回收后不阻止 GC 且订阅条目在下次发布时清理）。⚠️ 相对 PCL 的**实质差异**：保留**实例**语义而非静态单例（静态总线会让测试之间互相污染）。向不存在的通道发布**抛 `InvalidOperationException`**（PCL 一致：频道写错应当被看见而不是静默吞掉） |
@@ -784,20 +784,21 @@ UMango 现有的 `Download/`（10 文件 1,638 行，aria2/内置 HTTP/eD2k 三�
 
 | 模块 | 文件数 | 行数 | 说明 |
 |------|-------:|-----:|------|
-| `src/UMango.Core/PackageManagers` | 12 | 4,146 | 6 适配器 + 基类 + 注册表 + 模型（**最大模块，占 Core 56%**） |
-| `src/UMango.Core/Configuration` | 6 | 653 | 描述符驱动设置 |
-| `src/UMango.Core/Download` | 8 | 990 | 3 引擎 + 注册表 + 会话 + 模型 |
-| `src/UMango.Core/Install` | 4 | 446 | 执行器 + 命令构造 + 进度解析 + 步骤名 |
-| `src/UMango.Core/Animation` | 4 | 386 | 规划器 + 缓动 + 规格 + 设置 |
-| `src/UMango.Core/App/Tasks` | 8 | 228 | **采用自 PCL.Core（Apache-2.0）** |
+| `src/UMango.Core/PackageManagers` | 13 | 4,385 | 6 适配器 + 基类 + 注册表 + 模型（**最大模块，占 Core 56%**） |
+| `src/UMango.Core/Configuration` | 6 | 703 | 描述符驱动设置 |
+| `src/UMango.Core/Download` | 14 | 2,041 | 3 引擎 + 注册表 + 会话 + 模型 |
+| `src/UMango.Core/Install` | 4 | 460 | 执行器 + 命令构造 + 进度解析 + 步骤名 |
+| `src/UMango.Core/Animation` | 27 | 2,151 | 规划器 + 缓动 + 规格 + 设置 + **帧抽象** + **UI 线程访问抽象** + `IUIClock` |
+| `src/UMango.Core/App/Tasks` | 9 | 434 | **采用自 PCL.Core（Apache-2.0）** |
 | `src/UMango.Core/Execution` | 3 | 212 | 进程执行 3 件套（已接入日志） |
 | `src/UMango.Core/Records` | 2 | 160 | 操作记录 + 存储 |
 | `src/UMango.Core/Terminal` | 2 | 132 | 终端桥 + 行模型 |
 | `src/UMango.Core/Platform` | 2 | 67 | 平台/系统信息 |
 | `src/UMango.Core/Logging` | 5 | 429 | 调研期间新增并已提交（`f2cc0b9`）：`Log.cs`/`ILogSink.cs`/`LogModels.cs`/`MemoryLogSink.cs`/`FileLogSink.cs` |
-| **`src/UMango.Core` 合计** | **57** | **7,849** | |
-| `src/UMango.App`（Views + ViewModels + Themes + Animation + Services） | **41** | **8,637** | 含新增 `LogView`（404 行）；`Views/` + `ViewModels/` 共 21 文件 |
-| `src/UMango.Core.Tests` | 23 | 3,245 | |
+| **`src/UMango.Core` 合计** | **224** | **30,628** | |
+| `src/UMango.App`（Views + ViewModels + Themes + Animation + Services） | **55** | **12,793** | 含新增 `LogView`（404 行）；`Views/` + `ViewModels/` 共 21 文件 |
+| `src/UMango.Core.Tests` | 102 | 19,518 | |
+| `src/UMango.App.Tests` | 18 | 2,824 | |
 | `tools/XamlAudit` | 5 | 711 | XAML 静态审计 |
 
 ### 5.3 PCL-CE 侧按模块（实测）
