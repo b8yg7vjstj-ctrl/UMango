@@ -34,14 +34,31 @@ public sealed record PageMotionProfile
     /// <summary>入场末段时长（PCL 实测 350ms，BackOut 回弹）。</summary>
     public int EnterToMs { get; init; }
 
-    /// <summary>入场中段缓动（PCL 用 AniEaseOutFluent = 幂缓动 Out）。</summary>
-    public EasingKind EnterMidEase { get; init; }
+    /// <summary>
+    /// 入场中段缓动。
+    ///
+    /// PCL 用 <c>AniEaseOutFluent(Middle)</c> = <c>1-(1-t)^3</c>（幂 3）。
+    /// 旧版这里用 <see cref="EasingKind.QuadOut"/>（幂 2）近似，**数值并不相同**；
+    /// 现在直接用 <see cref="FluentOutEasing"/> 给出原值。
+    /// </summary>
+    public Easing EnterMidEase { get; init; } = Easing.Of(EasingKind.QuadOut);
 
-    /// <summary>入场末段缓动（PCL 用 AniEaseOutBack）。</summary>
-    public EasingKind EnterToEase { get; init; }
+    /// <summary>
+    /// 入场末段缓动。
+    ///
+    /// PCL 用 <c>AniEaseOutBack</c>，其指数是 <c>3 - 档位×0.5</c>（随档位变化），
+    /// 而不是教科书的固定 1.70158 —— 所以用 <see cref="BackEaseWithPowerEasing"/>。
+    /// </summary>
+    public Easing EnterToEase { get; init; } = Easing.Of(EasingKind.BackOut);
 
-    /// <summary>入场淡入缓动（PCL 用 AniEaseOutFluent(Weak)；Weak 档按近似映射，注明推断）。</summary>
-    public EasingKind FadeInEase { get; init; }
+    /// <summary>
+    /// 入场淡入缓动。
+    ///
+    /// PCL 用 <c>AniEaseOutFluent(Weak)</c> = <c>1-(1-t)^2</c>（幂 2）——
+    /// 数值上与 <see cref="EasingKind.QuadOut"/> **恰好相同**，但这里显式用
+    /// <see cref="FluentOutEasing"/> 表达原意（弱档幂缓动），不再依赖"巧合相等"。
+    /// </summary>
+    public Easing FadeInEase { get; init; } = Easing.Of(EasingKind.QuadOut);
 
     /// <summary>退场时长（PCL 实测 70ms）。</summary>
     public int ExitMs { get; init; }
@@ -59,14 +76,14 @@ public sealed record PageMotionProfile
     public static PageMotionProfile Pcl { get; } = new()
     {
         FadeInMs = 100,
-        FadeInEase = EasingKind.QuadOut,   // AniEaseOutFluent(Weak)；Weak 的幂次未在源码枚举中找到，按同族 QuadOut 近似（推断）
+        FadeInEase = new FluentOutEasing(EasePower.Weak),   // AniEaseOutFluent(Weak) = 1-(1-t)^2
         EnterFromY = -16,
         EnterMidY = 5,
         EnterToY = 11,                      // PCL 的终态推开量；我们落回 0，此值仅存档对照
         EnterMidMs = 250,
         EnterToMs = 350,
-        EnterMidEase = EasingKind.QuadOut,  // AniEaseOutFluent（Middle 档，幂 2）
-        EnterToEase = EasingKind.BackOut,   // AniEaseOutBack
+        EnterMidEase = new FluentOutEasing(EasePower.Middle),  // AniEaseOutFluent(Middle) = 1-(1-t)^3
+        EnterToEase = new BackEaseWithPowerEasing(EasePower.Middle),  // AniEaseOutBack，指数 3-3×0.5=1.5
         ExitMs = 70,
         ExitToY = -6,
         EnterStaggerMs = 25,
@@ -80,14 +97,14 @@ public sealed record PageMotionProfile
     public static PageMotionProfile Fluent { get; } = new()
     {
         FadeInMs = 150,
-        FadeInEase = EasingKind.CubicOut,
+        FadeInEase = new FluentOutEasing(EasePower.Middle),
         EnterFromY = -12,
         EnterMidY = 0,
         EnterToY = 0,
         EnterMidMs = 150,
         EnterToMs = 150,
-        EnterMidEase = EasingKind.CubicOut,
-        EnterToEase = EasingKind.CubicOut,
+        EnterMidEase = new FluentOutEasing(EasePower.Middle),
+        EnterToEase = new FluentOutEasing(EasePower.Middle),
         ExitMs = 90,
         ExitToY = -8,
         EnterStaggerMs = 0,

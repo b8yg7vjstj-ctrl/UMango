@@ -12,13 +12,6 @@ public partial class MainWindow : Window
 {
     private readonly HomeView _home = new();
 
-    /// <summary>
-    /// 共享动画服务：纯托管时钟 + 帧回调编组到 UI 线程。
-    /// 与 WPF 版同构（那边用 WpfClock），引擎与数值完全同一套。
-    /// </summary>
-    private static readonly AnimationService Service =
-        new(new StopwatchClock(60), a => Dispatcher.UIThread.Post(a));
-
     public MainWindow()
     {
         InitializeComponent();
@@ -27,25 +20,32 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 切页：换内容 + 用 Core 引擎播 PCL 原版入场动效。
-    /// 数值来自 PageMotionProfile.Pcl（淡入 100ms、两段落体 250/350ms BackOut），
-    /// 与 WPF 版完全一致 —— 两个壳，一套动效。
+    /// 切页：换内容 + 播 PCL 原版入场动效。
+    ///
+    /// 动效走 **Core 的补间层**（<see cref="TweenFactory"/> + <see cref="TweenPlanner"/>），
+    /// 数值逐条对照 PCL-CE `MyPageRight.TriggerEnterAnimation`（MyPageRight.cs:552-600）：
+    ///   · 起始态 Opacity=0、Y=-16
+    ///   · 淡入 100ms（AniEaseOutFluent(Weak) = 1-(1-t)^2）
+    ///   · 两段落体 +5 / +11（250ms FluentOut / 350ms AniEaseOutBack）**并行叠加**
+    ///   · 终态 Y = -16 + 5 + 11 = 0
+    ///
+    /// 与 WPF 壳共用同一份 Core 数值 → 两个壳的观感一致。
     /// </summary>
     private void ShowPage(Control page, bool animate = true)
     {
         PageHost.Content = page;
 
         if (!animate) return;
-        var settings = new AnimationSettings();   // PCL 预设为默认
-        var (x, y, o) = AvaloniaAnimatable.FromElement(page);
+
+        var binder = AvaloniaTweenBinder.ForElement(page);
+        var opacity = binder.Resolve(TweenChannel.Opacity)!;
+        var translateY = binder.Resolve(TweenChannel.TranslateY)!;
 
         // 起始态：透明 + 上方 16px（PCL 原版的入场起点）
-        o.SetValue(0.0);
-        y.SetValue(-16.0);
+        opacity.SetValue(0d);
+        translateY.SetValue(PclTweenPresets.EnterFromY);
 
-        var binding = AnimationPlannerBinding.CreatePageEnter(
-            PageMotionProfile.Pcl, x, y, o, settings, fps: 60);
-        Service.RunFireAndForget(binding);
+        AvaloniaTweenPlayer.Play(PclTweenPresets.PageEnter(), binder, fps: 60);
     }
 
     private void OnNavClick(object? sender, RoutedEventArgs e)

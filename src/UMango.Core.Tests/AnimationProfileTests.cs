@@ -23,7 +23,15 @@ public class AnimationProfileTests
         Assert.Equal(-6, p.ExitToY);
         Assert.Equal(25, p.EnterStaggerMs);
         Assert.Equal(15, p.ExitStaggerMs);
-        Assert.Equal(EasingKind.BackOut, p.EnterToEase); // PCL 的 AniEaseOutBack
+        // PCL 的 AniEaseOutBack，指数随档位变化：3 - Middle(3) × 0.5 = 1.5
+        var back = Assert.IsType<BackEaseWithPowerEasing>(p.EnterToEase);
+        Assert.Equal(1.5, back.Power, 6);
+        // AniEaseOutFluent(Weak) = 1-(1-t)^2
+        var fade = Assert.IsType<FluentOutEasing>(p.FadeInEase);
+        Assert.Equal((double)EasePower.Weak, fade.Power, 6);
+        // AniEaseOutFluent(Middle) = 1-(1-t)^3
+        var mid = Assert.IsType<FluentOutEasing>(p.EnterMidEase);
+        Assert.Equal((double)EasePower.Middle, mid.Power, 6);
     }
 
     [Fact]
@@ -32,7 +40,9 @@ public class AnimationProfileTests
         var f = PageMotionProfile.Fluent;
         Assert.True(f.FadeInMs < PageMotionProfile.Pcl.FadeInMs + 100);
         Assert.Equal(0, f.EnterStaggerMs); // Fluent 无级联
-        Assert.Equal(EasingKind.CubicOut, f.EnterToEase); // 无回弹
+        // Fluent 无回弹：终段是纯幂缓动 Out
+        var to = Assert.IsType<FluentOutEasing>(f.EnterToEase);
+        Assert.Equal((double)EasePower.Middle, to.Power, 6);
     }
 
     [Fact]

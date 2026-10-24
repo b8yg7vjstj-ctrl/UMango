@@ -113,12 +113,31 @@ public sealed class ValueProcessorRegistry
     public IReadOnlyList<IValueProcessor> All => _processors;
 
     /// <summary>
-    /// 默认注册表（含 double 处理器）。
+    /// 默认注册表（**只含 double 处理器** —— 这是历史行为，很多调用方直接用它）。
     ///
     /// 帧对象在构造时可能拿不到注册表（例如从别处反序列化出来的帧），
     /// 这时用默认注册表兜底 —— 动画是表现层的东西，缺个处理器不该崩。
+    /// 要全套处理器请用 <see cref="CreateFull"/>。
     /// </summary>
     public static ValueProcessorRegistry Default { get; } = new();
+
+    /// <summary>
+    /// 创建一个**含全部内置处理器**的注册表。
+    ///
+    /// 动画要动的不只是数字：颜色（淡入/渐变）、缩放与旋转变换、点、厚度、矩阵
+    /// 都得有对应处理器，否则 <see cref="Process"/> 会返回 null，动画静默不生效。
+    /// 这些处理器对应 PCL-CE 的 <c>PCL.Core/UI/Animation/ValueProcessor/</c>（Apache-2.0）。
+    /// </summary>
+    public static ValueProcessorRegistry CreateFull() => new(
+    [
+        new DoubleValueProcessor(),
+        new NColorValueProcessor(),
+        new NPointValueProcessor(),
+        new NThicknessValueProcessor(),
+        new NMatrixValueProcessor(),
+        new NScaleTransformValueProcessor(),
+        new NRotateTransformValueProcessor(),
+    ]);
 
     public void Register(IValueProcessor processor) => _processors.Add(processor);
 

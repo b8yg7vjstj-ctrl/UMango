@@ -37,7 +37,7 @@ public static class AnimationPlannerBinding
     {
         var frames = FramesFor(spec, fps);
         var easing = Easing.Of(spec.Easing);
-        var processors = registry ?? new ValueProcessorRegistry();
+        var processors = registry ?? ValueProcessorRegistry.CreateFull();
 
         var group = new ParallelAnimationGroup { Name = $"Entrance:{spec.Motion}" };
 
@@ -71,11 +71,11 @@ public static class AnimationPlannerBinding
         ValueProcessorRegistry? registry = null)
     {
         var speed = settings.EffectiveSpeedFactor;
-        var processors = registry ?? new ValueProcessorRegistry();
+        var processors = registry ?? ValueProcessorRegistry.CreateFull();
 
         int Frames(int ms) => Math.Max(1, (int)Math.Round(ms / speed / 1000.0 * Math.Clamp(fps, 1, 1000)));
 
-        var fade = new FromToAnimation(0.0, 1.0, Frames(profile.FadeInMs), Easing.Of(profile.FadeInEase), processors);
+        var fade = new FromToAnimation(0.0, 1.0, Frames(profile.FadeInMs), profile.FadeInEase, processors);
 
         // 两段位移只在"第二段真的会移动"时才成立：
         // 若中段与终态相同（无过冲的预设，例如 Fluent），第二段是 0 位移的空动作，
@@ -86,15 +86,15 @@ public static class AnimationPlannerBinding
         if (secondSegmentMoves)
         {
             ySeq.Add(new FromToAnimation(profile.EnterFromY, profile.EnterMidY,
-                Frames(profile.EnterMidMs), Easing.Of(profile.EnterMidEase), processors), offsetY);
+                Frames(profile.EnterMidMs), profile.EnterMidEase, processors), offsetY);
             ySeq.Add(new FromToAnimation(profile.EnterMidY, 0.0,
-                Frames(profile.EnterToMs), Easing.Of(profile.EnterToEase), processors), offsetY);
+                Frames(profile.EnterToMs), profile.EnterToEase, processors), offsetY);
         }
         else
         {
             // 单段直达（缓动取中段的，保持"先快后慢"的落定感）
             ySeq.Add(new FromToAnimation(profile.EnterFromY, 0.0,
-                Frames(profile.EnterMidMs + profile.EnterToMs), Easing.Of(profile.EnterMidEase), processors), offsetY);
+                Frames(profile.EnterMidMs + profile.EnterToMs), profile.EnterMidEase, processors), offsetY);
         }
 
         var group = new ParallelAnimationGroup { Name = "PageEnter" };

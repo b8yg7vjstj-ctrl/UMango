@@ -344,6 +344,11 @@ public partial class MainWindow : Window
         // PCL-CE MyPageRight.cs:578-587 —— 这就是"动效在 PCL 主题中完整保留"的字面实现。
         if (ThemeManager.CurrentKind == ThemeKind.PclClassic && Services.AppSettings.Animation.Enabled)
         {
+            // PCL 的 MyPageRight 是**整页 + 子项级联**两层叠加：
+            //   · 整页：Opacity 0→1、TranslateY -16→+5→+11（逐字调用 ModAnimation）
+            //   · 子项：同样的三条补间，但每个子项 delay += 25ms
+            // 这里整页沿用 PCL 原版 API（保证与 PCL 完全一致），
+            // 子项级联走 Core 的 StaggerPlanner（数值同样取自 PCL）。
             visible.Opacity = 0d;
             visible.RenderTransform = new System.Windows.Media.TranslateTransform(0d, -16);
             var enterList = new List<PCL.ModAnimation.AniData>
@@ -354,6 +359,10 @@ public partial class MainWindow : Window
                 PCL.ModAnimation.AaTranslateY(visible, 11d, 350, 0, new PCL.ModAnimation.AniEaseOutBack()),
             };
             PCL.ModAnimation.AniStart(enterList, "UMango PageEnter");
+
+            // 子项级联：收集右栏里可动画的控件（PCL MyPageRight._GetAllAnimControls 的规则），
+            // 逐个按 25ms 步进入场。
+            PlayStaggeredChildren(visible);
             return;
         }
 
@@ -363,8 +372,37 @@ public partial class MainWindow : Window
         AnimationPlayer.PlayWithEngineFireAndForget(visible, ElementMotion.PageContent);
     }
 
-    private FrameworkElement? CurrentVisibleView()
+    /// <summary>
+    /// 播放页面里**子项**的级联入场动画。
+    ///
+    /// 对应 PCL-CE <c>MyPageRight.TriggerEnterAnimation</c> 的子项部分：
+    /// PCL 收集右栏里所有可动画控件，然后给每一个排一条
+    /// 「透明 → 从 -16 滑入 → +5 → +11」的补间，延迟按 25ms 步进递增。
+    ///
+    /// 这里用 Core 的 <see cref="UMango.Core.Animation.StaggerPlanner"/> 计算
+    /// 每项的延迟与补间（数值与 PCL 一致），再由 WPF 宿主落到具体控件上。
+    /// 收集规则见 <see cref="UMango.App.Animation.WpfAnimPolicy"/>。
+    /// </summary>
+    private void PlayStaggeredChildren(FrameworkElement page)
     {
+        try
+        {
+            var items = UMango.App.Animation.WpfAnimPolicy.Collect(page, UMango.App.Animation.WpfAnimPolicy.Right);
+            if (items.Count == 0) return;
+
+            // 子项不参与整页的 -16 位移（整页自己已经在动了），
+            // 所以这里只让子项做淡入 —— 位移由整页带，否则会叠加成双倍位移。
+            UMango.App.Animation.WpfStaggerHost.PlayItemEnter(
+                items, UMango.Core.Animation.StaggerAxis.Vertical, translateEnabled: false);
+        }
+        catch (Exception ex)
+        {
+            // 动效失败不能影响页面可用性。
+            UMango.Core.Logging.Log.Warn("子项级联动画失败", ex.Message);
+        }
+    }
+
+    private FrameworkElement? CurrentVisibleView()    {
         foreach (var candidate in new FrameworkElement?[]
                  { ViewHome, ViewDownload, ViewProgress, ViewSettings, ViewTools, ViewDownloader, ViewLog })
         {

@@ -31,7 +31,7 @@ public sealed class FromToAnimation : AnimationBase
         To = to;
         Duration = Math.Max(0, durationFrames);
         Easing = easing ?? Easing.Of(EasingKind.Linear);
-        _registry = registry ?? new ValueProcessorRegistry();
+        _registry = registry ?? ValueProcessorRegistry.CreateFull();
         Keyframes = keyframes ?? [];
         ValueType = valueType;
     }
