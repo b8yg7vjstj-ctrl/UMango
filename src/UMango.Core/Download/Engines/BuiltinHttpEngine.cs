@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http;
 using UMango.Core.Network;
+using UMango.Core.Download.Resources;
 using UMango.Core.Terminal;
 
 namespace UMango.Core.Download.Engines;
@@ -83,6 +84,11 @@ public sealed class BuiltinHttpEngine : IDownloadEngine
                 return new DownloadResult(true, target, null, null, sw.ElapsedMilliseconds);
             }
 
+            // 全局/单主机连接额度（无额度就排队等）
+            var resources = DownloadResources.Current;
+            using var connectionLease = await resources
+                .AcquireConnectionAsync(request.Url, ct).ConfigureAwait(false);
+
             using var resp = await http.GetAsync(request.Url, HttpCompletionOption.ResponseHeadersRead, ct)
                                        .ConfigureAwait(false);
             bridge?.Write(true, $"HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}");
@@ -108,6 +114,7 @@ public sealed class BuiltinHttpEngine : IDownloadEngine
                 {
                     await dst.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
                     done += read;
+                    resources.RecordDownloadedBytes(read);
 
                     if (total is > 0)
                     {
@@ -181,9 +188,10 @@ public sealed class BuiltinHttpEngine : IDownloadEngine
     {
         var options = new RangeDownloaderOptions
         {
+            Resources = DownloadResources.Current,
             Throttle = request.MaxBytesPerSecond is > 0
                 ? new BandwidthThrottle(request.MaxBytesPerSecond.Value)
-                : null
+                : null,
         };
         var downloader = new RangeDownloader(http, options, msg => bridge?.Write(false, msg));
 

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using UMango.Core.Download;
+using UMango.Core.Download.Resources;
 using Xunit;
 
 namespace UMango.Core.Tests.Download;
@@ -290,6 +291,131 @@ public sealed class RangeDownloaderTests
         {
             if (File.Exists(path)) File.Delete(path);
         }
+    }
+
+    // ---------- 下载资源协调器接线 ----------
+
+    [Fact]
+    public async Task 接入资源协调器_下载后额度全部归还()
+    {
+        var content = RandomBytes((int)RangeDownloader.SmallFileThreshold + 300_000);
+        await using var server = await TestServer.Start();
+        server.Content = content;
+
+        using var http = new HttpClient();
+        using var resources = new DownloadResourceManager
+        {
+            MaxConnections = 4,
+            MaxConnectionsPerHost = 4,
+        };
+
+        var options = new RangeDownloaderOptions { Resources = resources };
+        var downloader = new RangeDownloader(http, options);
+        var path = TempPath();
+        try
+        {
+            Assert.True(await downloader.TryDownloadAsync(server.Url, path));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+
+        // 额度必须完整归还，否则后续下载永远排队
+        Assert.Equal(0, resources.ActiveConnectionCount);
+    }
+
+    [Fact]
+    public async Task 接入资源协调器_统计到已下载字节数()
+    {
+        var content = RandomBytes((int)RangeDownloader.SmallFileThreshold + 300_000);
+        await using var server = await TestServer.Start();
+        server.Content = content;
+
+        using var http = new HttpClient();
+        using var resources = new DownloadResourceManager();
+
+        var options = new RangeDownloaderOptions { Resources = resources };
+        var downloader = new RangeDownloader(http, options);
+        var path = TempPath();
+        try
+        {
+            Assert.True(await downloader.TryDownloadAsync(server.Url, path));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+
+        Assert.Equal(content.Length, resources.TotalBytesDownloaded);
+    }
+
+    [Fact]
+    public async Task 单主机连接上限为一时_第二段要排队()
+    {
+        var content = RandomBytes((int)RangeDownloader.SmallFileThreshold + 300_000);
+        await using var server = await TestServer.Start(responseDelay: TimeSpan.FromMilliseconds(200));
+        server.Content = content;
+
+        using var http = new HttpClient();
+        using var resources = new DownloadResourceManager
+        {
+            MaxConnections = 16,
+            MaxConnectionsPerHost = 1,
+        };
+
+        var options = new RangeDownloaderOptions { Resources = resources };
+        var downloader = new RangeDownloader(http, options);
+        var path = TempPath();
+        try
+        {
+            Assert.True(await downloader.TryDownloadAsync(server.Url, path));
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+
+        Assert.Equal(0, resources.ActiveConnectionCount);
+    }
+
+    [Fact]
+    public async Task 接入资源协调器_下载过程中占用了连接额度()
+    {
+        var content = RandomBytes((int)RangeDownloader.SmallFileThreshold + 300_000);
+        await using var server = await TestServer.Start(responseDelay: TimeSpan.FromMilliseconds(150));
+        server.Content = content;
+
+        using var http = new HttpClient();
+        using var resources = new DownloadResourceManager
+        {
+            MaxConnections = 4,
+            MaxConnectionsPerHost = 4,
+        };
+
+        var options = new RangeDownloaderOptions { Resources = resources };
+        var downloader = new RangeDownloader(http, options);
+        var path = TempPath();
+
+        var observed = 0;
+        var download = downloader.TryDownloadAsync(server.Url, path);
+        while (!download.IsCompleted)
+        {
+            observed = Math.Max(observed, resources.ActiveConnectionCount);
+            await Task.Delay(10);
+        }
+
+        try
+        {
+            Assert.True(await download);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+
+        // 下载期间必须真的占用了连接额度（否则协调器等于没接上）
+        Assert.True(observed >= 1, $"下载期间活跃连接数为 {observed}，说明额度没被申请");
     }
 
     private static string TempPath() => Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".bin");

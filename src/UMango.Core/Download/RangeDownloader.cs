@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Threading.Channels;
+using UMango.Core.Download.Resources;
 
 namespace UMango.Core.Download;
 
@@ -349,6 +350,12 @@ public sealed class RangeDownloader
             Interlocked.Increment(ref _activeConnections);
             var startedAt = Stopwatch.GetTimestamp();
             var attemptBytes = 0L;
+
+            // 全局/单主机连接额度：没有额度就排队等，而不是硬发出去把源打爆。
+            var resources = _owner._options.Resources;
+            var connectionLease = resources is null
+                ? null
+                : await resources.AcquireConnectionAsync(_url, ct).ConfigureAwait(false);
             try
             {
                 using var request = _owner.CreateSegmentRequest(_url, segment.CurrentOffset, segment.End);
@@ -384,6 +391,9 @@ public sealed class RangeDownloader
                     if (_owner._options.Throttle is { } throttle)
                         await throttle.ThrottleAsync(read, ct).ConfigureAwait(false);
 
+                    // 聚合速率统计（供界面显示全局速度）
+                    resources?.RecordDownloadedBytes(read);
+
                     _output.Seek(segment.CurrentOffset, SeekOrigin.Begin);
                     await _output.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
 
@@ -400,6 +410,8 @@ public sealed class RangeDownloader
             }
             finally
             {
+                // 连接额度归还：必须在 finally，否则异常路径会永久占住额度
+                connectionLease?.Dispose();
                 _rates.TryRemove(segment.Id, out _);
                 Interlocked.Decrement(ref _activeConnections);
                 ReportProgress(Interlocked.Read(ref _downloadedBytes), Volatile.Read(ref _activeConnections), true);
@@ -529,6 +541,12 @@ public sealed class RangeDownloaderOptions
 
     /// <summary>全局限速器（所有连接共享）。空表示不限速。</summary>
     public IBandwidthThrottle? Throttle { get; init; }
+
+    /// <summary>
+    /// 下载资源协调器（连接额度 / 缓冲区预算 / 聚合速率统计）。
+    /// 空表示不参与全局协调（每个下载各管各的）。
+    /// </summary>
+    public DownloadResourceManager? Resources { get; init; }
 
     /// <summary>段剩余字节数达到此值才允许被拆分。</summary>
     public long SlowSplitThreshold { get; init; } = 2L * 1024 * 1024;

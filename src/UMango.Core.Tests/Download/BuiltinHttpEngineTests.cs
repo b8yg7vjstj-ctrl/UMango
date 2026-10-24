@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using UMango.Core.Download;
 using UMango.Core.Download.Engines;
+using UMango.Core.Download.Resources;
 using Xunit;
 
 namespace UMango.Core.Tests.Download;
@@ -39,6 +40,41 @@ public sealed class RangeEngineIntegrationTests
         }
         finally
         {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
+    public async Task 顺序下载_统计到字节数并归还连接额度()
+    {
+        var content = RandomBytes(2048);
+        await using var server = await LocalHttpServer.Start();
+        server.Content = content;
+
+        var dir = NewDir();
+        var previous = DownloadResources.Current;
+        using var resources = new DownloadResourceManager
+        {
+            MaxConnections = 4,
+            MaxConnectionsPerHost = 4,
+        };
+        DownloadResources.Current = resources;
+        try
+        {
+            var engine = new BuiltinHttpEngine();
+            var result = await engine.DownloadAsync(
+                new DownloadRequest(server.Url, dir, "small.bin"), null, null);
+
+            Assert.True(result.Success, result.Message);
+            Assert.Equal(content.Length, resources.TotalBytesDownloaded);
+            Assert.Equal(0, resources.ActiveConnectionCount);
+            // 下载期间必须真的占用过连接额度（峰值留下了证据）
+            Assert.True(resources.PeakActiveConnectionCount >= 1,
+                $"峰值连接数为 {resources.PeakActiveConnectionCount}，说明顺序下载路径没申请额度");
+        }
+        finally
+        {
+            DownloadResources.Current = previous;
             Directory.Delete(dir, true);
         }
     }
