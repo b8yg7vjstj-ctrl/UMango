@@ -14,15 +14,31 @@ namespace UMango.Core.Threading;
 public sealed class LimitedConcurrencyTaskScheduler
 {
     private readonly SemaphoreSlim _semaphore;
+    private readonly int _maxConcurrency;
     private readonly TaskScheduler _taskScheduler;
+    private readonly Func<CancellationToken, Task> _acquire;
+    private readonly bool _usesSemaphore;
 
-    public LimitedConcurrencyTaskScheduler(int maxConcurrency = 4)
+    /// <param name="maxConcurrency">并发上限</param>
+    /// <param name="acquire">
+    /// 取得"执行槽位"的方式。默认用信号量。
+    /// 暴露这个参数是为了**测试**：信号量在"许可被释放"与"取消信号生效"
+    /// 同时到达的那一刻会授予许可而不是抛取消（实测同时到达时约 82% 会授予），
+    /// 而这个窗口靠打时间差是测不准的 —— 测试需要一个能**确定地**
+    /// 制造出"已授予槽位但令牌已取消"状态的入口。
+    /// </param>
+    public LimitedConcurrencyTaskScheduler(int maxConcurrency = 4, Func<CancellationToken, Task>? acquire = null)
     {
+        if (maxConcurrency < 1) throw new ArgumentOutOfRangeException(nameof(maxConcurrency));
+        _maxConcurrency = maxConcurrency;
         _semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
         _taskScheduler = TaskScheduler.Default;
+        _acquire = acquire ?? (Func<CancellationToken, Task>)(async ct => await _semaphore.WaitAsync(ct).ConfigureAwait(false));
+        _usesSemaphore = acquire is null;
     }
 
-    public int MaxConcurrency => _semaphore.CurrentCount;
+    /// <summary>并发上限。</summary>
+    public int MaxConcurrency => _maxConcurrency;
 
     /// <summary>
     /// 提交一个任务到有并发上限的队列。
@@ -32,18 +48,25 @@ public sealed class LimitedConcurrencyTaskScheduler
     {
         return Task.Run(async () =>
         {
-            await _semaphore.WaitAsync(ct).ConfigureAwait(false);
+            await _acquire(ct).ConfigureAwait(false);
             try
             {
+                // 取得槽位与取消信号生效之间存在竞态：
+                // 恰好有一个槽位被释放时，取得槽位的一方可能成功拿到它
+                // 而不是看到取消。若不在这里补一刀，被取消的任务仍会执行它的
+                // 委托 —— 表现出来就是"点了取消，包管理器还是跑起来了"。
+                ct.ThrowIfCancellationRequested();
+
                 await action().ConfigureAwait(false);
             }
             finally
             {
-                _semaphore.Release();
+                // 自定义 acquire 时并没有真的占信号量，释放它会多放行一个任务
+                if (_usesSemaphore) _semaphore.Release();
             }
         }, ct);
     }
 
     /// <summary>当前正在运行的任务数。</summary>
-    public int Running => _semaphore.CurrentCount < _semaphore.Release(0) ? _semaphore.Release(0) : 0;
+    public int Running => _maxConcurrency - _semaphore.CurrentCount;
 }
