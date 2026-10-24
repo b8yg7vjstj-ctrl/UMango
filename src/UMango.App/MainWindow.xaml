@@ -110,7 +110,7 @@
     WindowChrome.CornerRadius=0、卡片不再圆角、也不再需要圆角裁剪。
     窗口边界完全交回 Windows（是否圆角由系统决定，不由应用决定）。
   -->
-  <Border Background="{DynamicResource BrCard}" SnapsToDevicePixels="True">
+  <Border x:Name="RootCard" Background="{DynamicResource BrCard}" SnapsToDevicePixels="True">
 
     <!-- UseLayoutRounding 采纳自 PCL-CE FormMain.xaml:28：让小字号文字与 1px 边线
          对齐设备像素，深色模式下小字（11-13px）的模糊/发虚明显改善。 -->

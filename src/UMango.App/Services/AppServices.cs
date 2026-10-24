@@ -419,6 +419,54 @@ public static class AppSettings
 
     /// <summary>广播「背景设置变了」。</summary>
     public static void RaiseBackgroundChanged() => BackgroundChanged?.Invoke();
+
+    /// <summary>功能隐藏设置变化时触发（MainWindow 监听它重新算可见性）。</summary>
+    public static event Action? HiddenEntriesChanged;
+
+    /// <summary>广播「功能隐藏设置变了」。</summary>
+    public static void RaiseHiddenEntriesChanged() => HiddenEntriesChanged?.Invoke();
+
+    /// <summary>模糊（高级材质）设置变化时触发。</summary>
+    public static event Action? BlurChanged;
+
+    /// <summary>广播「模糊设置变了」。</summary>
+    public static void RaiseBlurChanged() => BlurChanged?.Invoke();
+
+    /// <summary>
+    /// 读出「要隐藏哪些入口」的策略。
+    ///
+    /// 存储形式是逗号分隔的入口名（<see cref="UMango.Core.UI.Customization.HideableEntry"/>）。
+    /// 解析不了的项**直接忽略**（不报错）—— 用户手改配置文件写错了名字，
+    /// 不该让整个应用起不来。
+    /// </summary>
+    public static Core.UI.Customization.HideEntryPolicy ReadHidePolicy()
+    {
+        EnsureLoaded();
+
+        var raw = Settings.Get<string>(UiSettings.HideEntriesKey);
+        var hidden = new HashSet<Core.UI.Customization.HideableEntry>();
+
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var name = part.Trim();
+                if (name.Length == 0) continue;
+
+                if (Enum.TryParse<Core.UI.Customization.HideableEntry>(name, ignoreCase: true, out var entry)
+                    && Enum.IsDefined(entry))
+                {
+                    hidden.Add(entry);
+                }
+            }
+        }
+
+        return new Core.UI.Customization.HideEntryPolicy
+        {
+            Hidden = hidden,
+            ForceShow = Settings.Get<bool>(UiSettings.HideForceShowKey),
+        };
+    }
 }
 
 /// <summary>

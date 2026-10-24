@@ -536,6 +536,21 @@
     <sys:String x:Key="Settings.Background.Suit.BottomLeft">靠左下角</sys:String>
     <sys:String x:Key="Settings.Background.Suit.BottomRight">靠右下角</sys:String>
 
+    <sys:String x:Key="Settings.Hidden.Section">隐藏的功能入口</sys:String>
+    <sys:String x:Key="Settings.Hidden.Hint">用逗号分隔要藏起来的入口名，例如 TabDownload,ToolLogs。可用名字：TabDownload / TabProgress / TabSettings / TabTools / ToolDownloader / ToolLogs / ToolDiagnostics / ToolLicenses / ToolFeedback / ToolMusic / ToolAbout。写错的名字会被忽略。</sys:String>
+    <sys:String x:Key="Settings.Hidden.ForceShow">临时显示全部入口（忽略上面的隐藏设置）</sys:String>
+    <sys:String x:Key="Settings.Hidden.Failed">保存隐藏设置失败：{0}</sys:String>
+    <sys:String x:Key="Settings.Blur.Section">高级材质</sys:String>
+    <sys:String x:Key="Settings.Blur.Hint">给界面开启毛玻璃模糊效果（与 PCL 的「高级材质」一致）。模糊会占用一些渲染资源，低端设备可以关掉。</sys:String>
+    <sys:String x:Key="Settings.Blur.Enable">启用界面模糊</sys:String>
+    <sys:String x:Key="Settings.Blur.Radius">模糊半径</sys:String>
+    <sys:String x:Key="Settings.Blur.SamplingRate">采样率（0~100，越低越快）</sys:String>
+    <sys:String x:Key="Settings.Blur.KernelType">模糊核类型</sys:String>
+    <sys:String x:Key="Settings.Blur.Kernel.Gaussian">高斯</sys:String>
+    <sys:String x:Key="Settings.Blur.Kernel.Radial">径向</sys:String>
+    <sys:String x:Key="Settings.Blur.Kernel.Diagonal">对角高斯</sys:String>
+    <sys:String x:Key="Settings.Blur.Failed">保存模糊设置失败：{0}</sys:String>
+
     <sys:String x:Key="Window.Back">返回</sys:String>
     <sys:String x:Key="Nav.Feedback">反馈</sys:String>
     <sys:String x:Key="Feedback.Refresh">刷新</sys:String>

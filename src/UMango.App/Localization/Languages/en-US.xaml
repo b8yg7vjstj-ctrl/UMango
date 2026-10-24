@@ -522,6 +522,21 @@
     <sys:String x:Key="Settings.Background.Suit.BottomLeft">Bottom left</sys:String>
     <sys:String x:Key="Settings.Background.Suit.BottomRight">Bottom right</sys:String>
 
+    <sys:String x:Key="Settings.Hidden.Section">Hidden entries</sys:String>
+    <sys:String x:Key="Settings.Hidden.Hint">Comma-separated names of the entries to hide, for example TabDownload,ToolLogs. Available names: TabDownload / TabProgress / TabSettings / TabTools / ToolDownloader / ToolLogs / ToolDiagnostics / ToolLicenses / ToolFeedback / ToolMusic / ToolAbout. Unknown names are ignored.</sys:String>
+    <sys:String x:Key="Settings.Hidden.ForceShow">Temporarily show all entries (ignore the list above)</sys:String>
+    <sys:String x:Key="Settings.Hidden.Failed">Failed to save the hidden-entry settings: {0}</sys:String>
+    <sys:String x:Key="Settings.Blur.Section">Advanced material</sys:String>
+    <sys:String x:Key="Settings.Blur.Hint">Apply a frosted-glass blur to the interface, like PCL's advanced material. Blurring costs some rendering performance, so low-end machines can turn it off.</sys:String>
+    <sys:String x:Key="Settings.Blur.Enable">Enable interface blur</sys:String>
+    <sys:String x:Key="Settings.Blur.Radius">Blur radius</sys:String>
+    <sys:String x:Key="Settings.Blur.SamplingRate">Sampling rate (0-100, lower is faster)</sys:String>
+    <sys:String x:Key="Settings.Blur.KernelType">Blur kernel</sys:String>
+    <sys:String x:Key="Settings.Blur.Kernel.Gaussian">Gaussian</sys:String>
+    <sys:String x:Key="Settings.Blur.Kernel.Radial">Radial</sys:String>
+    <sys:String x:Key="Settings.Blur.Kernel.Diagonal">Diagonal Gaussian</sys:String>
+    <sys:String x:Key="Settings.Blur.Failed">Failed to save the blur settings: {0}</sys:String>
+
     <sys:String x:Key="Window.Back">Back</sys:String>
     <sys:String x:Key="Nav.Feedback">Feedback</sys:String>
     <sys:String x:Key="Feedback.Refresh">Refresh</sys:String>

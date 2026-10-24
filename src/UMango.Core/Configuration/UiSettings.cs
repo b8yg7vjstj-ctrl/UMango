@@ -85,6 +85,28 @@ public static class UiSettings
     /// <summary>动态背景的模糊半径（0 表示不模糊）。</summary>
     public const string BackgroundBlurKey = "background.blur";
 
+    // ---------------- 功能隐藏 ----------------
+
+    /// <summary>要隐藏的入口（逗号分隔的 <see cref="UMango.Core.UI.Customization.HideableEntry"/> 名）。</summary>
+    public const string HideEntriesKey = "ui.appearance.hideEntries";
+
+    /// <summary>临时强制显示所有被隐藏的入口。</summary>
+    public const string HideForceShowKey = "ui.appearance.hideForceShow";
+
+    // ---------------- 高级材质（模糊） ----------------
+
+    /// <summary>是否启用高级材质（界面模糊）。</summary>
+    public const string BlurEnabledKey = "ui.appearance.blurEnabled";
+
+    /// <summary>模糊半径（对应 PCL 的 <c>UiBlurValue</c>）。</summary>
+    public const string BlurRadiusKey = "ui.appearance.blurRadius";
+
+    /// <summary>模糊采样率（0~100，对应 PCL 的 <c>UiBlurSamplingRate</c>，PCL 存的是百分数）。</summary>
+    public const string BlurSamplingRateKey = "ui.appearance.blurSamplingRate";
+
+    /// <summary>模糊核类型（对应 PCL 的 <c>UiBlurType</c>）。</summary>
+    public const string BlurKernelTypeKey = "ui.appearance.blurKernelType";
+
     /// <summary>全部分组（按设置页展示顺序）</summary>
     public static readonly string[] SectionOrder =
         [SectionAppearance, SectionAnimation, SectionDebug, SectionBehavior];
@@ -380,6 +402,73 @@ public static class UiSettings
             Kind = SettingKind.Int,
             DefaultValue = 0,
             Order = 56
+        },
+
+        new SettingDescriptor
+        {
+            Key = HideEntriesKey,
+            Section = SectionAppearance,
+            Title = "隐藏的功能入口",
+            Description = "逗号分隔的入口名，例如 TabDownload,ToolLogs。"
+                          + "把某个入口从顶部选项卡或工具页左栏里藏起来。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 20
+        },
+
+        new SettingDescriptor
+        {
+            Key = HideForceShowKey,
+            Section = SectionAppearance,
+            Title = "临时显示全部入口",
+            Description = "打开后忽略上面的隐藏设置，把所有入口都显示出来。",
+            Kind = SettingKind.Bool,
+            DefaultValue = false,
+            Order = 21
+        },
+
+        new SettingDescriptor
+        {
+            Key = BlurEnabledKey,
+            Section = SectionAppearance,
+            Title = "高级材质（界面模糊）",
+            Description = "开启后界面元素背后出现毛玻璃效果（与 PCL 的「高级材质」一致）。",
+            Kind = SettingKind.Bool,
+            DefaultValue = false,
+            Order = 22
+        },
+
+        new SettingDescriptor
+        {
+            Key = BlurRadiusKey,
+            Section = SectionAppearance,
+            Title = "模糊半径",
+            Description = "数值越大越模糊（对应 PCL 的 UiBlurValue）。",
+            Kind = SettingKind.Int,
+            DefaultValue = 16,
+            Order = 23
+        },
+
+        new SettingDescriptor
+        {
+            Key = BlurSamplingRateKey,
+            Section = SectionAppearance,
+            Title = "模糊采样率",
+            Description = "0~100，越低越快（对应 PCL 的 UiBlurSamplingRate）。",
+            Kind = SettingKind.Int,
+            DefaultValue = 70,
+            Order = 24
+        },
+
+        new SettingDescriptor
+        {
+            Key = BlurKernelTypeKey,
+            Section = SectionAppearance,
+            Title = "模糊核类型",
+            Description = "0=高斯，1=径向，2=对角高斯（对应 PCL 的 UiBlurType）。",
+            Kind = SettingKind.Int,
+            DefaultValue = 0,
+            Order = 25
         },
     ];
 

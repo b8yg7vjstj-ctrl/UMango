@@ -147,3 +147,64 @@ public class ShellViewModelTests
         Assert.Equal(5, Enum.GetValues<AppTab>().Length);
     }
 }
+
+/// <summary>功能隐藏：外壳菜单的过滤。</summary>
+public sealed class ShellHiddenEntriesTests
+{
+    [Fact]
+    public void 藏掉日志入口_工具页菜单里没有它()
+    {
+        var shell = new ShellViewModel();
+        shell.ApplyHiddenEntries(new HashSet<string> { "logs" }, new HashSet<AppTab>());
+
+        shell.CurrentTab = AppTab.Tools;
+
+        Assert.DoesNotContain(shell.LeftMenu, i => i.Key == "logs");
+        Assert.Contains(shell.LeftMenu, i => i.Key == "feedback");
+    }
+
+    [Fact]
+    public void 藏掉下载器入口_工具页菜单里没有它()
+    {
+        var shell = new ShellViewModel();
+        shell.ApplyHiddenEntries(new HashSet<string> { "downloader" }, new HashSet<AppTab>());
+
+        shell.CurrentTab = AppTab.Tools;
+
+        Assert.DoesNotContain(shell.LeftMenu, i => i.Key == "downloader");
+    }
+
+    [Fact]
+    public void 不藏任何东西_菜单不变()
+    {
+        var shell = new ShellViewModel();
+        var before = shell.LeftMenu.Count;
+
+        shell.ApplyHiddenEntries(new HashSet<string>(), new HashSet<AppTab>());
+
+        Assert.Equal(before, shell.LeftMenu.Count);
+    }
+
+    [Fact]
+    public void 藏掉音乐入口_其它入口都还在()
+    {
+        var shell = new ShellViewModel();
+        shell.ApplyHiddenEntries(new HashSet<string> { "music" }, new HashSet<AppTab>());
+
+        shell.CurrentTab = AppTab.Tools;
+
+        Assert.DoesNotContain(shell.LeftMenu, i => i.Key == "music");
+        Assert.Contains(shell.LeftMenu, i => i.Key == "about");
+        Assert.Contains(shell.LeftMenu, i => i.Key == "licenses");
+    }
+
+    [Fact]
+    public void 隐藏工具入口不影响主页菜单()
+    {
+        var shell = new ShellViewModel();
+        shell.ApplyHiddenEntries(new HashSet<string> { "logs" }, new HashSet<AppTab>());
+
+        // 主页菜单里本来就没有 logs，条目数不变
+        Assert.Contains(shell.LeftMenu, i => i.Key == "overview");
+    }
+}

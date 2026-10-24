@@ -446,6 +446,13 @@ public partial class SettingsView : UserControl
             ViewModel.BackgroundSuit = option.Mode;
     }
 
+    /// <summary>模糊核类型变化：ComboBox 选中项换成 VM 的整数值。</summary>
+    private void BlurKernelBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox box && box.SelectedItem is SettingsViewModel.BlurKernelTypeOption option)
+            ViewModel.BlurKernelType = option.Value;
+    }
+
     /// <summary>代理密码改动：PasswordBox 没有可绑定的 Password 属性，只能走事件。</summary>
     private void ProxyPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
     {

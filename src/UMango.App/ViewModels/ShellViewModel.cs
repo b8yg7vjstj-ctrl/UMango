@@ -64,6 +64,27 @@ public partial class ShellViewModel : ObservableObject
     /// 为什么用事件而不只靠 PropertyChanged：页面切换右区内容时需要一个明确的"选中了哪一项"信号。</summary>
     public event Action<string>? NavChanged;
 
+    /// <summary>
+    /// 要隐藏的工具页入口（Key → 隐藏开关）。
+    /// 对应 PCL 的「隐藏功能」机制（见 Core 的 <c>HidePolicy</c>）。
+    /// </summary>
+    public IReadOnlySet<string> HiddenToolKeys { get; private set; } =
+        new HashSet<string>();
+
+    /// <summary>要隐藏的顶部选项卡（<see cref="AppTab"/> 集合）。</summary>
+    public IReadOnlySet<AppTab> HiddenTabs { get; private set; } =
+        new HashSet<AppTab>();
+
+    /// <summary>设置「要隐藏哪些入口」并重建菜单。</summary>
+    public void ApplyHiddenEntries(
+        IReadOnlySet<string> hiddenToolKeys,
+        IReadOnlySet<AppTab> hiddenTabs)
+    {
+        HiddenToolKeys = hiddenToolKeys ?? new HashSet<string>();
+        HiddenTabs = hiddenTabs ?? new HashSet<AppTab>();
+        RebuildLeftMenu(CurrentTab);
+    }
+
     public ShellViewModel()
     {
         // 构造时先建一次菜单：OnCurrentTabChanged 只在"变化"时触发，
@@ -97,7 +118,7 @@ public partial class ShellViewModel : ObservableObject
 
     private void RebuildLeftMenu(AppTab tab)
     {
-        var items = MenuFor(tab);
+        var items = FilterHidden(MenuFor(tab));
         LeftMenu = items;
 
         // 换选项卡时选中项复位到第一项：沿用上一个选项卡的选中项会让右区内容与
@@ -116,7 +137,7 @@ public partial class ShellViewModel : ObservableObject
     ///
     /// 第一项是主视图，其余是次级页面（<see cref="NavItem.IsSecondary"/>）。
     /// </summary>
-    private static NavItem[] MenuFor(AppTab tab) => tab switch
+    private NavItem[] MenuFor(AppTab tab) => tab switch
     {
         AppTab.Home =>
         [
@@ -152,4 +173,12 @@ public partial class ShellViewModel : ObservableObject
             new NavItem("about", L("Nav.About"), IsSecondary: true)
         ]
     };
+
+    /// <summary>
+    /// 按「要隐藏哪些入口」过滤菜单项。
+    ///
+    /// 对应 PCL 的 <c>HiddenRefresh()</c>：把被藏起来的入口从左栏里去掉。
+    /// </summary>
+    private NavItem[] FilterHidden(NavItem[] items) =>
+        items.Where(i => !HiddenToolKeys.Contains(i.Key)).ToArray();
 }

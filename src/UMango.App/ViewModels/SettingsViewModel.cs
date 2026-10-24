@@ -497,6 +497,168 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    // ---------------- 功能隐藏 ----------------
+
+    private string _hiddenEntries = "";
+    private bool _hideForceShow;
+
+    /// <summary>
+    /// 要隐藏的入口（逗号分隔的入口名）。
+    ///
+    /// 入口名取自 Core 的 <see cref="Core.UI.Customization.HideableEntry"/>：
+    /// TabDownload / TabProgress / TabSettings / TabTools /
+    /// ToolDownloader / ToolLogs / ToolDiagnostics / ToolLicenses /
+    /// ToolFeedback / ToolMusic / ToolAbout。
+    /// </summary>
+    public string HiddenEntries
+    {
+        get => _hiddenEntries;
+        set
+        {
+            if (value == _hiddenEntries) return;
+            _hiddenEntries = value;
+            OnPropertyChanged(nameof(HiddenEntries));
+            ApplyHiddenEntriesSettings();
+        }
+    }
+
+    /// <summary>临时显示全部入口（忽略隐藏设置）。</summary>
+    public bool HideForceShow
+    {
+        get => _hideForceShow;
+        set
+        {
+            if (value == _hideForceShow) return;
+            _hideForceShow = value;
+            OnPropertyChanged(nameof(HideForceShow));
+            ApplyHiddenEntriesSettings();
+        }
+    }
+
+    /// <summary>
+    /// 把隐藏设置写穿到 Core 并让外壳重新算可见性。
+    ///
+    /// 解析不了的入口名**直接忽略**（见 <c>AppSettings.ReadHidePolicy</c>），
+    /// 不给用户弹错误 —— 手改配置文件写错名字不该让界面报错。
+    /// </summary>
+    private void ApplyHiddenEntriesSettings()
+    {
+        try
+        {
+            AppSettings.Settings.Set(UiSettings.HideEntriesKey, _hiddenEntries.Trim());
+            AppSettings.Settings.Set(UiSettings.HideForceShowKey, _hideForceShow);
+            AppSettings.Save();
+            AppSettings.RaiseHiddenEntriesChanged();
+        }
+        catch (Exception ex)
+        {
+            BackgroundStatusMessage = ViewText.L("Settings.Hidden.Failed", ex.Message);
+        }
+    }
+
+    // ---------------- 高级材质（模糊） ----------------
+
+    private bool _blurEnabled;
+    private int _blurRadius = 16;
+    private int _blurSamplingRate = 70;
+    private int _blurKernelType;
+
+    /// <summary>是否启用高级材质（界面模糊）。</summary>
+    public bool BlurEnabled
+    {
+        get => _blurEnabled;
+        set
+        {
+            if (value == _blurEnabled) return;
+            _blurEnabled = value;
+            OnPropertyChanged(nameof(BlurEnabled));
+            ApplyBlurSettings();
+        }
+    }
+
+    /// <summary>模糊半径。</summary>
+    public int BlurRadius
+    {
+        get => _blurRadius;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 60);
+            if (clamped == _blurRadius) return;
+            _blurRadius = clamped;
+            OnPropertyChanged(nameof(BlurRadius));
+            ApplyBlurSettings();
+        }
+    }
+
+    /// <summary>模糊采样率（0~100）。</summary>
+    public int BlurSamplingRate
+    {
+        get => _blurSamplingRate;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 100);
+            if (clamped == _blurSamplingRate) return;
+            _blurSamplingRate = clamped;
+            OnPropertyChanged(nameof(BlurSamplingRate));
+            ApplyBlurSettings();
+        }
+    }
+
+    /// <summary>模糊核类型选项。</summary>
+    public sealed record BlurKernelTypeOption(int Value, string DisplayName);
+
+    /// <summary>模糊核类型选项集合（对应 PCL 的 UiBlurType 三个取值）。</summary>
+    public IReadOnlyList<BlurKernelTypeOption> BlurKernelTypes { get; } =
+    [
+        new(0, ViewText.L("Settings.Blur.Kernel.Gaussian")),
+        new(1, ViewText.L("Settings.Blur.Kernel.Radial")),
+        new(2, ViewText.L("Settings.Blur.Kernel.Diagonal")),
+    ];
+
+    /// <summary>模糊核类型选项（当前选中）。</summary>
+    public BlurKernelTypeOption? SelectedBlurKernelType
+    {
+        get => BlurKernelTypes.FirstOrDefault(t => t.Value == _blurKernelType);
+        set
+        {
+            if (value is null) return;
+            BlurKernelType = value.Value;
+        }
+    }
+
+    /// <summary>模糊核类型（0=高斯，1=径向，2=对角高斯）。</summary>
+    public int BlurKernelType
+    {
+        get => _blurKernelType;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 2);
+            if (clamped == _blurKernelType) return;
+            _blurKernelType = clamped;
+            OnPropertyChanged(nameof(BlurKernelType));
+            OnPropertyChanged(nameof(SelectedBlurKernelType));
+            ApplyBlurSettings();
+        }
+    }
+
+    /// <summary>把模糊设置写穿到 Core 并让界面重新应用。</summary>
+    private void ApplyBlurSettings()
+    {
+        try
+        {
+            AppSettings.Settings.Set(UiSettings.BlurEnabledKey, _blurEnabled);
+            AppSettings.Settings.Set(UiSettings.BlurRadiusKey, _blurRadius);
+            AppSettings.Settings.Set(UiSettings.BlurSamplingRateKey, _blurSamplingRate);
+            AppSettings.Settings.Set(UiSettings.BlurKernelTypeKey, _blurKernelType);
+            AppSettings.Save();
+            AppSettings.RaiseBlurChanged();
+        }
+        catch (Exception ex)
+        {
+            BackgroundStatusMessage = ViewText.L("Settings.Blur.Failed", ex.Message);
+        }
+    }
+
     /// <summary>语言选项（首项 = 跟随系统）。</summary>
     public IReadOnlyList<AppLocalization.LanguageOption> Languages { get; } =
         AppLocalization.BuildOptions();
@@ -522,6 +684,14 @@ public partial class SettingsViewModel : ObservableObject
         _backgroundOpacity = AppSettings.Settings.Get<int>(UiSettings.BackgroundOpacityKey);
         _backgroundBlur = AppSettings.Settings.Get<int>(UiSettings.BackgroundBlurKey);
         _backgroundSuit = AppSettings.Settings.Get<BackgroundSuitMode>(UiSettings.BackgroundSuitKey);
+
+        // 回显已保存的隐藏与模糊设置。
+        _hiddenEntries = AppSettings.Settings.Get<string>(UiSettings.HideEntriesKey);
+        _hideForceShow = AppSettings.Settings.Get<bool>(UiSettings.HideForceShowKey);
+        _blurEnabled = AppSettings.Settings.Get<bool>(UiSettings.BlurEnabledKey);
+        _blurRadius = AppSettings.Settings.Get<int>(UiSettings.BlurRadiusKey);
+        _blurSamplingRate = AppSettings.Settings.Get<int>(UiSettings.BlurSamplingRateKey);
+        _blurKernelType = AppSettings.Settings.Get<int>(UiSettings.BlurKernelTypeKey);
 
         // 回显当前生效的语言（保存值 → 解析成选项；解析不到时回落"跟随系统"）
         var savedCode = AppLocalization.ReadSavedLanguageCode();

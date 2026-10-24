@@ -151,7 +151,107 @@ public partial class MainWindow : Window
         Services.AppSettings.BackgroundChanged += ApplyBackgroundSettings;
         StateChanged += (_, _) => ApplyBackgroundPlayback();
         Loaded += (_, _) => ApplyBackgroundSettings();
+
+        // 功能隐藏：PCL 的「隐藏功能」机制（见 Core 的 HidePolicy）。
+        Services.AppSettings.HiddenEntriesChanged += ApplyHiddenEntries;
+        ApplyHiddenEntries();
+
+        // 高级材质（界面模糊）：PCL 的 UiBlur / UiBlurValue / UiBlurSamplingRate / UiBlurType。
+        Services.AppSettings.BlurChanged += ApplyBlurSettings;
+        ApplyBlurSettings();
     }
+
+    // ================= 高级材质（模糊） =================
+
+    /// <summary>
+    /// 应用界面模糊（PCL 的「高级材质」）。
+    ///
+    /// PCL 把半径/采样率/核类型写成**应用级资源**（<c>Application.Current.Resources</c>），
+    /// 由 <c>BlurBorder</c> 控件自己去读。UMango 的做法是直接给窗口根节点挂效果 ——
+    /// 效果是挂在**渲染目标**上的，挂在根 Border 上就等于整窗模糊。
+    /// </summary>
+    private void ApplyBlurSettings()
+    {
+        var enabled = Services.AppSettings.Settings.Get<bool>(UMango.Core.Configuration.UiSettings.BlurEnabledKey);
+        var radius = Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BlurRadiusKey);
+        var sampling = Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BlurSamplingRateKey);
+        var kernel = Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BlurKernelTypeKey);
+
+        if (!enabled || radius <= 0)
+        {
+            RootCard.Effect = null;
+            return;
+        }
+
+        var effect = new Effects.AdaptiveBlurEffect
+        {
+            Radius = radius,
+            SamplingRate = Math.Clamp(sampling, 1, 100) / 100d,
+            KernelType = (System.Windows.Media.Effects.KernelType)Math.Clamp(kernel, 0, 2),
+        };
+
+        RootCard.Effect = effect;
+    }
+
+    // ================= 功能隐藏 =================
+
+    /// <summary>
+    /// 按设置把顶部选项卡与工具页入口藏起来。
+    ///
+    /// 对应 PCL 的 <c>HiddenRefresh()</c>。差别见 Core 的 <c>HidePolicy</c>：
+    /// 全部藏起来时仍保留「设置」入口，用户才进得去把设置改回来。
+    /// </summary>
+    private void ApplyHiddenEntries()
+    {
+        var policy = Services.AppSettings.ReadHidePolicy();
+        var resolution = Core.UI.Customization.HidePolicy.Resolve(policy);
+
+        // 工具页左栏：被藏起来的入口从菜单里去掉（ShellViewModel 是菜单的唯一真相来源）。
+        var hiddenToolKeys = new HashSet<string>();
+        foreach (var entry in Core.UI.Customization.HidePolicy.ToolCandidates)
+        {
+            if (policy.IsVisible(entry)) continue;
+            hiddenToolKeys.Add(ToolKeyOf(entry));
+        }
+
+        _shell.ApplyHiddenEntries(hiddenToolKeys, new HashSet<AppTab>());
+
+        TabDownload.Visibility = MapTab(resolution.TopTabs, Core.UI.Customization.HideableEntry.TabDownload);
+        TabProgress.Visibility = MapTab(resolution.TopTabs, Core.UI.Customization.HideableEntry.TabProgress);
+        TabSettings.Visibility = MapTab(resolution.TopTabs, Core.UI.Customization.HideableEntry.TabSettings);
+        TabTools.Visibility = MapTab(resolution.TopTabs, Core.UI.Customization.HideableEntry.TabTools);
+
+        // 当前选中的选项卡被藏起来时，退回主页（否则右区显示着一个没有入口的页面）。
+        if (TabDownload.Visibility != Visibility.Visible && _shell.CurrentTab == AppTab.Download)
+            _shell.CurrentTab = AppTab.Home;
+        if (TabProgress.Visibility != Visibility.Visible && _shell.CurrentTab == AppTab.Progress)
+            _shell.CurrentTab = AppTab.Home;
+        if (TabSettings.Visibility != Visibility.Visible && _shell.CurrentTab == AppTab.Settings)
+            _shell.CurrentTab = AppTab.Home;
+        if (TabTools.Visibility != Visibility.Visible && _shell.CurrentTab == AppTab.Tools)
+            _shell.CurrentTab = AppTab.Home;
+
+        SyncTabCheck();
+    }
+
+    /// <summary>工具页入口 → 左栏菜单 Key。</summary>
+    private static string ToolKeyOf(Core.UI.Customization.HideableEntry entry) => entry switch
+    {
+        Core.UI.Customization.HideableEntry.ToolDownloader => "downloader",
+        Core.UI.Customization.HideableEntry.ToolLogs => "logs",
+        Core.UI.Customization.HideableEntry.ToolDiagnostics => "diagnostics",
+        Core.UI.Customization.HideableEntry.ToolLicenses => "licenses",
+        Core.UI.Customization.HideableEntry.ToolFeedback => "feedback",
+        Core.UI.Customization.HideableEntry.ToolMusic => "music",
+        Core.UI.Customization.HideableEntry.ToolAbout => "about",
+        _ => entry.ToString(),
+    };
+
+    /// <summary>某个顶部选项卡该显示还是该藏。</summary>
+    private static Visibility MapTab(
+        IReadOnlyList<Core.UI.Customization.HideableEntry> visible,
+        Core.UI.Customization.HideableEntry entry) =>
+        visible.Contains(entry) ? Visibility.Visible : Visibility.Collapsed;
 
     // ================= 动态背景 =================
 
