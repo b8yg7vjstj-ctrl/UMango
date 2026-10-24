@@ -485,4 +485,15 @@
     <sys:String x:Key="SystemDialog.File.AllFilesFilter">所有文件|*.*</sys:String>
     <sys:String x:Key="SystemDialog.Folder.SelectTitle">选择文件夹</sys:String>
     <sys:String x:Key="Downloader.Browse">浏览…</sys:String>
+    <!-- ============ 代理设置 ============ -->
+    <sys:String x:Key="Settings.Proxy.Section">网络代理</sys:String>
+    <sys:String x:Key="Settings.Proxy.Hint">包管理器下载与更新检查走的网络请求都遵循这里的设置。选「跟随系统」时会自动读取操作系统的代理。</sys:String>
+    <sys:String x:Key="Settings.Proxy.Mode.None">不使用代理（直连）</sys:String>
+    <sys:String x:Key="Settings.Proxy.Mode.System">跟随系统代理</sys:String>
+    <sys:String x:Key="Settings.Proxy.Mode.Custom">自定义代理</sys:String>
+    <sys:String x:Key="Settings.Proxy.Status.None">当前不使用代理，所有请求直连。</sys:String>
+    <sys:String x:Key="Settings.Proxy.Status.Custom">当前使用自定义代理：{0}</sys:String>
+    <sys:String x:Key="Settings.Proxy.Status.SystemFound">已读取到系统代理：{0}</sys:String>
+    <sys:String x:Key="Settings.Proxy.Status.SystemNone">未读取到系统代理（系统未启用代理或读取失败），当前按直连处理。</sys:String>
+
 </ResourceDictionary>

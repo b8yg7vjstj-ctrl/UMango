@@ -471,4 +471,15 @@
     <sys:String x:Key="SystemDialog.File.AllFilesFilter">All files|*.*</sys:String>
     <sys:String x:Key="SystemDialog.Folder.SelectTitle">Select folder</sys:String>
     <sys:String x:Key="Downloader.Browse">Browse…</sys:String>
+    <!-- ============ 代理设置 ============ -->
+    <sys:String x:Key="Settings.Proxy.Section">Network proxy</sys:String>
+    <sys:String x:Key="Settings.Proxy.Hint">Package manager downloads and update checks follow this setting. "Follow system" reads the operating system proxy automatically.</sys:String>
+    <sys:String x:Key="Settings.Proxy.Mode.None">No proxy (direct)</sys:String>
+    <sys:String x:Key="Settings.Proxy.Mode.System">Follow system proxy</sys:String>
+    <sys:String x:Key="Settings.Proxy.Mode.Custom">Custom proxy</sys:String>
+    <sys:String x:Key="Settings.Proxy.Status.None">No proxy is in use; all requests go out directly.</sys:String>
+    <sys:String x:Key="Settings.Proxy.Status.Custom">Using the custom proxy: {0}</sys:String>
+    <sys:String x:Key="Settings.Proxy.Status.SystemFound">System proxy detected: {0}</sys:String>
+    <sys:String x:Key="Settings.Proxy.Status.SystemNone">No system proxy was found (the system has none enabled, or it could not be read); requests go out directly for now.</sys:String>
+
 </ResourceDictionary>

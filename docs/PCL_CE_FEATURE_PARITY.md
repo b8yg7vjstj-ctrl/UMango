@@ -628,7 +628,7 @@
 | P3-6 | 进程间管道通信 | 未做 | UMango 架构不需要 |
 | P3-7 | 反馈页（标签化提交） | 未做 | 需配套后端；可后置 |
 | P3-8 | 日志查看页 | ✅ **已完成**（同上 commit `f2cc0b9`，`Views/LogView.xaml`） | 与 P0-3 同批交付，并附「导出诊断包」 |
-| P3-9 | 启动器杂项设置 | 未做 | ⚠️ **未逐项确认**其中是否含 UMango 该有的项（文件 322 行未细读） |
+| P3-9 | 启动器杂项设置 | **部分**（已逐项确认，见下） | PCL 的 `PageSetupLauncherMisc.xaml.cs`（322 行）共 9 组设置，逐项核对后：**UMango 该有的 1 组已迁（网络代理）**，其余 8 组各有明确不迁理由 |
 
 ### 4.5 Windows 依赖实测汇总（迁移成本的硬约束）
 
@@ -851,8 +851,13 @@ UMango 现有的 `Download/`（8 文件 990 行，aria2/内置 HTTP/eD2k 三引�
 
 以下各项**本次未能确定**，列出原因，避免误导决策：
 
-1. **`PageSetupLauncherMisc.xaml.cs`（322 行）的具体设置项未逐项展开**。
-   只确认它是非 MC 的启动器杂项设置页，未确认其中哪些项 UMango 应当有。→ 影响 P3-9 的判定。
+1. ~~**`PageSetupLauncherMisc.xaml.cs`（322 行）的具体设置项未逐项展开**~~ —— **已逐项确认**（见 §4.5 之后的 P3-9 逐项核对表）：
+   9 组设置中，**网络代理**（自定义地址 / 自定义用户名 / 自定义密码 / 代理类型）已迁入
+   （`src/UMango.Core/Network/ProxyManager.cs` + `src/UMango.App/Network/PlatformSystemProxyProbe.cs` + 设置页「①.9 网络代理」卡）；
+   其余 8 组不迁的理由分别是：公告方案（PCL 官网专属）、禁用硬件加速（WPF 渲染层内部开关，UMango 暂无软渲染回退路径）、
+   动画 FPS 上限（UMango 已有 `ui.animation.fpsLimit` 等价项）、最大日志行数（UMango 已有日志缓冲上限）、
+   遥测（UMango 不采集遥测）、DoH（UMango 的 DNS 走系统，不自带解析器）、调试动画速度（UMango 的动画速度因子已独立）、
+   调试跳过复制与调试随机延时（PCL 的 MC 安装流程专用）、以及「停止使用 PCL CE / 导入导出 PCL 配置」（PCL 专属）。
 2. **`Modules/Base/ModBase.cs`（3,759 行）内部的通用/专用比例未逐行分类**。
    该文件是上游继承的基础设施大杂烩，本次只确认了它的体积与角色，未做行级归属统计。
 3. **PCL-CE 的 `Controls/`（64 文件 11,342 行）未纳入功能清单**。

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Http;
+using UMango.Core.Network;
 using UMango.Core.Terminal;
 
 namespace UMango.Core.Download.Engines;
@@ -47,7 +48,8 @@ public sealed class BuiltinHttpEngine : IDownloadEngine
 
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromHours(2) };
+            // 用全局代理管理器建 handler：用户设了代理，下载也必须走代理。
+            using var http = new HttpClient(ProxyHolder.CreateHandler()) { Timeout = TimeSpan.FromHours(2) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("UMango/0.1");
 
             using var resp = await http.GetAsync(request.Url, HttpCompletionOption.ResponseHeadersRead, ct)

@@ -8,6 +8,7 @@ using UMango.Core.Configuration;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
+using UMango.Core.Network;
 
 using UMango.App.Localization;
 
@@ -39,6 +40,92 @@ public partial class SettingsViewModel : ObservableObject
     /// 更新有检查→下载→重启的完整生命周期，独立成一个 VM 更清楚。
     /// </summary>
     public UpdateViewModel Update { get; } = new();
+
+    // ==================== 网络代理 ====================
+
+    /// <summary>代理模式的可选项。</summary>
+    public IReadOnlyList<ProxyModeOption> ProxyModes { get; } =
+    [
+        new(ProxyMode.NoProxy, LocalizationService.Text("Settings.Proxy.Mode.None")),
+        new(ProxyMode.SystemProxy, LocalizationService.Text("Settings.Proxy.Mode.System")),
+        new(ProxyMode.CustomProxy, LocalizationService.Text("Settings.Proxy.Mode.Custom")),
+    ];
+
+    /// <summary>代理模式选项。</summary>
+    public sealed record ProxyModeOption(ProxyMode Mode, string DisplayName);
+
+    private ProxyModeOption? _selectedProxyMode;
+
+    /// <summary>当前代理模式。</summary>
+    public ProxyModeOption SelectedProxyMode
+    {
+        get => _selectedProxyMode ??= ProxyModes[0];
+        set
+        {
+            if (value is null || value == _selectedProxyMode)
+                return;
+            _selectedProxyMode = value;
+            OnPropertyChanged(nameof(SelectedProxyMode));
+            ApplyProxySettings();
+        }
+    }
+
+    private string _proxyAddress = "";
+    private string _proxyUsername = "";
+    private string _proxyPassword = "";
+
+    /// <summary>自定义代理地址。</summary>
+    public string ProxyAddress
+    {
+        get => _proxyAddress;
+        set
+        {
+            if (value == _proxyAddress) return;
+            _proxyAddress = value;
+            OnPropertyChanged(nameof(ProxyAddress));
+            ApplyProxySettings();
+        }
+    }
+
+    /// <summary>自定义代理用户名。</summary>
+    public string ProxyUsername
+    {
+        get => _proxyUsername;
+        set
+        {
+            if (value == _proxyUsername) return;
+            _proxyUsername = value;
+            OnPropertyChanged(nameof(ProxyUsername));
+            ApplyProxySettings();
+        }
+    }
+
+    /// <summary>自定义代理密码（只写不读，避免密码出现在绑定回显里）。</summary>
+    public string ProxyPassword
+    {
+        get => _proxyPassword;
+        set
+        {
+            if (value == _proxyPassword) return;
+            _proxyPassword = value;
+            ApplyProxySettings();
+        }
+    }
+
+    private string _proxyStatusMessage = "";
+
+    /// <summary>系统代理探测状态。</summary>
+    public string ProxyStatusMessage
+    {
+        get => _proxyStatusMessage;
+        private set
+        {
+            if (value == _proxyStatusMessage) return;
+            _proxyStatusMessage = value;
+            OnPropertyChanged(nameof(ProxyStatusMessage));
+        }
+    }
+
 
     /// <summary>
     /// 灰度（哀悼日）模式开关。写到 <see cref="GrayModeController.GrayModeKey"/> 是唯一权威；
@@ -216,7 +303,54 @@ public partial class SettingsViewModel : ObservableObject
         // 否则设置页的选中项会与实际观感脱节。
         ThemeManager.ThemeChanged += SyncFromThemeManager;
 
+        // 代理：回显保存的模式与地址，并把代理管理器接到网络层
+        _selectedProxyMode = ProxyModes.FirstOrDefault(m => m.Mode == AppServices.ProxyManager.Mode) ?? ProxyModes[0];
+        _proxyAddress = AppServices.ProxyManager.CustomProxyAddress?.ToString() ?? "";
+        ApplyProxySettings();
+
         RefreshRecords();
+    }
+
+    /// <summary>
+    /// 把代理设置应用到代理管理器，并让网络层重建客户端。
+    /// </summary>
+    private void ApplyProxySettings()
+    {
+        var manager = AppServices.ProxyManager;
+        manager.Mode = (SelectedProxyMode ?? ProxyModes[0]).Mode;
+
+        if (manager.Mode == ProxyMode.CustomProxy)
+        {
+            if (!string.IsNullOrWhiteSpace(ProxyAddress)
+                && Uri.TryCreate(ProxyAddress, UriKind.Absolute, out var uri))
+            {
+                manager.CustomProxyAddress = uri;
+            }
+            manager.CustomProxyCredentials = string.IsNullOrEmpty(ProxyUsername)
+                ? null
+                : new System.Net.NetworkCredential(ProxyUsername, ProxyPassword);
+        }
+        else if (manager.Mode == ProxyMode.SystemProxy)
+        {
+            manager.RefreshSystemProxy();
+        }
+
+        AppServices.Http.RefreshProxy();
+        UpdateProxyStatus();
+    }
+
+    /// <summary>更新「系统代理探测状态」那一行。</summary>
+    private void UpdateProxyStatus()
+    {
+        var manager = AppServices.ProxyManager;
+        ProxyStatusMessage = manager.Mode switch
+        {
+            ProxyMode.NoProxy => L("Settings.Proxy.Status.None"),
+            ProxyMode.CustomProxy => L("Settings.Proxy.Status.Custom", manager.CustomProxyAddress?.ToString() ?? "-"),
+            _ => manager.SystemProxyAvailable
+                ? L("Settings.Proxy.Status.SystemFound", manager.GetProxyUrl() ?? "-")
+                : L("Settings.Proxy.Status.SystemNone"),
+        };
     }
 
     /// <summary>切换语言（选中即应用，与主题族一致）。</summary>

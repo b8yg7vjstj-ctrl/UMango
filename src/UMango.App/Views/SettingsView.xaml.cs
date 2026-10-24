@@ -430,4 +430,29 @@ public partial class SettingsView : UserControl
             _execute();
         }
     }
+
+    /// <summary>代理模式切换：应用代理设置，并显示/隐藏自定义代理面板。</summary>
+    private void ProxyModeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox box && box.SelectedItem is SettingsViewModel.ProxyModeOption option)
+            ViewModel.SelectedProxyMode = option;
+        UpdateProxyCustomVisibility();
+    }
+
+    /// <summary>代理密码改动：PasswordBox 没有可绑定的 Password 属性，只能走事件。</summary>
+    private void ProxyPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox box)
+            ViewModel.ProxyPassword = box.Password;
+    }
+
+    /// <summary>自定义代理面板只在「自定义」模式下可见。</summary>
+    private void UpdateProxyCustomVisibility()
+    {
+        if (ProxyCustomPanel is null)
+            return;
+        var isCustom = ViewModel.SelectedProxyMode?.Mode == Core.Network.ProxyMode.CustomProxy;
+        ProxyCustomPanel.Visibility = isCustom ? Visibility.Visible : Visibility.Collapsed;
+    }
+
 }

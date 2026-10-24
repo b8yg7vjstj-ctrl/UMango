@@ -9,6 +9,7 @@ using UMango.Core.Caching;
 using UMango.Core.Configuration;
 using UMango.Core.Download;
 using UMango.Core.Logging;
+using UMango.App.Network;
 using UMango.Core.Network;
 using UMango.Core.Notifications;
 using UMango.Core.Platform;
@@ -89,6 +90,28 @@ public static class AppServices
     /// 自更新服务。**懒创建**：大多数会话不会检查更新，
     /// 没必要在启动路径上建 HttpClient。
     /// </summary>
+    /// <summary>
+    /// 代理管理器。App 启动时用平台探测器初始化，
+    /// 并放进 <see cref="ProxyHolder.Current"/> 让所有 HTTP 出站共用同一套策略。
+    /// </summary>
+    public static ProxyManager ProxyManager { get; } = CreateProxyManager();
+
+    private static ProxyManager CreateProxyManager()
+    {
+        var manager = new ProxyManager(new PlatformSystemProxyProbe());
+        ProxyHolder.Current = manager;
+        return manager;
+    }
+
+    /// <summary>统一的 HTTP 服务（更新检查等用）。</summary>
+    public static HttpService Http { get; } = CreateHttp();
+
+    private static HttpService CreateHttp()
+    {
+        var service = new HttpService { ProxyManager = ProxyManager };
+        return service;
+    }
+
     public static UpdateService Update
     {
         get => _update ??= LazyUpdate.Value;
@@ -101,7 +124,7 @@ public static class AppServices
         new(() => new DownloadEngineRegistry(), isThreadSafe: true);
 
 
-    private static readonly Lazy<UpdateService> LazyUpdate = new(() => new UpdateService(new HttpService()));
+    private static readonly Lazy<UpdateService> LazyUpdate = new(() => new UpdateService(Http));
     /// <summary>
     /// 初始化过程中被吞掉的错误（正常为 null）。
     /// 之所以要暴露出来：错误被 try/catch 吞掉后如果完全没有痕迹，
