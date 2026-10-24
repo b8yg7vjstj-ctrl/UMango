@@ -31,3 +31,7 @@ local.properties
 *.user
 *.suo
 .vs/
+
+# 测试结果
+**/TestResults/
+*.trx
