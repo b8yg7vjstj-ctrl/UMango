@@ -50,6 +50,7 @@
       零传递依赖，不引入任何传染性义务。
     -->
     <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
   <!--

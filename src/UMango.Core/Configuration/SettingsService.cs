@@ -29,8 +29,19 @@ public sealed class SettingsService
     private readonly Dictionary<string, object?> _values = [];
     private readonly List<Func<JsonObject, JsonObject>> _migrations = [];
     private readonly ISettingsStore _store;
+    private readonly ConfigEventHub? _events;
 
     public SettingsService(ISettingsStore store) => _store = store;
+
+    /// <summary>
+    /// 构造，并接入配置事件总线。
+    ///
+    /// 事件总线是<b>可选</b>的：不接的话设置服务行为完全不变（只发 <see cref="Changed"/>）。
+    /// 接了之后，读写会先走事件总线的「预览」段（观察者可以改写值或否决操作），
+    /// 再走「普通」段（只做通知）。语义与 PCL-CE 的 <c>ConfigItem._TriggerEvent</c> 一致。
+    /// </summary>
+    public SettingsService(ISettingsStore store, ConfigEventHub events) : this(store) =>
+        _events = events;
 
     /// <summary>某个设置变化时触发（参数为键名）。界面订阅它做即时生效。</summary>
     public event Action<string>? Changed;
@@ -77,16 +88,36 @@ public sealed class SettingsService
     public T Get<T>(string key)
     {
         var d = Descriptor(key);
+        object? current = null;
+        var has = false;
+
         if (_values.TryGetValue(key, out var raw) && raw is not null)
         {
             // 枚举落盘是整数，读回来要还原成枚举
             if (d.Kind == SettingKind.Enum && raw is int i && d.EnumType is not null)
-                return (T)Enum.ToObject(d.EnumType, i);
-            if (raw is T typed) return typed;
-            try { return (T)Convert.ChangeType(raw, typeof(T))!; }
-            catch (Exception) { /* 类型对不上时退回默认值，而不是抛给界面 */ }
+            {
+                current = Enum.ToObject(d.EnumType, i);
+                has = true;
+            }
+            else if (raw is T typed) { current = typed; has = true; }
+            else
+            {
+                try { current = (T)Convert.ChangeType(raw, typeof(T))!; has = true; }
+                catch (Exception) { /* 类型对不上时退回默认值，而不是抛给界面 */ }
+            }
         }
-        return (T)(d.DefaultValue ?? default(T))!;
+
+        if (!has) current = d.DefaultValue ?? default(T);
+
+        // 读取类事件：预览观察者可以替换读到的值。
+        if (_events is not null)
+        {
+            var args = new ConfigEventArgs(key, ConfigEvent.Get, null, current, current);
+            _events.RaiseRead(key, args);
+            if (args.NewValueReplacement is not null) current = args.NewValueReplacement;
+        }
+
+        return (T)current!;
     }
 
     /// <summary>写值。会做类型与范围校验，非法值直接抛错（不要静默夹住，那会掩盖界面 bug）。</summary>
@@ -94,12 +125,27 @@ public sealed class SettingsService
     {
         var d = Descriptor(key);
         var normalized = Normalize(d, value);
-
         var old = Get<object?>(key);
+
+        // 更新类事件：预览观察者可以改写要写的值，或直接否决这次写入。
+        //
+        // 顺序与 PCL 一致：**先派发预览事件，再判断"值是否真的变了"**。
+        // 否则「写一个与当前相同的值」会在事件派发之前就被短路掉 ——
+        // 观察者永远收不到通知，而它恰恰是想在"有人试图写这个键"时被叫醒。
+        if (_events is not null)
+        {
+            var args = new ConfigEventArgs(key, ConfigEvent.Set, null, old, normalized);
+            var cancelled = _events.RaisePreview(key, args);
+            if (cancelled) return;
+            if (args.NewValueReplacement is not null) normalized = Normalize(d, args.NewValueReplacement);
+        }
+
         if (Equals(old, normalized)) return;   // 值没变就不触发通知，避免界面白刷一遍
 
         _values[key] = normalized;
         Changed?.Invoke(key);
+
+        _events?.Raise(key, new ConfigEventArgs(key, ConfigEvent.Set, null, old, normalized));
     }
 
     /// <summary>该键是否已偏离默认值。</summary>
@@ -119,8 +165,22 @@ public sealed class SettingsService
     /// <summary>重置单项到默认值。</summary>
     public void Reset(string key)
     {
-        Descriptor(key);
-        if (_values.Remove(key)) Changed?.Invoke(key);
+        var d = Descriptor(key);
+        var had = _values.ContainsKey(key);
+        var old = Get<object?>(key);
+
+        // 先派发预览事件，再动值 —— 否则被否决时值已经被删掉了。
+        if (_events is not null)
+        {
+            var args = new ConfigEventArgs(key, ConfigEvent.Reset, null, old, d.DefaultValue);
+            var cancelled = _events.RaisePreview(key, args);
+            if (cancelled) return;   // 值原封不动
+        }
+
+        _values.Remove(key);
+        if (had) Changed?.Invoke(key);
+
+        _events?.Raise(key, new ConfigEventArgs(key, ConfigEvent.Reset, null, old, d.DefaultValue));
     }
 
     /// <summary>重置一个分组。</summary>

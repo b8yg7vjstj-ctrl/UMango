@@ -22,8 +22,18 @@
 > **状态更新（第 11 轮起）**：本报告第 1 节的计数是产出时的快照。此后已完成：
 > - **P0-3 日志系统**（`Core/Logging/` + 日志页 + 一键导出诊断包）
 > - **P0-4 已安装列表接入界面**（下载页「搜索结果 ↔ 已安装」模式切换）
-> - **P0-2 配置体系**已按描述符驱动实现（`Core/Configuration/`，含迁移与容错）
-> - 附加：`UMango.Core` 去掉残留 UseWPF 并多目标编译 `net10.0`（平台中立成为编译期证明）
+> - **P0-2 配置体系**：**已完成**（`Core/Configuration/`，描述符驱动 + 5 种存取后端 + 迁移引擎 + 事件总线）。
+>   与 PCL 原版的**四处实质差异**：
+>   ① **不迁源生成器**（`PCL.Core.SourceGenerators/` 5 个 2,039 行）—— UMango 用普通描述符对象表达同样的语义，
+>      换来"能直接在 macOS 上单测"与"新增设置只改一处"。
+>   ② `ConfigService` **不是静态单例**（PCL 的 `_Items` / `_KeySet` 是静态字段，测试之间互相污染）→ UMango 做成实例类。
+>   ③ **配置读坏不让程序退出**（PCL 调 `Lifecycle.ForceShutdown(-2)`）→ UMango 把坏文件挪到 `.failbackup`、
+>      用 `.bak` 恢复，然后继续启动。
+>   ④ **迁移起点按路径最长选**（PCL 按迁移表倒序取第一个存在的来源，等于让书写顺序决定用哪个源文件）。
+>   另修掉 PCL 三个真实缺陷：`JsonFileProvider.Get` 读失败时会把坏值改写成「true / 原文」并落盘（数据损失）、
+>   `YamlFileProvider.Get` 键不存在时报 `ArgumentNullException`（指不到是哪个键不见了）、
+>   `DynamicCacheConfigStorage.InvalidateCache` 忘记 `Stop()` 底层存储（资源泄漏）。
+>> - 附加：`UMango.Core` 去掉残留 UseWPF 并多目标编译 `net10.0`（平台中立成为编译期证明）
 >
 > - **P0-1 持久化缓存**：**已完成**（用 JSON 实现，无 SQLite 依赖） —— 用 JSON 文件实现同一套
 >   `IAvailabilityCache` 抽象（数据量极小：六个包源、每天一次），
@@ -573,7 +583,7 @@
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
 | P0-1 | **持久化缓存服务**（SQLite + 内容寻址 + 淘汰策略） | **已完成**（等价实现） | **中** | `IO/Storage/Cache/`（13 文件，`CacheService.cs`、`SqliteCacheStorage.cs`、`CacheEvictionService.cs`、`CachePolicy.cs`、`SchemaManager.cs`） | 否（纯 .NET）—— **不引入 `Microsoft.Data.Sqlite`**：`src/UMango.Core/Caching/AvailabilityCache.cs` 用 JSON 文件实现了同一套 `IAvailabilityCache` 抽象（数据量极小：六个包源、每天一次），依赖冲突自然消解；将来内容变复杂时替换实现即可，接口已隔离。另：本轮**数据库服务**（`App/Database/`，对应 LiteDB）已单独完成，见主表「数据库服务」行 |
-| P0-2 | **配置体系补齐**（多后端 + 源生成器 + 事件） | 部分（描述符驱动已有） | **中** | `App/Configuration/`（**28 文件 / 2,478 行**：`ConfigService.cs:19`、`Storage/` 5 种后端（JSON/YAML/CatIni/加密/动态缓存）、`ConfigStorage.cs:24`、`ConfigMigration.cs`）+ `PCL.Core.SourceGenerators/`（5 生成器 2,039 行） | 部分（`EncryptedFileConfigStorage` → `Utils/Secret/EncryptHelper` 走 Windows DPAPI/CNG；其余零 Windows 依赖） |
+| P0-2 | **配置体系补齐**（多后端 + 源生成器 + 事件） | ✅ **已完成**（Core `Configuration/`：5 种存取后端 + 迁移引擎 + 事件总线 + 门面） | — | `App/Configuration/`（**28 文件 / 2,478 行**：`ConfigService.cs:19`、`Storage/` 5 种后端（JSON/YAML/CatIni/加密/动态缓存）、`ConfigStorage.cs:24`、`ConfigMigration.cs`）—— **不迁源生成器**（PCL.Core.SourceGenerators 5 个 2,039 行） | 部分（`EncryptedFileConfigStorage` → `Utils/Secret/EncryptHelper` 走 Windows DPAPI/CNG；其余零 Windows 依赖） |
 | P0-3 | **日志系统** | ✅ **已完成**（commit `f2cc0b9`，Core 5 文件 429 行 + LogView 404 行） | — | 已由并发任务实现，**该 commit 明确引用本报告的条目编号「P0-3」** | 否 |
 | P0-4 | **已安装包列表接入界面** | **已完成**（commit `39f5259`，`DownloadViewModel.cs:84,245`） | — | 无需迁移 —— 是 UMango 自己的能力 | 否 |
 

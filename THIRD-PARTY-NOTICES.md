@@ -65,6 +65,8 @@ Apache-2.0 全文见：https://www.apache.org/licenses/LICENSE-2.0
 | [simple-icons](https://github.com/simple-icons/simple-icons) | **CC0 1.0** | npm / pnpm / git / Homebrew 品牌图标 |
 | [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | MIT | MVVM 基础设施（`ObservableObject` / `RelayCommand`） |
 | [LiteDB](https://github.com/mbdavid/LiteDB) 5.0.21 | **MIT** | 内嵌文档数据库（`src/UMango.Core/Database/`，对应 PCL-CE 的 `DatabaseService` / `DatabaseEntry`） |
+| [YamlDotNet](https://github.com/aanpierdahl/YamlDotNet) 18.1.0 | **MIT** | YAML 配置后端（`src/UMango.Core/Configuration/Storage/YamlFileProvider.cs`，对应 PCL-CE 的同名后端） |
+| [FluentValidation](https://github.com/FluentValidation/FluentValidation) 12.1.1 | **Apache-2.0** | 验证器族（`src/UMango.Core/Validation/`，对应 PCL-CE 的 `Utils/Validate/`；零传递依赖） |
 
 winget 与 scoop 在 simple-icons 中无对应图标，界面使用**自绘字母徽章**，
 未使用任何来源不明的商标图形。
