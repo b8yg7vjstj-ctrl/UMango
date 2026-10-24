@@ -9,19 +9,25 @@ namespace UMango.Core.Tests;
 /// 文案提供器的契约测试。重点保证「无 UI 环境下取文案不炸」——
 /// 这是 App.Tests 里 56 处构造 ViewModel 的前提。
 /// </summary>
+[Collection("静态状态")]
 public class LocalizationTextProviderTests : IDisposable
 {
     private readonly ITextProvider _saved;
 
     public LocalizationTextProviderTests()
     {
-        _saved = new SnapshotProvider(LocalizationService.Text);
+        // ⚠ 必须存**provider 实例**，不能存 LocalizationService.Text 这个方法组。
+        //   存方法组的话，还原后每次取文案都是
+        //     LocalizationService.Text → DelegateProvider.Text → LocalizationService.Text → …
+        //   无限递归，直接栈溢出把整个测试进程炸掉。
+        //   （这个坑在 App.Tests 的 ChineseProvider 里犯过一次，此处是同一形状的复发。）
+        _saved = LocalizationService.CurrentProvider;
     }
 
     public void Dispose()
     {
         // 还原，避免影响其它用例（静态状态）
-        LocalizationService.SetTextProvider(new DelegateProvider(_saved.Text));
+        LocalizationService.SetTextProvider(_saved);
     }
 
     [Fact]
@@ -52,13 +58,6 @@ public class LocalizationTextProviderTests : IDisposable
         LocalizationService.SetTextProvider(null!);
         // 不应抛 NRE，而是回到「返回键本身」
         Assert.Equal("Any.Key", LocalizationService.Text("Any.Key"));
-    }
-
-    private sealed class SnapshotProvider : ITextProvider
-    {
-        private readonly Func<string, string> _f;
-        public SnapshotProvider(Func<string, string> f) => _f = f;
-        public string Text(string key) => _f(key);
     }
 
     private sealed class DelegateProvider : ITextProvider

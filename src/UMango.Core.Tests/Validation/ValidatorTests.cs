@@ -12,6 +12,7 @@ namespace UMango.Core.Tests.Validation;
 /// 这样做还有个额外好处：键名打错会立刻暴露（消息变成另一个键），
 /// 而中文文案写错只会在切换语言时才被用户看到。
 /// </summary>
+[Collection("静态状态")]
 public class ValidatorTests
 {
     private static string[] MessagesOf<T>(AbstractValidator<T> validator, T input)

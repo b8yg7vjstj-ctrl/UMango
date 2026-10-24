@@ -413,6 +413,20 @@
 
 ---
 
+### 2.L 已修 PCL 原版缺陷（迁移时发现并修掉的真实 bug）
+
+迁移 Apache-2.0 层不是逐字抄就完事 —— 实测原版里有几个**真实缺陷**，照抄会把 bug 一起搬过来。已修的：
+
+| # | 缺陷 | 位置 | 症状 | UMango 的修法 |
+|---|---|---|---|---|
+| 1 | `StringLengthValidator` 首条规则条件写反 | `Utils/Validate/` | 长度**恰好等于** `Max` 时被判失败（`"abcd"` 在 `Max=4` 下无效） | 条件改为 `Min == Max ? Length == Min : Length >= Min && Length <= Max` |
+| 2 | Minecraft 非法字符传的是单串 `"!;"` | `Utils/Validate/` | `input.Contains("!;")` 只在**同时出现** `!` 和 `;` 时才命中 → `"wow!"` 合法 | 改为两个独立字符 `["!", ";"]` |
+| 3 | 保留名比较大小写敏感 | `Utils/Validate/` | `"con"` 通过（Windows 上 `con` 同样非法） | 改用 `StringComparison.OrdinalIgnoreCase` |
+| 4 | `WithHeader` 同名头静默失败 | `IO/Net/Http/` | 先 `WithContent`（已带 `Content-Type: text/plain`）再 `WithHeader("Content-Type", "application/json")` **不生效** —— `TryAddWithoutValidation` 在头已存在时返回 false 且不抛，看起来成功了其实没改 | 先 `Remove` 再 `Add` |
+| 5 | 缓存命中时丢掉状态码 | `IO/Net/Http/Cache/` | 反序列化响应一律返回 200，调用方无法知道原响应是 404 | 状态码与 ETag/Last-Modified 一起缓存并还原 |
+
+每一项都有**对应的回归测试**（`src/UMango.Core.Tests/Validation/ValidatorTests.cs` 44 个、`src/UMango.Core.Tests/Network/HttpExtensionTests.cs` 57 个），并用缺陷注入验证过测试有牙。
+
 ## 3. MC 专属功能的完整清单（供决策"是否迁移"）
 
 **合计：81 个 MC 专属条目（另 3 条「部分 MC」）**。按 PCL-CE 目录边界统计其**实际体积**如下表。
@@ -568,7 +582,7 @@
 | # | 功能 | 现状 | 迁移成本 | 涉及 PCL.Core 模块 | Windows 依赖 |
 |---|------|------|---------|------------------|-------------|
 | P1-1 | **启动器自更新**（多通道抽象 + 镜像降级） | 未做 | **中** | `Modules/Updates/`（11 文件 1,020 行）—— ⚠️ **位于自定义许可目录**，只能借鉴架构、不能复制代码；或另找 Apache-2.0 的替代实现 | 否 |
-| P1-2 | **HTTP 客户端扩展层**（代理/缓存/路由/内容处理） | 未做 | **中** | `IO/Net/Http/`（约 18 文件） | 否 |
+| P1-2 | **HTTP 客户端扩展层**（代理/缓存/路由/内容处理） | **已完成** | **中** | `IO/Net/Http/`（约 18 文件） | 否 —— `src/UMango.Core/Network/Http/`（请求构建 / 头 / 内容 / Cookie / 认证、响应读取、克隆、带退避的重试、代理管理、HTTP 缓存处理器）+ `src/UMango.Core/Utils/JsonCompat.cs`（宽松 JSON）。⚠️ 相对原版的**实质差异**：① **不引入 Polly** —— 原版用 Polly 做重试，退避算法本身十几行，自己写更可控也更好测；② **去掉 Windows 注册表**（原版监听 `HKCU\...\Internet Settings` 变更来刷新系统代理）—— 那会破坏 Core 的 net10.0 支（跨平台可编译的证明），改为按需读 `WebRequest.DefaultWebProxy`；③ **去掉 PCL 专属元数据头**（`PCL-Community/PCL2-CE` UA 与 pcl2.server Referer）—— UMango 不该向 PCL 官方服务器表明身份；④ **修掉原版一个真实缺陷**：`WithHeader` 用 `TryAddWithoutValidation`，同名头已存在时会**静默失败** —— 先 `WithContent` 再 `WithHeader("Content-Type", …)` 实际根本没生效；UMango 改为先 `Remove` 再 `Add`（见 §2.K「已修 PCL 原版缺陷」说明）|
 | P1-3 | **DNS 查询 + 加权竞速** | 未做 | **低** | `IO/Net/Dns/`（3 文件） | 否 —— 引入 `Ae.Dns.Client` 包 |
 | P1-4 | **线程/并发原语**（防抖、手动复位事件、限流任务池） | 未做 | **低** | `Utils/Threading/`（6 文件） | 否 |
 | P1-5 | **哈希算法族** | 未做 | **低** | `Utils/Hash/`（7 文件） | 否 |
