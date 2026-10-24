@@ -309,7 +309,7 @@
 
 | 功能 | PCL-CE 位置（文件:行） | 是否 MC 专属 | UMango 状态 | 备注 |
 |------|----------------------|------------|-----------|------|
-| **多线程下载管理器（分片/并发/限速/进度聚合）** | `Modules/Network/Management/NetManager.cs`（`ThreadCount:44`、`Speed:35`、`FileRemain:12`、`DownloadDone:21`） | **否** | **部分** | 模块总计 12 文件 1,137 行。UMango `src/UMango.Core/Download/`（8 文件 990 行）走**另一种路线**：`DownloadEngineRegistry.Select:34` 按协议选引擎（`Aria2Engine`、`BuiltinHttpEngine`、`Ed2kEngine`），**自身不做分片并发**，把该能力外包给 aria2。**因此不是"未做"而是"用不同架构覆盖"** |
+| **多线程下载管理器（分片/并发/限速/进度聚合）** | `Modules/Network/Management/NetManager.cs`（`ThreadCount:44`、`Speed:35`、`FileRemain:12`、`DownloadDone:21`） | **否** | **部分** | 模块总计 12 文件 1,137 行。UMango `src/UMango.Core/Download/`（10 文件 1,638 行）走**另一种路线**：`DownloadEngineRegistry.Select:34` 按协议选引擎（`Aria2Engine`、`BuiltinHttpEngine`、`Ed2kEngine`）。**自身也做分片并发** —— `RangeDownloader.cs`（570 行）实现自适应分段下载：先发 `bytes=0-0` 探测服务器是否支持 Range（支持则**跳过探测**、直接用已知大小），按 8 MB 目标段大小切段、每段独立重试（上限 2 次）、段慢于其他活跃连接时重启该段（PCL 的"相对慢"与"绝对慢"两条判定都补齐了：相对慢 = 自身速率 < 中位速率/4 且中位 ≥ 明显快阈值；绝对慢 = 自身速率 < 绝对慢阈值**且**存在明显更快的段）、Content-Range 一致性校验、段提前结束即判失败。`BandwidthThrottle.cs`（78 行）做整连接限速。⚠️ **与 PCL 原版的三处差异**：① PCL 的 `AdaptiveRangeDownloader` 位于**自定义许可目录**（`Plain Craft Launcher 2/Modules/Network/Downloader/`），**只能借鉴设计、不能复制代码** —— UMango 是独立实现；② PCL 用 `SafeFileHandle` + `MemoryMappedFile` 写段，UMango 用 `FileStream.Seek` + 写偏移（更简单、跨平台，代价是大文件随机写不如 mmap）；③ PCL 在 `ModNet.NetTaskSpeedLimitHigh > 0` 时**关闭慢段重启**，UMango 对应的是 `RangeDownloaderOptions.Throttle != null`（整连接限速时同样不重启慢段）。**因此不是"未做"而是"用不同架构覆盖"** |
 | 下载任务门面与重试/镜像源 | `Modules/Network/Facade/ModNet.cs:6`（`NetGetCodeByRequestRetry:16`、`NetDownloadByLoader:107`、`NetTaskSpeedLimit*:9-13`） | **否** | **已完成** | ✅ `src/UMango.Core/Download/DownloadTaskFacade.cs`（统一重试 + 镜像降级）+ `DownloadSources.cs`（`DownloadSource` / `DownloadRetryPolicy` / `DownloadAttempt` / `DownloadTaskResult`）+ `MirrorUrls.cs`（镜像模板派生）。⚠️ **与原版的四处差异**：① 原版重试与换源塞在一个双层循环里，**换源后每个源都重试满次数**（主源 3 次 + 备用源 3 次 = 6 次请求）→ 这里**总量封顶**（`MaxTotalAttempts`，默认 6）；② 原版只支持**一个** `FallbackUrl` → 这里支持**任意多个**镜像源；③ 原版是同步接口（`.GetAwaiter().GetResult()` 阻塞 UI）→ 全异步；④ 每次尝试都如实记进 `DownloadAttempt` 列表，界面能显示"主源失败 → 正在试镜像"。 |
 | 单文件下载器（URL→本地文件） | `Modules/Network/Downloader/FileDownloader.cs:9`（`DownloadAsync:11/19`、`DownloadByLoader:27`） | **否** | **已完成** | UMango `Download/Engines/BuiltinHttpEngine.cs:14` + `DownloadModels.cs:41`（`DownloadRequest`） |
 | HTTP 请求层（JSON/字符串/超时/UA） | `Modules/Network/Http/Requester.cs:13`（`FetchJsonAsync:40/45`、`FetchStringAsync:21`） | **否** | **已完成** | ✅ `src/UMango.Core/Network/Http/`（P1-2 已迁 PCL `IO/Net/Http/` Apache-2.0 层：请求构建 / 头 / 内容 / Cookie / 认证、响应读取、克隆、**带退避的重试**、代理管理、**HTTP 缓存处理器**）+ `src/UMango.Core/Utils/JsonCompat.cs`（宽松 JSON）。⚠️ 相对原版的**实质差异**：**不引入 Polly**（PCL 用它做重试/熔断）→ 用等义的轻量退避重试，不额外引入依赖 |
@@ -402,7 +402,7 @@
 | 图标管理 | `UI/IconManager.cs`、`IconModel.cs` | 否 | **部分** | UMango 用 lucide + simple-icons（见 `THIRD-PARTY-NOTICES.md` §2） |
 | 联机基础设施（P2P / 协议） | `Link/Scaffolding/`、`Link/EasyTier/`、`Link/Lobby/`、`Link/BroadcastLocal.cs`（59 文件 5,018 行） | 是 | **不适用** | 语义是 MC 联机（见 2.F） |
 | Natayark 账号 | `Link/Natayark/NatayarkProfileManager.cs` | 是 | **不适用** | 第三方 MC 联机平台 |
-| **下载引擎（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | UMango `Download/` 8 文件 990 行；`Aria2Engine.cs:24`（覆盖 HTTP/HTTPS/FTP/SFTP/BitTorrent/Metalink）、`Ed2kEngine.cs:22`、`BuiltinHttpEngine.cs:14`；协议推断 `DownloadModels.cs:9`（`Detect`） |
+| **下载引擎（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | UMango `Download/` 10 文件 1,638 行；`Aria2Engine.cs:24`（覆盖 HTTP/HTTPS/FTP/SFTP/BitTorrent/Metalink）、`Ed2kEngine.cs:22`、`BuiltinHttpEngine.cs:14`；协议推断 `DownloadModels.cs:9`（`Detect`）；自适应分段下载 `RangeDownloader.cs`（570 行，独立实现，PCL 原版在受限许可目录内） |
 | **安装执行器（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | `Install/InstallExecutor.cs:44`（`PlanAsync:61`、`InstallAsync:70`）、`InstallCommandBuilder.cs:11`（`BuildInstall:14`/`BuildUninstall:57`）、`InstallProgressParser.cs:16`、`StepNames.cs:10` |
 | **操作记录（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | `Records/InstallRecord.cs:8`、`InstallRecordStore.cs:16`（`Load:94`、`Save:115`、`CountBySource:66`） |
 | **终端集成桥（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | `Terminal/TerminalBridge.cs:22`（`For:53`、`LinesOfStep:114`、`DebugMode:50`）、`TerminalLine.cs:4` |
@@ -749,7 +749,7 @@ UMango.Core 目前**只有一个依赖**（`CommunityToolkit.Mvvm 8.4.2`）。
 **B 类里最值得注意的一项**：`Modules/Network/`（12 文件 1,137 行）经实测**只有 2 处 MC 域名硬编码**
 （`FileDownloader.cs:216`、`RequestSigning.cs:25-28`），本质上是个通用下载引擎 ——
 但**它整块在自定义许可目录下**，所以"下载引擎很通用"这个直觉**不能推出"可以搬过来"**。
-UMango 现有的 `Download/`（8 文件 990 行，aria2/内置 HTTP/eD2k 三引擎）是自主设计，**这条路本来就是对的**。
+UMango 现有的 `Download/`（10 文件 1,638 行，aria2/内置 HTTP/eD2k 三引擎 + 自适应分段下载 `RangeDownloader.cs`）是自主设计，**这条路本来就是对的**。
 
 **一个可复用的安全设计参考（B 类，但值得单独记一笔）**：`Modules/Event/XamlEventSanitizer.cs`（用 8 条
 `[GeneratedRegex]` 剥离 XAML 中的事件声明，返回含 `UnsupportedTypesFound` 的 `SanitizeResult`）。

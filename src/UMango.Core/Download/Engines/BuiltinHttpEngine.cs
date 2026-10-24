@@ -69,6 +69,20 @@ public sealed class BuiltinHttpEngine : IDownloadEngine
             using var http = new HttpClient(ProxyHolder.CreateHandler()) { Timeout = TimeSpan.FromHours(2) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("UMango/0.1");
 
+            // ---- 先试分段下载（大文件 + 服务器支持 Range）----
+            // 分段失败/不适用时安静地回落到下面的顺序下载。
+            var ranged = await TryRangeDownloadAsync(http, request, temp, bridge, onProgress, ct)
+                .ConfigureAwait(false);
+            if (ranged)
+            {
+                if (!await FinishAsync(request, temp, target, sw, bridge).ConfigureAwait(false))
+                    return new DownloadResult(false, null, "checksum_mismatch",
+                        "分段下载的文件校验失败", sw.ElapsedMilliseconds);
+
+                sw.Stop();
+                return new DownloadResult(true, target, null, null, sw.ElapsedMilliseconds);
+            }
+
             using var resp = await http.GetAsync(request.Url, HttpCompletionOption.ResponseHeadersRead, ct)
                                        .ConfigureAwait(false);
             bridge?.Write(true, $"HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}");
@@ -150,6 +164,69 @@ public sealed class BuiltinHttpEngine : IDownloadEngine
             TryDelete(temp);
             return new DownloadResult(false, null, "download_failed", ex.Message, sw.ElapsedMilliseconds);
         }
+    }
+
+    /// <summary>
+    /// 尝试用分段（多连接）方式下载到 <paramref name="temp"/>。
+    /// 返回 false 表示"不适合分段"（小文件 / 服务器不支持 Range / 出错），
+    /// 调用方应回落到顺序下载。
+    /// </summary>
+    private static async Task<bool> TryRangeDownloadAsync(
+        HttpClient http,
+        DownloadRequest request,
+        string temp,
+        TerminalBridge? bridge,
+        Action<DownloadProgress>? onProgress,
+        CancellationToken ct)
+    {
+        var options = new RangeDownloaderOptions
+        {
+            Throttle = request.MaxBytesPerSecond is > 0
+                ? new BandwidthThrottle(request.MaxBytesPerSecond.Value)
+                : null
+        };
+        var downloader = new RangeDownloader(http, options, msg => bridge?.Write(false, msg));
+
+        try
+        {
+            return await downloader.TryDownloadAsync(request.Url, temp, onProgress, null, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // 分段失败不是致命错误：删掉半成品，交给顺序下载重来。
+            bridge?.Write(false, $"分段下载未成功（{ex.Message}），改用顺序下载");
+            TryDelete(temp);
+            return false;
+        }
+    }
+
+    /// <summary>校验并落位（临时文件 -> 目标文件）。校验不通过返回 false。</summary>
+    private static async Task<bool> FinishAsync(
+        DownloadRequest request,
+        string temp,
+        string target,
+        Stopwatch sw,
+        TerminalBridge? bridge)
+    {
+        if (!string.IsNullOrWhiteSpace(request.ExpectedSha256))
+        {
+            var actual = DownloadFile.ComputeSha256(temp);
+            if (!string.Equals(actual, request.ExpectedSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                bridge?.Write(true, $"校验失败：期望 {request.ExpectedSha256}，实际 {actual}");
+                TryDelete(temp);
+                return false;
+            }
+        }
+
+        // 落位：先删旧文件再 Move（Windows 上 Move 到已存在文件会失败）
+        TryDelete(target);
+        File.Move(temp, target);
+        return true;
     }
 
     private static void TryDelete(string path)

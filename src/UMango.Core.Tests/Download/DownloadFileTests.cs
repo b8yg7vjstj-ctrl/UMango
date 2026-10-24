@@ -253,15 +253,20 @@ public class BuiltinHttpEngineTests
         listener.Prefixes.Add(prefix);
         listener.Start();
 
+        // 注意：引擎现在会先做一次 Range 探测（bytes=0-0），再下载正文 ——
+        // 所以这里必须能服务**多个**请求，否则探测那次会永远等不到响应。
         var serve = Task.Run(async () =>
         {
             try
             {
-                var ctx = await listener.GetContextAsync();
-                ctx.Response.StatusCode = (int)status;
-                ctx.Response.ContentLength64 = payload.Length;
-                await ctx.Response.OutputStream.WriteAsync(payload);
-                ctx.Response.Close();
+                while (listener.IsListening)
+                {
+                    var ctx = await listener.GetContextAsync();
+                    ctx.Response.StatusCode = (int)status;
+                    ctx.Response.ContentLength64 = payload.Length;
+                    await ctx.Response.OutputStream.WriteAsync(payload);
+                    ctx.Response.Close();
+                }
             }
             catch
             {
