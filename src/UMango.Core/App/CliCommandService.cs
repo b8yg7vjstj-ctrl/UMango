@@ -71,9 +71,27 @@ public sealed class CliCommandService
             "search" => await SearchAsync(line, ct).ConfigureAwait(false),
             "list" => await ListAsync(line, ct).ConfigureAwait(false),
             "source" => await SourceAsync(ct).ConfigureAwait(false),
+            "rpc" => await RpcAsync(line, ct).ConfigureAwait(false),
             "help" => CliCommandResult.Ok(HelpText()),
             _ => CliCommandResult.Ok(HelpText())
         };
+    }
+
+    /// <summary>
+    /// <c>umango rpc …</c>：调用**已经在运行**的那个实例。
+    ///
+    /// 走 Core 侧的 <see cref="RpcCli"/>（与界面层无关，命令行模式下
+    /// 不需要启动任何窗口）。
+    /// </summary>
+    private async Task<CliCommandResult> RpcAsync(CommandLine line, CancellationToken ct)
+    {
+        // "REQ" / "GET" / "SET" 不是已注册的子命令名，
+        // 所以它们和后面的名字都会落在位置参数里。
+        var args = line.Positional.ToList();
+        if (args.Count == 0)
+            return CliCommandResult.Fail(2, "用法：umango rpc REQ <名称> [内容] | GET <名称> | SET <名称> <值>");
+
+        return await RpcCli.ExecuteAsync(args.ToArray(), null, ct).ConfigureAwait(false);
     }
 
     private static bool IsKnownCommand(string text) =>
@@ -239,6 +257,8 @@ public sealed class CliCommandService
         "  search <关键词> [--source npm]                               搜索包",
         "  list [--source npm]                                          列出已安装",
         "  source                                                       列出包源与可用性",
+        "  rpc REQ <名称> [参数]                                        调用正在运行的实例",
+        "  rpc GET <名称> / rpc SET <名称> <值>                          读写实例的属性",
         "  help                                                         显示本帮助",
         "",
         "通用参数：",

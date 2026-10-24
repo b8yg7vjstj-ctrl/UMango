@@ -55,7 +55,7 @@ public static class UmangoCommandLine
 
     private static IReadOnlyList<SubcommandDefinition> BuildSubcommands()
     {
-        var names = new[] { "install", "uninstall", "upgrade", "search", "list", "source", "help" };
+        var names = new[] { "install", "uninstall", "upgrade", "search", "list", "source", "rpc", "help" };
         var list = new List<SubcommandDefinition>(names.Length);
         foreach (var name in names)
         {

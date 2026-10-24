@@ -35,8 +35,23 @@ namespace UMango.Core.Ipc;
 /// <summary>管道通信的常量。</summary>
 public static class PipeProtocol
 {
-    /// <summary>统一字符编码。</summary>
-    public static readonly Encoding Encoding = Encoding.UTF8;
+    /// <summary>
+    /// 统一字符编码（UTF-8，**不带 BOM**）。
+    ///
+    /// ⚠ 这里**不能**用 <see cref="System.Text.Encoding.UTF8"/>：
+    /// 那个实例的 <c>encoderShouldEmitUTF8Identifier</c> 是 true，
+    /// <see cref="StreamWriter"/> 第一次写时会**顺手写一个 BOM**（U+FEFF）。
+    ///
+    /// 后果（真机实测踩到）：客户端用
+    /// <c>new StreamReader(stream, new UTF8Encoding(false), detectEncodingFromByteOrderMarks: false)</c>
+    /// 读时，**BOM 不会被去掉** —— 于是响应首行变成
+    /// <c>\uFEFFSUCCESS text version</c>，按空格切开后第一个字段是
+    /// <c>\uFEFFSUCCESS</c>，任何按名字解析状态的代码都会失败
+    /// （表现为「服务端返回成功，客户端却说失败」）。
+    ///
+    /// 所以协议统一用**无 BOM 的 UTF-8**，读端一律开 BOM 自动探测做兜底。
+    /// </summary>
+    public static readonly Encoding Encoding = new UTF8Encoding(false);
 
     /// <summary>行分隔符（行协议）。</summary>
     public const char LineEnding = '\n';
@@ -129,6 +144,14 @@ public sealed class PipeServer : IAsyncDisposable
     /// <summary>已处理的会话数。</summary>
     public int SessionCount => Volatile.Read(ref _sessionCount);
 
+    /// <summary>
+    /// 服务端循环是否已经退出。
+    ///
+    /// 调用方（如 <c>RpcService.WaitForStoppedAsync</c>）用它来确认
+    /// 管道名已经真正释放 —— 否则紧接着用同名管道起第二个服务会撞车。
+    /// </summary>
+    public bool IsStopped => _loop.IsCompleted;
+
     /// <summary>运行期日志（最近若干条）。</summary>
     public IReadOnlyList<string> RecentLog
     {
@@ -179,7 +202,7 @@ public sealed class PipeServer : IAsyncDisposable
                 // **只创建一个 reader**：StreamReader 会预读，
                 // 如果先用它读一行进程号、再拿它去读请求行，
                 // 预读进来的后续行就被第一个 reader 吞掉了 —— 表现为「服务端收不到请求」。
-                using var reader = new StreamReader(pipe, PipeProtocol.Encoding, false, 4096, true);
+                using var reader = new StreamReader(pipe, PipeProtocol.Encoding, detectEncodingFromByteOrderMarks: true, 4096, true);
                 using var writer = new StreamWriter(pipe, PipeProtocol.Encoding, 4096, true);
 
                 var clientPid = await ReadClientProcessIdAsync(reader, ct).ConfigureAwait(false);
@@ -292,7 +315,7 @@ public static class PipeClient
                 await writer.WriteLineAsync(line).ConfigureAwait(false);
             await writer.FlushAsync().ConfigureAwait(false);
 
-            using var reader = new StreamReader(pipe, PipeProtocol.Encoding, false, 4096, true);
+            using var reader = new StreamReader(pipe, PipeProtocol.Encoding, detectEncodingFromByteOrderMarks: true, 4096, true);
             var responses = new List<string>();
             while (await reader.ReadLineAsync(cts.Token).ConfigureAwait(false) is { } line)
             {

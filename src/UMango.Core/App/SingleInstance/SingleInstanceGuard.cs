@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using UMango.Core.Ipc;
+
 namespace UMango.Core.App.SingleInstance;
 
 /// <summary>
@@ -134,7 +136,7 @@ public sealed class SingleInstanceGuard : IAsyncDisposable
             await using var client = new NamedPipeClientStream(
                 ".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             await client.ConnectAsync(1000).ConfigureAwait(false);
-            await using var writer = new StreamWriter(client, Encoding.UTF8, 8, true);
+            await using var writer = new StreamWriter(client, PipeProtocol.Encoding, 8, true);
             await writer.WriteLineAsync(message).ConfigureAwait(false);
             await writer.FlushAsync().ConfigureAwait(false);
             return true;
@@ -153,7 +155,7 @@ public sealed class SingleInstanceGuard : IAsyncDisposable
             try
             {
                 await _pipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
-                using var reader = new StreamReader(_pipe, Encoding.UTF8);
+                using var reader = new StreamReader(_pipe, PipeProtocol.Encoding, detectEncodingFromByteOrderMarks: true);
                 var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(line))
                 {

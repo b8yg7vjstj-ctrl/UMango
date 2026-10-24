@@ -115,6 +115,16 @@ public static class AppServices
     /// <summary>统一的 HTTP 服务（更新检查等用）。</summary>
     public static HttpService Http { get; } = CreateHttp();
 
+    /// <summary>
+    /// RPC 宿主（让已在运行的实例能被命令行/脚本调用）。
+    ///
+    /// **默认不开放任何能力** —— 见 <see cref="RpcHost"/> 的说明：
+    /// 命名管道没有鉴权，要开放必须「显式注册 + 显式放行」两道手续都做。
+    /// 这里只是把宿主建起来并装上内置端点（ping / version），
+    /// 真正的能力由各功能自己注册。
+    /// </summary>
+    public static RpcHost Rpc { get; } = new(log: message => Log.Info("Rpc", message));
+
     private static HttpService CreateHttp()
     {
         var service = new HttpService { ProxyManager = ProxyManager };

@@ -83,6 +83,11 @@ public partial class App : Application
             return;
         }
 
+        // RPC 宿主：让「已经在跑的 UMango」能被命令行/脚本调用
+        // （例如 `umango rpc REQ ping`）。默认不开放任何能力。
+        Services.AppServices.Rpc.InstallDefaultEndpoints();
+        Services.AppServices.Rpc.PublishPipeName();
+
         // 放在最后：基类负责触发 Startup 事件，StartupUri 指向的主窗口在其之后创建，
         // 因此上面两步都先于首帧完成（主题不会"先用默认色画一帧再变"）。
         base.OnStartup(e);
@@ -191,6 +196,10 @@ public partial class App : Application
             // 释放单例锁：删掉锁文件，避免进程被强杀后残留的锁让后续启动
             // 永远误判为"已有实例"（那时用户将永远打不开第二个窗口）。
             Services.SingleInstanceService.DisposeAsync().AsTask().GetAwaiter().GetResult();
+
+            // 删掉 RPC 管道名文件：否则命令行会一直以为「有个实例在跑」，
+            // 然后连一个已经不存在的管道并等超时。
+            Services.RpcHost.RemovePipeNameFile();
 
             // 还原灰度改写的画笔：进程虽然在退出，但画刷可能被静态引用持有，
             // 留着脱色值会在设计器/复用场景下造成"颜色莫名其妙一直是灰的"。
