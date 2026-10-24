@@ -597,11 +597,11 @@
 | P2-2 | **动画系统补齐**（帧动画/关键帧/组合/时钟抽象/`IAnimatable`） | **已完成**（核心能力齐备） | **中**（⚠️ 由「高」下调） | `UI/Animation/`（**87 文件 / 2,742 行**） | **部分**（仅 14/87 文件触及 WPF，且 UMango 也是 WPF，故这类文件**可直接用**）。**已迁入 Core（净10.0）**：帧驱动器 + 关键帧 + 顺序/并行组 + 时钟抽象 + `IAnimatable` + 值处理器（含算术运算）+ 绝对/相对值 + `ActionAnimation` + 复合缓动 + 按名取消。**未迁**：`UIAccessProvider`（WPF 自动化桥，UMango 不需要）、`WinMMClock`（Windows 专有时钟，用 `StopwatchClock` 替代）、`Matrix/NColor/NRotateTransform/NScaleTransform/Point/Thickness` 六种专用 FromTo 动画（UMango 用通用 `FromToAnimation` + 值处理器覆盖同类需求） |
 | P2-3 | **系统信息与硬件** | 部分 | **中** | `Utils/OS/`（14 文件） | **部分是**（注册表、`NtInterop`、`KernelInterop`、`WindowInterop`、`AumidHelper`） |
 | P2-4 | IoC / 生命周期 | 部分 | **中** | `App/IoC/`（14 文件） | 否 |
-| P2-5 | 内部事件总线 | 未做 | **低** | `App/EventBus/`（4 文件） | 否 |
-| P2-6 | 单实例运行 | 未做 | **低** | `App/Essentials/SingleInstanceService.cs` | **是**（命名互斥体/Win32） |
-| P2-7 | 命令行参数解析 | 未做 | **低** | `App/Cli/`（7 文件） | 否 |
-| P2-8 | 字符串/集合/任务扩展方法集 | 未做 | **低** | `Utils/Exts/`（8 文件） | 否 |
-| P2-9 | 二进制差分（增量更新） | 未做 | **中** | `Utils/Diff/`（4 文件） | 否 |
+| P2-5 | 内部事件总线 | **已完成** | **低** | `App/EventBus/`（4 文件 290 行） | 否 —— `src/UMango.Core/Events/EventBus.cs` 补齐 PCL 的**通道名路由**（`AddChannel`/`RemoveChannel`/`Channels`）、**异步发布**（`PublishAsync(channel, data)`）、**可赋值性匹配**（订阅 `object` 能收到 `Foo`）、**弱引用持有者**（`IEventHandler<T>`，持有者被回收后不阻止 GC 且订阅条目在下次发布时清理）。⚠️ 相对 PCL 的**实质差异**：保留**实例**语义而非静态单例（静态总线会让测试之间互相污染）。向不存在的通道发布**抛 `InvalidOperationException`**（PCL 一致：频道写错应当被看见而不是静默吞掉） |
+| P2-6 | 单实例运行 | **已完成**（commit `9715e65`，命名互斥锁 + 命名管道激活） | **低** | `App/Essentials/SingleInstanceService.cs` | **是**（命名互斥体/Win32） |
+| P2-7 | 命令行参数解析 | **部分**（已有 `CommandLineArgs`：标志 + 位置参数；缺子命令 / 类型化参数定义） | **低** | `App/Cli/`（7 文件 502 行） | 否 |
+| P2-8 | 字符串/集合/任务扩展方法集 | **已完成**（`Utils/Extensions.cs` 11 个扩展：IsBlank/Truncate/SafeSubstring/Between/AfterFirst/BeforeLast/AtOrDefault/ToHashSet/IgnoreResult/WithTimeout） | **低** | `Utils/Exts/`（8 文件） | 否 |
+| P2-9 | 二进制差分（增量更新） | **部分**（⚠️ 现实现是 deflate 压缩而非真 bsdiff，补丁不含旧数据 → 无法真正增量） | **中** | `Utils/Diff/`（4 文件） | 否 |
 | P2-10 | 加密算法族 + 密钥保护 | 未做 | **中** | `Utils/Encryption/`（5 文件）、`Utils/Secret/`（3 文件）、`App/Secrets.cs` | **部分是**（DPAPI/CNG） |
 | P2-11 | 主题体系补齐（LAB 色彩、色调档、系统主题跟随） | 部分 | **中** | `UI/Theme/`（5 文件）、`UI/NColor.cs` | **部分是**（`SystemThemeHelper`） |
 | P2-12 | 统一对话框/提示封装 | 部分 | **低** | `UI/MsgBoxWrapper.cs`、`SystemDialogs.cs`、`UI/HintWrapper.cs` | 否 |
@@ -611,7 +611,7 @@
 | P2-16 | 灰度（哀悼日）模式 | **已完成** | 低 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | **是**（WPF 画笔改写，非 Effect） |
 | P2-17 | 位图/图像处理 | 未做 | **低** | `Modules/Base/MyBitmap.cs`、`UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs` | 部分 |
 | P2-18 | 语义化版本公共类型 | 部分 | **低** | `Utils/SemVer.cs`、`Utils/VersionRange.cs` | 否 |
-| P2-19 | 相似度搜索 | 未做 | **低** | `Utils/SimilaritySearch.cs` | 否 |
+| P2-19 | 相似度搜索 | **部分**（已有 `StringDistance`：Levenshtein / Similarity / ContainsIgnoreCase；缺 PCL 的多字段加权搜索 `SimilaritySearch`） | **低** | `Utils/SimilaritySearch.cs` | 否 |
 | P2-20 | 自定义事件总线（XAML 附加事件） | 未做 | **中** | `Modules/Event/`（6 文件 741 行） | **是**（`XamlEventSanitizer`） |
 | P2-21 | **启动器自定义主页**（远程 XAML 渲染 + 热补丁 + 内置小提示） | 未做 | **中** | `Pages/PageLaunch/PageLaunchRight.xaml.cs`（898 行，⚠️ **位于自定义许可目录**，只能借鉴设计、不能复制代码） | **是**（WPF `LoadContent`） |
 | P2-22 | ↳ 该功能的**安全再设计**（**不建议照搬**） | 未做 | **中** | 在进程内加载并执行**远程 XAML** 等于开放任意代码执行面；PCL-CE 用 `XamlEventSanitizer` 缓解，但这是危险模式。若要"可自定义主页"，应改为**受限数据格式**（JSON 描述 + 内置模板）而非可执行 XAML | **是** |
