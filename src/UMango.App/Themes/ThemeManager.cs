@@ -174,6 +174,20 @@ public static class ThemeManager
     public static void ToggleDark() => Apply(CurrentKind, !IsDark);
 
     /// <summary>
+    /// 按跟随策略应用深浅色。
+    ///
+    /// 「跟随系统」时用的是 <see cref="SystemThemeProbe"/> 的探测结果；
+    /// 探测不到（读不到注册表、没有 gsettings 等）就沿用当前深浅色，
+    /// 不把界面切成随机状态。
+    /// </summary>
+    public static void ApplyFollowMode(UMango.Core.UI.Theme.ThemeFollowMode mode)
+    {
+        var system = SystemThemeProbe.Detect();
+        var resolved = UMango.Core.UI.Theme.SystemThemeResolver.Resolve(mode, system, IsDark);
+        Apply(CurrentKind, resolved);
+    }
+
+    /// <summary>
     /// 判断某个合并字典是不是主题 token 字典（按 Source 文件名识别，忽略路径）。
     /// 这里只认文件名而不是完整 URI，是为了容忍 ResourceDictionary 在不同位置被引用
     /// （例如 App.xaml 写 "Themes/X.xaml"、别的字典写 "X.xaml"）。

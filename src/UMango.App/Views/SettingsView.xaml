@@ -328,6 +328,15 @@
               <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
                          Foreground="{DynamicResource BrG3}"
                          Text="{DynamicResource Settings.DarkMode.Hint}"/>
+
+              <!-- 跟随系统：勾上后深浅色由操作系统决定，手动开关失效 -->
+              <CheckBox x:Name="FollowSystemToggle" Style="{DynamicResource PclSwitch}"
+                        Margin="0,8,0,0"
+                        Content="{DynamicResource Settings.FollowSystem}" IsChecked="{Binding FollowSystem, Mode=TwoWay}"
+                        Click="FollowSystemToggle_Click"/>
+              <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrG3}"
+                         Text="{DynamicResource Settings.FollowSystem.Hint}"/>
             </StackPanel>
           </Border>
 

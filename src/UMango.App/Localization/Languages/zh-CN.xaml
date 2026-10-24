@@ -479,4 +479,6 @@
     <sys:String x:Key="Validation.MinLength">长度至少为 {0} 个字符！</sys:String>
     <sys:String x:Key="Validation.MaxLength">长度最长为 {0} 个字符！</sys:String>
     <sys:String x:Key="Validation.RegexMismatch">不符合要求的格式：{0}</sys:String>
-    <sys:String x:Key="Validation.Blacklisted">不可包含这个词条：{0}</sys:String></ResourceDictionary>
+    <sys:String x:Key="Validation.Blacklisted">不可包含这个词条：{0}</sys:String>  <sys:String x:Key="Settings.FollowSystem">跟随系统深浅色</sys:String>
+  <sys:String x:Key="Settings.FollowSystem.Hint">勾选后深色/浅色由操作系统的外观设置决定；关闭则使用上面的手动开关。</sys:String>
+</ResourceDictionary>

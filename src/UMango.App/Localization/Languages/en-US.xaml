@@ -465,4 +465,6 @@
     <sys:String x:Key="Validation.MinLength">Length must be at least {0} characters.</sys:String>
     <sys:String x:Key="Validation.MaxLength">Length must be at most {0} characters.</sys:String>
     <sys:String x:Key="Validation.RegexMismatch">Does not match the required format: {0}</sys:String>
-    <sys:String x:Key="Validation.Blacklisted">Must not contain this term: {0}</sys:String></ResourceDictionary>
+    <sys:String x:Key="Validation.Blacklisted">Must not contain this term: {0}</sys:String>  <sys:String x:Key="Settings.FollowSystem">Follow the system appearance</sys:String>
+  <sys:String x:Key="Settings.FollowSystem.Hint">When checked, light/dark follows the operating system appearance; uncheck to use the manual switch above.</sys:String>
+</ResourceDictionary>

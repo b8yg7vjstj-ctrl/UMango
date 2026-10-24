@@ -61,6 +61,26 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 深浅色是否跟随操作系统。
+    ///
+    /// 勾上后，界面深浅由系统设置决定（Windows 看注册表、macOS 看
+    /// AppleInterfaceStyle、Linux 看 color-scheme），手动开关不再生效。
+    /// </summary>
+    public bool FollowSystem
+    {
+        get => AppSettings.Settings.Get<string>(UiSettings.ThemeFollowKey) is { Length: > 0 } stored
+            ? UMango.Core.UI.Theme.SystemThemeResolver.FromStorageValue(stored) == UMango.Core.UI.Theme.ThemeFollowMode.System
+            : true;
+        set
+        {
+            var mode = value ? UMango.Core.UI.Theme.ThemeFollowMode.System : UMango.Core.UI.Theme.ThemeFollowMode.Light;
+            AppSettings.Settings.Set(UiSettings.ThemeFollowKey, UMango.Core.UI.Theme.SystemThemeResolver.ToStorageValue(mode));
+            AppSettings.Save();
+            OnPropertyChanged(nameof(FollowSystem));
+        }
+    }
+
     public IReadOnlyList<ThemeOption> Themes { get; } =
     [
         new ThemeOption(ThemeKind.PclClassic, L("Settings.Theme.PclName"),
@@ -215,7 +235,15 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             var option = SelectedTheme ?? Themes[0];
-            ThemeManager.Apply(option.Kind, IsDark);
+            if (FollowSystem)
+            {
+                // 跟随系统：深浅色由系统决定，用户选的 IsDark 只是回显。
+                ThemeManager.ApplyFollowMode(UMango.Core.UI.Theme.ThemeFollowMode.System);
+            }
+            else
+            {
+                ThemeManager.Apply(option.Kind, IsDark);
+            }
 
             // 持久化：否则重启后又回到默认主题（之前审计发现的缺口）
             AppSettings.Settings.Set(UiSettings.ThemeKindKey,

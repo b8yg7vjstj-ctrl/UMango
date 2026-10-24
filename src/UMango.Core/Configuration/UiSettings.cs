@@ -22,6 +22,12 @@ public static class UiSettings
     public const string ThemeKindKey = "ui.appearance.theme";
     public const string DarkModeKey = "ui.appearance.darkMode";
 
+    /// <summary>
+    /// 深浅色跟随策略：<c>system</c> / <c>light</c> / <c>dark</c>。
+    /// 见 <c>UMango.Core.UI.Theme.SystemThemeResolver</c>。
+    /// </summary>
+    public const string ThemeFollowKey = "ui.appearance.themeFollow";
+
     public const string AnimationEnabledKey = "ui.animation.enabled";
     public const string AnimationDirectionKey = "ui.animation.direction";
     public const string AnimationSpeedKey = "ui.animation.speedFactor";

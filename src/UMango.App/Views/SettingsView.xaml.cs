@@ -209,6 +209,17 @@ public partial class SettingsView : UserControl
         ApplyThemeIfChanged();
     }
 
+    /// <summary>跟随系统开关：勾上后深浅色交给操作系统决定。</summary>
+    private void FollowSystemToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox box)
+        {
+            ViewModel.FollowSystem = box.IsChecked == true;
+        }
+
+        ApplyThemeIfChanged();
+    }
+
     /// <summary>
     /// 把用户当前的选择落到主题上。与 ThemeManager 的现状一致时什么都不做：
     /// ListBox 初始化选中、ViewModel 自身同步都会走到这里，若无差别地 Apply，
