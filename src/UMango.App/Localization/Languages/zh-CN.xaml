@@ -496,4 +496,15 @@
     <sys:String x:Key="Settings.Proxy.Status.SystemFound">已读取到系统代理：{0}</sys:String>
     <sys:String x:Key="Settings.Proxy.Status.SystemNone">未读取到系统代理（系统未启用代理或读取失败），当前按直连处理。</sys:String>
 
+    <sys:String x:Key="Homepage.Section">自定义主页</sys:String>
+    <sys:String x:Key="Homepage.ManifestPath">清单文件：{0}</sys:String>
+    <sys:String x:Key="Homepage.NoManifest">未配置自定义主页。把 JSON 清单放到上面的路径即可，文件改动会自动生效。</sys:String>
+    <sys:String x:Key="Homepage.DroppedCards">有 {0} 张卡片被丢弃（标题为空、链接不是 http/https、图标不是名字、或动作未注册）。</sys:String>
+    <sys:String x:Key="Homepage.OpenLink">打开链接</sys:String>
+    <sys:String x:Key="Homepage.RunAction">执行</sys:String>
+    <sys:String x:Key="Homepage.LinkRejected">该链接不是 http/https，已拒绝打开。</sys:String>
+    <sys:String x:Key="Homepage.OpenLinkFailed">打开链接失败：{0}</sys:String>
+    <sys:String x:Key="Homepage.UnknownAction">未注册的动作：{0}</sys:String>
+    <sys:String x:Key="Homepage.Tag">标签</sys:String>
+
 </ResourceDictionary>

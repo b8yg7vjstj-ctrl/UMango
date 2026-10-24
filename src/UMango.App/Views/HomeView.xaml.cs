@@ -26,7 +26,7 @@ public partial class HomeView : UserControl
     public HomeView()
     {
         InitializeComponent();
-        ViewModel = new HomeViewModel();
+        ViewModel = new HomeViewModel(AppServices.Homepage);
         DataContext = ViewModel;
 
         // 语言切换 → 重建代码侧拼的本地化句子（XAML 的 DynamicResource 会自动更新，不用管）
@@ -45,6 +45,13 @@ public partial class HomeView : UserControl
     {
         // 首次加载走注册表缓存（不重新起 CLI 进程）；刷新由「刷新」按钮显式触发。
         await ViewModel.EnsureLoadedAsync();
+
+        // 自定义主页：读一次清单，并开始监听文件变化（用户在外部改 JSON 也能立刻生效）。
+        ViewModel.Homepage.Load();
+        AppServices.Homepage.StartWatching();
+
+        // 清单里的「重新探测包源」动作 → 走主页自己的刷新命令（与工具栏的刷新按钮同一条路）。
+        AppServices.Homepage.RefreshRequested += () => ViewModel.RefreshCommand.Execute(null);
     }
 }
 
@@ -78,6 +85,13 @@ public partial class HomeViewModel : ObservableObject
 
     private bool _initialized;
     private bool _loading;
+
+    /// <summary>创建主页 ViewModel。</summary>
+    /// <param name="homepageHost">自定义主页接入点（由组合根提供，全进程一份）。</param>
+    public HomeViewModel(Services.HomepageHost homepageHost)
+    {
+        Homepage = new HomepageSectionViewModel(homepageHost);
+    }
 
     /// <summary>包源状态行（标题=包管理器名、副标题=安装目录，与下载页左栏口径一致）。</summary>
     public ObservableCollection<HomeSourceStatus> Sources { get; } = [];
@@ -118,6 +132,14 @@ public partial class HomeViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(RunningOnText));
     }
+
+    // ------------------------------------------------------------------
+    // 自定义主页（声明式 JSON 清单）—— 见 HomepageCardViewModel 的说明。
+    // Core 侧负责解析与安全校验；这里只把结果暴露给界面。
+    // ------------------------------------------------------------------
+
+    /// <summary>自定义主页区（卡片 + 提示 + 清单路径）。</summary>
+    public HomepageSectionViewModel Homepage { get; }
 
     [ObservableProperty]
     private bool _isBusy;

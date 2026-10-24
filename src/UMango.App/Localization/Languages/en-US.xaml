@@ -482,4 +482,15 @@
     <sys:String x:Key="Settings.Proxy.Status.SystemFound">System proxy detected: {0}</sys:String>
     <sys:String x:Key="Settings.Proxy.Status.SystemNone">No system proxy was found (the system has none enabled, or it could not be read); requests go out directly for now.</sys:String>
 
+    <sys:String x:Key="Homepage.Section">Custom homepage</sys:String>
+    <sys:String x:Key="Homepage.ManifestPath">Manifest file: {0}</sys:String>
+    <sys:String x:Key="Homepage.NoManifest">No custom homepage configured. Drop a JSON manifest at the path above; edits apply automatically.</sys:String>
+    <sys:String x:Key="Homepage.DroppedCards">{0} card(s) were dropped (empty title, non-http(s) link, icon that is not a name, or unregistered action).</sys:String>
+    <sys:String x:Key="Homepage.OpenLink">Open link</sys:String>
+    <sys:String x:Key="Homepage.RunAction">Run</sys:String>
+    <sys:String x:Key="Homepage.LinkRejected">That link is not http/https and was refused.</sys:String>
+    <sys:String x:Key="Homepage.OpenLinkFailed">Failed to open link: {0}</sys:String>
+    <sys:String x:Key="Homepage.UnknownAction">Unregistered action: {0}</sys:String>
+    <sys:String x:Key="Homepage.Tag">Tag</sys:String>
+
 </ResourceDictionary>

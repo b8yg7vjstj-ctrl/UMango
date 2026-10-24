@@ -16,6 +16,7 @@ using UMango.Core.Platform;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
+using UMango.Core.UI.Homepage;
 
 namespace UMango.App.Services;
 
@@ -102,6 +103,14 @@ public static class AppServices
         ProxyHolder.Current = manager;
         return manager;
     }
+
+    /// <summary>
+    /// 自定义主页接入点（声明式 JSON 清单）。
+    ///
+    /// 与 PCL 的差别：PCL 加载并执行**远程 XAML**（任意代码执行面），
+    /// UMango 只渲染一份**声明式 JSON 清单**（Core 侧解析并做能力式校验）。
+    /// </summary>
+    public static HomepageHost Homepage { get; } = new();
 
     /// <summary>统一的 HTTP 服务（更新检查等用）。</summary>
     public static HttpService Http { get; } = CreateHttp();

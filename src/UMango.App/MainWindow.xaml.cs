@@ -73,6 +73,9 @@ public partial class MainWindow : Window
         // 选项卡也可能被别处改（快捷键、将来页面内的跳转）→ 跟着切右区、勾选顶部 banner。
         _shell.PropertyChanged += OnShellPropertyChanged;
 
+        // 自定义主页卡片里的快捷动作 → 跳到对应页面（声明式主页的落点）。
+        Services.AppServices.Homepage.NavigationRequested += NavigateFromHomepage;
+
         _wired = true;
 
         // 构造完成后按 VM 的初始状态把界面刷一遍（默认是「主页」）。
@@ -219,6 +222,35 @@ public partial class MainWindow : Window
 
         SwitchNow(tab);
         PlayContentAnimation();
+    }
+
+    /// <summary>
+    /// 自定义主页动作触发的跳转。
+    ///
+    /// 目标名是**封闭集合**（Core 侧的动作白名单只认这五个），
+    /// 所以这里不需要再做输入校验 —— 但仍然用 switch 显式列举，
+    /// 未知目标直接忽略：白名单万一被扩展而这里忘了改，宁可不动也不要跳到未知页面。
+    /// </summary>
+    private void NavigateFromHomepage(string target)
+    {
+        switch (target)
+        {
+            case "downloads":
+                _shell.SwitchTabCommand.Execute(AppTab.Download);
+                break;
+            case "settings":
+                _shell.SwitchTabCommand.Execute(AppTab.Settings);
+                break;
+            case "tools":
+                _shell.SwitchTabCommand.Execute(AppTab.Tools);
+                break;
+            case "logs":
+                _shell.SwitchTabCommand.Execute(AppTab.Tools);
+                // 工具页的左栏里「日志」是二级项：切过去还得把左栏选中项改成它，
+                // 否则右区会显示工具页默认内容而不是日志页。
+                _shell.SelectNavCommand.Execute("logs");
+                break;
+        }
     }
 
     /// <summary>立即切换可见性（不含动画时序）。</summary>
