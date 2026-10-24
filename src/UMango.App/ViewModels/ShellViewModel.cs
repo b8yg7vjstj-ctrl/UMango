@@ -148,6 +148,7 @@ public partial class ShellViewModel : ObservableObject
             new NavItem("diagnostics", L("Nav.Diagnostics"), IsSecondary: true),
             new NavItem("licenses", L("Nav.Licenses"), IsSecondary: true),
             new NavItem("feedback", L("Nav.Feedback"), IsSecondary: true),
+            new NavItem("music", L("Nav.Music"), IsSecondary: true),
             new NavItem("about", L("Nav.About"), IsSecondary: true)
         ]
     };

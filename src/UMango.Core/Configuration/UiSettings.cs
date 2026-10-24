@@ -51,6 +51,18 @@ public static class UiSettings
     /// <summary>提交反馈的目标地址（留空 = 只导出草稿，不跳转）。</summary>
     public const string FeedbackSubmitUrlKey = "feedback.submitUrl";
 
+    /// <summary>背景音乐开关。</summary>
+    public const string MusicEnabledKey = "music.enabled";
+
+    /// <summary>随机播放（关闭 = 按文件名顺序循环）。</summary>
+    public const string MusicShuffleKey = "music.shuffle";
+
+    /// <summary>音乐音量（0~1）。</summary>
+    public const string MusicVolumeKey = "music.volume";
+
+    /// <summary>音乐目录（留空 = 用程序目录下的 Musics）。</summary>
+    public const string MusicDirectoryKey = "music.directory";
+
     /// <summary>全部分组（按设置页展示顺序）</summary>
     public static readonly string[] SectionOrder =
         [SectionAppearance, SectionAnimation, SectionDebug, SectionBehavior];
@@ -221,6 +233,51 @@ public static class UiSettings
             Kind = SettingKind.String,
             DefaultValue = "",
             Order = 33
+        },
+
+        new SettingDescriptor
+        {
+            Key = MusicEnabledKey,
+            Section = SectionBehavior,
+            Title = "背景音乐",
+            Description = "在工具页播放音乐目录里的曲目。支持 .wav / .mp3；"
+                          + "NAudio 不带 FLAC 解码器，.flac 会被判为格式不支持。",
+            Kind = SettingKind.Bool,
+            DefaultValue = false,
+            Order = 40
+        },
+
+        new SettingDescriptor
+        {
+            Key = MusicShuffleKey,
+            Section = SectionBehavior,
+            Title = "随机播放",
+            Description = "打开后随机挑选曲目；关闭则按文件名顺序循环，播完一轮重来。",
+            Kind = SettingKind.Bool,
+            DefaultValue = true,
+            Order = 41
+        },
+
+        new SettingDescriptor
+        {
+            Key = MusicVolumeKey,
+            Section = SectionBehavior,
+            Title = "音乐音量",
+            Description = "0 ~ 1 之间的数值。",
+            Kind = SettingKind.Double,
+            DefaultValue = 0.5d,
+            Order = 42
+        },
+
+        new SettingDescriptor
+        {
+            Key = MusicDirectoryKey,
+            Section = SectionBehavior,
+            Title = "音乐目录",
+            Description = "留空则使用程序目录下的 Musics 文件夹。目录不存在会自动创建。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 43
         },
     ];
 

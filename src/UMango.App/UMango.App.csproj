@@ -17,6 +17,14 @@
          生成属性与命令，没有生成器就会大面积编译失败。
          注意：若其它 agent 也已在本文件加过同一行，保留一份即可（重复 PackageReference 会报 NU1504）。 -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <!-- NAudio：背景音乐播放（MIT 许可，与 PCL-CE 用的同一套库、同一许可）。
+         选 2.4.0 而不是 3.x：3.x 把 NAudio 拆成 Core/Wasapi/WinMM/Midi 等多个包，
+         且目标框架只到 net9.0；2.4.0 提供 net6.0-windows7.0 资产，
+         API 面（Mp3FileReader / AudioFileReader / WaveFileReader / WaveOutEvent）完全够用。
+         FLAC 解码 NAudio 2.x 不含（只有 .NET Framework 专用的 NAudio.Flac 1.x 才有，
+         且该包未声明许可）→ UMango 在 Core 层只把 .flac 记作「可识别格式」，
+         真正能否解码由播放层判定，播不了就归类为「格式不支持」。 -->
+    <PackageReference Include="NAudio" Version="2.4.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\UMango.Core\UMango.Core.csproj" />

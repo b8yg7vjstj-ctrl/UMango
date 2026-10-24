@@ -539,4 +539,27 @@
     <sys:String x:Key="Feedback.Category.Decline">已拒绝</sys:String>
     <sys:String x:Key="Feedback.Category.Ignored">已忽略</sys:String>
     <sys:String x:Key="Feedback.Category.Duplicate">重复</sys:String>
+    <sys:String x:Key="Music.Library">曲库</sys:String>
+    <sys:String x:Key="Music.Refresh">重新扫描</sys:String>
+    <sys:String x:Key="Music.Play">播放</sys:String>
+    <sys:String x:Key="Music.Pause">暂停</sys:String>
+    <sys:String x:Key="Music.Next">下一首</sys:String>
+    <sys:String x:Key="Music.Stop">停止</sys:String>
+    <sys:String x:Key="Music.Replay">重播</sys:String>
+    <sys:String x:Key="Music.Shuffle">随机</sys:String>
+    <sys:String x:Key="Music.Volume">音量</sys:String>
+    <sys:String x:Key="Music.State.Playing">正在播放</sys:String>
+    <sys:String x:Key="Music.State.Paused">已暂停</sys:String>
+    <sys:String x:Key="Music.State.Stopped">已停止</sys:String>
+    <sys:String x:Key="Music.Loaded">已载入 {0} 首曲目</sys:String>
+    <sys:String x:Key="Music.NoTracks">没有找到可播放的曲目</sys:String>
+    <sys:String x:Key="Music.NowPlaying">正在播放：{0}</sys:String>
+    <sys:String x:Key="Music.DirectoryFailed">无法访问音乐目录：{0}</sys:String>
+    <sys:String x:Key="Music.Error.DeviceBusy">音频设备被其它程序占用</sys:String>
+    <sys:String x:Key="Music.Error.DeviceChanged">音频设备已断开或更换</sys:String>
+    <sys:String x:Key="Music.Error.PropertyChangeUnsupported">无法调整 {0} 的播放参数</sys:String>
+    <sys:String x:Key="Music.Error.UnsupportedFormat">不支持该格式：{0}</sys:String>
+    <sys:String x:Key="Music.Error.FileNotFound">文件不存在：{0}</sys:String>
+    <sys:String x:Key="Music.Error.PlaybackFailed">播放失败：{0}</sys:String>
+    <sys:String x:Key="Nav.Music">音乐</sys:String>
 </ResourceDictionary>

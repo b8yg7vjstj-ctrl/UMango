@@ -404,7 +404,7 @@ public partial class MainWindow : Window
 
     private FrameworkElement? CurrentVisibleView()    {
         foreach (var candidate in new FrameworkElement?[]
-                 { ViewHome, ViewDownload, ViewProgress, ViewSettings, ViewTools, ViewDownloader, ViewLog })
+                 { ViewHome, ViewDownload, ViewProgress, ViewSettings, ViewTools, ViewDownloader, ViewLog, ViewFeedback, ViewMusic })
         {
             if (candidate?.Visibility == Visibility.Visible) return candidate;
         }
@@ -427,13 +427,15 @@ public partial class MainWindow : Window
         var downloaderSelected = onTools && _shell.CurrentNavKey == "downloader";
         var logSelected = onTools && _shell.CurrentNavKey == "logs";
         var feedbackSelected = onTools && _shell.CurrentNavKey == "feedback";
+        var musicSelected = onTools && _shell.CurrentNavKey == "music";
 
         ViewDownloader.Visibility = VisibleIf(downloaderSelected);
         ViewLog.Visibility = VisibleIf(logSelected);
         ViewFeedback.Visibility = VisibleIf(feedbackSelected);
+        ViewMusic.Visibility = VisibleIf(musicSelected);
 
         // 选中了这些独立页面之一时把 ToolsView 收起，否则两层内容会叠在一起
-        ViewTools.Visibility = VisibleIf(onTools && !downloaderSelected && !logSelected && !feedbackSelected);
+        ViewTools.Visibility = VisibleIf(onTools && !downloaderSelected && !logSelected && !feedbackSelected && !musicSelected);
     }
 
     // ================= 左栏菜单 =================

@@ -247,6 +247,8 @@
           <views:LogView x:Name="ViewLog" Visibility="Collapsed"/>
           <!-- 反馈页：工具页左栏选「反馈」时显示 -->
           <views:FeedbackView x:Name="ViewFeedback" Visibility="Collapsed"/>
+          <!-- 音乐页：工具页左栏选「音乐」时显示 -->
+          <views:MusicView x:Name="ViewMusic" Visibility="Collapsed"/>
         </Grid>
       </Grid>
 

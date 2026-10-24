@@ -1,0 +1,149 @@
+<UserControl x:Class="UMango.App.Views.MusicView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource BrBg}"
+             Loaded="MusicView_Loaded">
+  <!--
+    ============================================================================
+    音乐页（Views/MusicView.xaml）
+    ============================================================================
+    对应 PCL-CE 的「音乐」功能（ModMusic）—— PCL 那份位于受限许可目录，
+    这里只借鉴语义（曲库 + 播放控制 + 失败分类），实现是重新写的。
+
+    布局：
+      · 顶部：当前曲目 + 状态 + 播放控制按钮 + 音量 + 随机开关；
+      · 下方：曲库列表（可点条目直接播放）。
+
+    约定与其它页面一致：颜色一律 {DynamicResource}，卡片用 PclCard。
+  ============================================================================
+  -->
+  <Grid Margin="20,16,20,20">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <!-- ============ 播放控制条 ============ -->
+    <Border Grid.Row="0" Style="{DynamicResource PclCard}" Padding="12,10">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 当前曲目 + 状态 -->
+        <Grid Grid.Row="0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding CurrentTitle}" FontSize="13" FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis"
+                       Foreground="{DynamicResource BrC1}"/>
+            <TextBlock Text="{Binding StateText}" FontSize="11" Margin="0,2,0,0"
+                       Foreground="{DynamicResource BrG3}"/>
+          </StackPanel>
+
+          <!-- 播放控制 -->
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Content="{DynamicResource Music.Play}" Height="26" Padding="12,0" FontSize="12"
+                    Style="{DynamicResource PclPrimaryButton}"
+                    Command="{Binding PlayCommand}"/>
+            <Button Content="{DynamicResource Music.Pause}" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
+                    Style="{DynamicResource PclButton}"
+                    Command="{Binding PauseCommand}"/>
+            <Button Content="{DynamicResource Music.Next}" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
+                    Style="{DynamicResource PclButton}"
+                    Command="{Binding NextCommand}"/>
+            <Button Content="{DynamicResource Music.Stop}" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
+                    Style="{DynamicResource PclButton}"
+                    Command="{Binding StopCommand}"/>
+            <Button Content="{DynamicResource Music.Replay}" Height="26" Padding="12,0" FontSize="12" Margin="6,0,0,0"
+                    Style="{DynamicResource PclButton}"
+                    Command="{Binding ReplayCommand}"/>
+          </StackPanel>
+        </Grid>
+
+        <!-- 状态提示 + 音量 + 随机 -->
+        <Grid Grid.Row="1" Margin="0,8,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap"
+                     TextTrimming="CharacterEllipsis"
+                     Foreground="{DynamicResource BrG3}"
+                     Text="{Binding StatusMessage}"/>
+
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+            <TextBlock Text="{DynamicResource Music.Shuffle}" FontSize="11" VerticalAlignment="Center"
+                       Margin="0,0,6,0" Foreground="{DynamicResource BrG3}"/>
+            <CheckBox IsChecked="{Binding Shuffle}" VerticalAlignment="Center" Style="{DynamicResource PclCheckBox}"/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+            <TextBlock Text="{DynamicResource Music.Volume}" FontSize="11" VerticalAlignment="Center"
+                       Margin="0,0,6,0" Foreground="{DynamicResource BrG3}"/>
+            <Slider Width="110" Style="{DynamicResource PclSlider}" VerticalAlignment="Center"
+                    Minimum="0" Maximum="1"
+                    Value="{Binding Volume}"/>
+          </StackPanel>
+        </Grid>
+      </Grid>
+    </Border>
+
+    <!-- ============ 曲库 ============ -->
+    <Border Grid.Row="1" Margin="0,10,0,0" Style="{DynamicResource PclCard}" Padding="0">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 + 刷新 -->
+        <Grid Grid.Row="0" Margin="10,10,10,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <TextBlock Grid.Column="0" Style="{DynamicResource PclSectionTitle}"
+                     Text="{DynamicResource Music.Library}"/>
+          <Button Grid.Column="1" Content="{DynamicResource Music.Refresh}" Height="26" Padding="12,0" FontSize="12"
+                  Style="{DynamicResource PclButton}"
+                  Command="{Binding RefreshCommand}"/>
+        </Grid>
+
+        <!-- 空曲库提示 -->
+        <Border Grid.Row="1" Margin="10,10,10,10" Padding="10,8" CornerRadius="4"
+                Background="{DynamicResource BrG8}"
+                Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
+          <TextBlock Text="{DynamicResource Music.NoTracks}" FontSize="12" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}"/>
+        </Border>
+
+        <!-- 曲目列表 -->
+        <ListBox Grid.Row="1" Margin="8" ItemsSource="{Binding Tracks}"
+                 Background="Transparent" BorderThickness="0"
+                 FocusVisualStyle="{x:Null}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisInvert}}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Margin="4,0,4,4">
+                <TextBlock Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource BrC1}"/>
+                <TextBlock Text="{Binding FileName}" FontSize="10" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource BrG4}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

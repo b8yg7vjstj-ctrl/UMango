@@ -525,4 +525,27 @@
     <sys:String x:Key="Feedback.Category.Decline">Declined</sys:String>
     <sys:String x:Key="Feedback.Category.Ignored">Ignored</sys:String>
     <sys:String x:Key="Feedback.Category.Duplicate">Duplicate</sys:String>
+    <sys:String x:Key="Music.Library">Library</sys:String>
+    <sys:String x:Key="Music.Refresh">Rescan</sys:String>
+    <sys:String x:Key="Music.Play">Play</sys:String>
+    <sys:String x:Key="Music.Pause">Pause</sys:String>
+    <sys:String x:Key="Music.Next">Next</sys:String>
+    <sys:String x:Key="Music.Stop">Stop</sys:String>
+    <sys:String x:Key="Music.Replay">Replay</sys:String>
+    <sys:String x:Key="Music.Shuffle">Shuffle</sys:String>
+    <sys:String x:Key="Music.Volume">Volume</sys:String>
+    <sys:String x:Key="Music.State.Playing">Playing</sys:String>
+    <sys:String x:Key="Music.State.Paused">Paused</sys:String>
+    <sys:String x:Key="Music.State.Stopped">Stopped</sys:String>
+    <sys:String x:Key="Music.Loaded">Loaded {0} tracks</sys:String>
+    <sys:String x:Key="Music.NoTracks">No playable tracks found</sys:String>
+    <sys:String x:Key="Music.NowPlaying">Now playing: {0}</sys:String>
+    <sys:String x:Key="Music.DirectoryFailed">Cannot access music directory: {0}</sys:String>
+    <sys:String x:Key="Music.Error.DeviceBusy">The audio device is busy with another program</sys:String>
+    <sys:String x:Key="Music.Error.DeviceChanged">The audio device was disconnected or changed</sys:String>
+    <sys:String x:Key="Music.Error.PropertyChangeUnsupported">Cannot adjust playback settings of {0}</sys:String>
+    <sys:String x:Key="Music.Error.UnsupportedFormat">Unsupported format: {0}</sys:String>
+    <sys:String x:Key="Music.Error.FileNotFound">File not found: {0}</sys:String>
+    <sys:String x:Key="Music.Error.PlaybackFailed">Playback failed: {0}</sys:String>
+    <sys:String x:Key="Nav.Music">Music</sys:String>
 </ResourceDictionary>
