@@ -109,6 +109,19 @@ public class SimilaritySearchTests
     }
 
     [Fact]
+    public void 位置接近度确实影响分数()
+    {
+        // 位置因子必须真的起作用，而不是恒等于 1。
+        // 命中在源的开头 vs 结尾，两者的分数差必须大于零。
+        var atStart = SimilaritySearch.Score("framework here", "framework");
+        var atEnd = SimilaritySearch.Score("here framework", "framework");
+
+        Assert.True(
+            Math.Abs(atStart - atEnd) > 0.001,
+            $"位置因子应造成可见分差，实际 {atStart:F6} vs {atEnd:F6}");
+    }
+
+    [Fact]
     public void 分数落在0到1之间()
     {
         var samples = new[]
