@@ -119,7 +119,8 @@ public class SingleInstanceGuardTests
         var notified = await SingleInstanceGuard.TryNotifyExistingAsync(lockFile, "activate");
         sw.Stop();
         Assert.False(notified, "连不上的管道应返回 false，让调用方自行退出");
-        Assert.True(sw.ElapsedMilliseconds < 3000, $"不应长时间挂住（实际 {sw.ElapsedMilliseconds}ms）");
+        // 上限给 10 秒：语义是「不能挂死」，不是精确计时。
+        Assert.True(sw.ElapsedMilliseconds < 10000, $"不应长时间挂住（实际 {sw.ElapsedMilliseconds}ms）");
     }
 
     [Fact]

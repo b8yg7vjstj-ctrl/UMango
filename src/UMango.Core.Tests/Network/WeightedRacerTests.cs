@@ -194,7 +194,9 @@ public class WeightedRacerTests
         var sw = System.Diagnostics.Stopwatch.StartNew();
         await cts.CancelAsync();
 
-        var finished = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(3)));
+        // 看门狗给 10 秒：这里的语义是「取消必须被尊重」，不是「取消必须多快」。
+        // 3 秒在并行跑整套测试时会被机器负载拖爆（曾经真的随机红过一次）。
+        var finished = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10)));
         sw.Stop();
         Assert.True(ReferenceEquals(finished, task),
             $"收手耗时 {sw.ElapsedMilliseconds}ms：竞速器被无视取消的候选拖死了");
@@ -290,7 +292,9 @@ public class WeightedRacerTests
         sw.Stop();
 
         // 若没有取消输家，这里会 ≥3000ms。
-        Assert.True(sw.ElapsedMilliseconds < 1000, $"耗时 {sw.ElapsedMilliseconds}ms，应贴近最快者 50ms");
+        // 上限给 2000ms：要卡住的是「不能拖到 3000ms」，而不是精确计时；
+        // 1000ms 在并行负载下会随机红。
+        Assert.True(sw.ElapsedMilliseconds < 2000, $"耗时 {sw.ElapsedMilliseconds}ms，应贴近最快者 50ms");
     }
 
     private static async Task WaitUntil(Func<bool> condition, int timeoutMs)

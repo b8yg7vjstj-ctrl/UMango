@@ -467,4 +467,8 @@
     <sys:String x:Key="Validation.RegexMismatch">Does not match the required format: {0}</sys:String>
     <sys:String x:Key="Validation.Blacklisted">Must not contain this term: {0}</sys:String>  <sys:String x:Key="Settings.FollowSystem">Follow the system appearance</sys:String>
   <sys:String x:Key="Settings.FollowSystem.Hint">When checked, light/dark follows the operating system appearance; uncheck to use the manual switch above.</sys:String>
+    <sys:String x:Key="SystemDialog.File.SelectTitle">Select file</sys:String>
+    <sys:String x:Key="SystemDialog.File.AllFilesFilter">All files|*.*</sys:String>
+    <sys:String x:Key="SystemDialog.Folder.SelectTitle">Select folder</sys:String>
+    <sys:String x:Key="Downloader.Browse">Browse…</sys:String>
 </ResourceDictionary>

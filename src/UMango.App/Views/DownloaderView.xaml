@@ -41,11 +41,22 @@
           <!-- 输出目录 -->
           <TextBlock Text="{DynamicResource Downloader.SaveTo}" Margin="0,12,0,4" FontSize="12"
                      Foreground="{DynamicResource BrG3}"/>
-          <TextBox Padding="8,6"
-                   Text="{Binding OutputDirectory, UpdateSourceTrigger=PropertyChanged}"
-                   Background="{DynamicResource BrCard}"
-                   Foreground="{DynamicResource BrC1}"
-                   BorderBrush="{DynamicResource BrG6}"/>
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" Padding="8,6"
+                     Text="{Binding OutputDirectory, UpdateSourceTrigger=PropertyChanged}"
+                     Background="{DynamicResource BrCard}"
+                     Foreground="{DynamicResource BrC1}"
+                     BorderBrush="{DynamicResource BrG6}"/>
+            <!-- 浏览按钮放在 code-behind 里调系统文件夹选择对话框：
+                 文件对话框是 WPF 类型，不能放进 ViewModel（否则 macOS 上无法单测）。 -->
+            <Button Grid.Column="1" Margin="6,0,0,0" Height="30" MinWidth="72"
+                    Content="{DynamicResource Downloader.Browse}"
+                    Click="BrowseOutputDirectory_Click"/>
+          </Grid>
 
           <!-- 操作按钮 -->
           <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
