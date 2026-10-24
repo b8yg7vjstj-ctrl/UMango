@@ -625,7 +625,7 @@
 | P3-3 | 视频/动态背景 | 未做 | 与包管理器无关 |
 | P3-4 | 内嵌 WebServer | 未做 | PCL-CE 用它接 MC 登录回调；UMango 无此需求 |
 | P3-5 | 请求签名 | 未做 | 与 PCL 官方服务配套 |
-| P3-6 | 进程间管道通信 | 未做 | UMango 架构不需要 |
+| P3-6 | 进程间管道通信 | **已完成** | `PCL.Core/IO/PipeComm.cs`（Apache-2.0，170 行）—— `src/UMango.Core/Ipc/PipeServer.cs`：行协议（UTF-8，每行一条消息）+ 客户端自报进程号 + 会话计数 + 运行期日志 + 出错不杀服务端。**三处实质差异**：① 原版用 `KernelInterop.GetNamedPipeClientProcessId` 读管道句柄拿客户端进程号（Win32 专属），改为**客户端在协议里自报**（自报可伪造，只作日志与弱校验）；② 原版跑在专用线程上，改为 **async**；③ 原版的私有终止符协议（ESC）改为**行协议**。另加 `PipeServer.BuildPipeName`：**macOS/Linux 上 .NET 把命名管道映射成 Unix domain socket，完整路径必须 ≤ 104 字符**，超长名字自动用哈希压缩（原版无此概念，是跨平台移植时新发现的约束）。13 个测试，注入矩阵 4 项全红后还原。 |
 | P3-7 | 反馈页（标签化提交） | 未做 | 需配套后端；可后置 |
 | P3-8 | 日志查看页 | ✅ **已完成**（同上 commit `f2cc0b9`，`Views/LogView.xaml`） | 与 P0-3 同批交付，并附「导出诊断包」 |
 | P3-9 | 启动器杂项设置 | **部分**（已逐项确认，见下） | PCL 的 `PageSetupLauncherMisc.xaml.cs`（322 行）共 9 组设置，逐项核对后：**UMango 该有的 1 组已迁（网络代理）**，其余 8 组各有明确不迁理由 |
