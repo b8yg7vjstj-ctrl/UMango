@@ -53,6 +53,18 @@
   </ItemGroup>
 
   <!--
+    DPAPI（ProtectedData）只对 net10.0-windows 支有意义。
+    它在 Windows 桌面框架引用里是**转发**类型（实际住在
+    System.Security.Cryptography.ProtectedData 程序集），而 Core 刻意不启用
+    UseWPF/UseWindowsForms —— 库工程的 `net10.0-windows` TFM 本身并不隐含
+    WindowsDesktop 框架引用，所以只能显式加这个包。
+    版本 8.0.0 = MIT，零传递依赖。
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <!--
     WinRT Toast 互操作只编进 net10.0-windows：它用的是 Windows 专属的 COM vtable
     （IToastNotifier / IXmlDocumentIO / HString 等），net10.0 支既没有对应的
     框架引用也不该有。排除而非 #if 的理由：这些文件里几乎每行都带指针类型，
@@ -63,6 +75,20 @@
     <Compile Remove="Utils/WinRT/**/*.cs" />
     <!-- AumidHelper 只用 Microsoft.Win32 注册表，同样是 Windows-only -->
     <Compile Remove="Utils/OS/AumidHelper.cs" />
+    <!-- DPAPI 密钥保护器（Windows-only）：net10.0 支用文件权限版 -->
+    <Compile Remove="Security/Platform/WindowsDpapiKeyProtector.cs" />
+    <Compile Remove="Security/Platform/Windows/**/*.cs" />
+  </ItemGroup>
+
+  <!--
+    密钥保护器的平台分支：Windows 用 DPAPI，其它平台用文件系统权限。
+    两个工厂文件同名同命名空间（KeyProtectorFactory.Default），
+    按 TargetFramework 二选一编入 —— 这样调用方（SecretService）
+    完全不用知道自己在哪个平台上。
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <Compile Remove="Security/Platform/NonWindowsKeyProtector.cs" />
+    <Compile Remove="Security/Platform/Portable/**/*.cs" />
   </ItemGroup>
 
 </Project>
