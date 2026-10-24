@@ -21,4 +21,11 @@
   <ItemGroup>
     <ProjectReference Include="..\UMango.Core\UMango.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- 像素着色器：自适应模糊效果用的 AdaptiveBlur.ps（自 PCL-CE 的 Apache-2.0 层采用）。
+         .ps 是**已编译**的二进制，Build Action 必须是 Resource，
+         否则 pack:// URI 取不到它。.hlsl 是对应的源码，一并带上便于追溯。 -->
+    <Resource Include="Assets\Shaders\AdaptiveBlur.ps" />
+    <Resource Include="Assets\Shaders\AdaptiveBlur.hlsl" />
+  </ItemGroup>
 </Project>

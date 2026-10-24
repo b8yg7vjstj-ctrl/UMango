@@ -395,7 +395,7 @@
 | 主题/配色（NColor、色调档、系统主题跟随） | `UI/Theme/`（`ThemeService.cs`、`SystemThemeHelper.cs`、`CatColorResource.cs`、`LabColor.cs`、`ToneProfile.cs`）、`UI/NColor.cs` | 否 | **部分** | UMango 有 4 套 token 字典 + `ThemeManager`；**无** LAB 色彩空间、色调档、系统主题跟随 |
 | 动画系统（完整） | `UI/Animation/`（**87 文件 / 2,742 行**：`Animatable/` 4、`Clock/` 5、`Core/` 21、`Easings/` 39、`ValueProcessor/` 9、`UIAccessProvider/` 2、根 7） | 否 | **部分** | 见 2.A「动画引擎」与 §4.6「第 2.5 层」。**仅 14/87 文件触及 WPF，且零使用 WPF 的 `DoubleAnimation`/`Storyboard`/`Timeline`** —— 自研帧驱动引擎，可移植性远高于初判。**已补齐**：值处理器算术运算（Add/Subtract/Scale/Equal/Default）、绝对/相对值动画（`AnimationValueType`）、`ActionAnimation`、复合缓动（`CombinedEasing`/`CompositeEasing`/`BackEaseWithPower`）、`EmptyAnimatable`/`ClrAnimatable<TOwner,T>`、按名取消 |
 | WPF 控件库 | `UI/Controls/SvgIcon/`（10 文件，自研 SVG 渲染）、`BlurBorder.cs`、`Tooltip.cs`、`WaterfallPanel.cs`、`MotdRenderer.xaml` | 否 | **部分** | UMango 用 lucide（ISC）图标 + 自绘样式；**未移植 SvgIcon 运行时解析器**（`SvgPathGeometryParser.cs` 等） |
-| 模糊/特效 | `UI/Effects/`（`AdaptiveBlurEffect.cs`、`EnhancedBlurEffect.cs`、`OptimizedBlurEffect.cs`、`SamplingBlurProcessor.cs`） | 否 | **未做** | Windows 专用（需 P/Invoke） |
+| 模糊/特效 | `UI/Effects/`（`AdaptiveBlurEffect.cs`、`EnhancedBlurEffect.cs`、`OptimizedBlurEffect.cs`、`SamplingBlurProcessor.cs`） | 否 | **已完成**（部分） | 实现位置：`src/UMango.Core/UI/Blur/`（`BlurKernel.cs` 纯算法层 + `SamplingBlur.cs` 泊松采样层）+ `src/UMango.App/Effects/AdaptiveBlurEffect.cs`（WPF `ShaderEffect` 适配层）+ 着色器资源 `Assets/Shaders/AdaptiveBlur.{ps,hlsl}`。⚠️ **相对原版的实质差异**：① 原版 `OptimizedBlurEffect` / `EnhancedBlurEffect` 是 `Freezable` 而非 `Effect`，其 `GetEffectInstance()` **无论采样率都直接返回原生 `BlurEffect`** —— 原版那 590 行的 `SamplingBlurProcessor` 在 PCL 自己的界面路径上**从未真正执行**，只有 `AdaptiveBlurEffect`（`ShaderEffect` + 预编译 `.ps`）是真实生效的特效，故 UMango 同样只落地这一条真实路径；② 原版泊松采样的最小间距 0.7 在单位圆内**几何上不可行**（最多放 6 个点，32 个点放不下），UMango 改用 Vogel 螺旋（黄金角分布，实际最小间距 0.2733）；③ 原版高斯核在半径为 0 时算出 NaN，UMango 特判为单点核；④ 原版卷积结果**截断**取整，常量图经两次卷积后整体暗两档，UMango 改四舍五入；⑤ 原版 `TextureSize` 固定为 1920×1080，UMango 保持一致但注明为已知限制。**不引入** `EnhancedBlurEffect` / `OptimizedBlurEffect`（在原版中即死代码）。 |
 | 图像加载与转换 | `UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs`、`Utils/IconHelper.cs` | 否 | **未做** | |
 | 灰度/无障碍 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | 否 | **已完成** | 哀悼日灰度模式：Core `UI/GrayProfile.cs` 迁语义（PCL 原版零消费方）+ `GrayColorPlanner<TKey>` 记账；App `Themes/GrayModeController.cs` 改写资源字典里的画笔；设置项 `ui.appearance.grayMode`。**注意 WPF 没有 ColorMatrixEffect**（只在 GDI+/WinForms 里），所以只能换画笔而非挂 Effect |
 | 后台展示器 | `UI/BackgroundPresenter.cs` | 否 | **未做** | 与视频背景配套 |
@@ -607,7 +607,7 @@
 | P2-12 | 统一对话框/提示封装 | 部分 | **低** | `UI/MsgBoxWrapper.cs`、`SystemDialogs.cs`、`UI/HintWrapper.cs` | 否 |
 | P2-13 | 系统 Toast 通知 | **已完成** | **中** | `src/UMango.Core/UI/ToastNotification.cs` + `Utils/WinRT/**`（10 文件）+ `Utils/OS/AumidHelper.cs`（Apache-2.0 逐字采用）+ `src/UMango.App/Services/ToastBridge.cs`（自写桥接，7 测试） | **是**（WinRT 专用，net10.0-windows 支） |
 | P2-14 | SVG 图标运行时渲染 | 部分 | **中** | `UI/Controls/SvgIcon/`（10 文件） | **是**（WPF 几何） |
-| P2-15 | 模糊/特效 | 未做 | **中** | `UI/Effects/`（4 文件） | **是**（P/Invoke） |
+| P2-15 | 模糊/特效 | **已完成**（部分，见主表「模糊/特效」行的差异说明） | **中** | `UI/Effects/`（4 文件） | **是**（`ShaderEffect` + 预编译 `.ps` 着色器，**不需要 P/Invoke**）—— 着色器需在 Windows 上用 FXC 预编译（PCL 原版附 `CompileShader.bat`），但**已编译产物可直接复用**，构建链无需 FXC |
 | P2-16 | 灰度（哀悼日）模式 | **已完成** | 低 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | **是**（WPF 画笔改写，非 Effect） |
 | P2-17 | 位图/图像处理 | 未做 | **低** | `Modules/Base/MyBitmap.cs`、`UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs` | 部分 |
 | P2-18 | 语义化版本公共类型 | 部分 | **低** | `Utils/SemVer.cs`、`Utils/VersionRange.cs` | 否 |
