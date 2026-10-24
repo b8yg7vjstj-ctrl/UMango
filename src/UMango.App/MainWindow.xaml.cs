@@ -49,6 +49,25 @@ public partial class MainWindow : Window
     /// <summary>系统通知桥接（Windows 专用，其它平台上是空转）。</summary>
     private Services.ToastBridge? _toast;
 
+    /// <summary>
+    /// 导航宿主：把 Core 的导航栈接到窗口上（副标题栏 + 返回按钮）。
+    ///
+    /// 为什么需要它：PCL-CE 用 <c>FormMain.xaml.cs</c> 里的 <c>pageStack</c> +
+    /// <c>PageChange</c>/<c>PageBack</c> 管理次级页面（FormMain.xaml.cs:1668/1770），
+    /// 并在标题栏下方显示副标题（:1476-1505）。
+    /// UMango 之前只有"折叠子视图"式的下载器，没有通用的页栈。
+    /// </summary>
+    private readonly Services.NavigationHost _nav = new(
+        new Core.UI.Navigation.NavigationService(
+            Services.NavStackMapping.PageId(AppTab.Home, "overview"), "概览"));
+
+    /// <summary>
+    /// 正在把导航栈的变化写回左栏（避免左栏的回调又去改导航栈，形成回环）。
+    ///
+    /// 和 <see cref="_syncingNav"/>（左栏 → VM）是一对镜像开关。
+    /// </summary>
+    private bool _syncingNavStack;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -64,7 +83,8 @@ public partial class MainWindow : Window
         _shell.LeftMenuChanged += SyncLeftSelection;
 
         // 二级导航变化 → 由外壳裁决是否要换成独立页面（当前只有"下载器"这一例）。
-        _shell.NavChanged += _ => ApplyNavOverride();
+        _shell.NavChanged += OnNavChanged;
+        _nav.Navigation.Navigated += OnNavigationStackChanged;
 
         // 全局提示浮层：PCL 的 HintWrapper 经 PclUiBridge 汇入 NotificationService，
         // 再汇入 Core 的提示队列（HintService）。
@@ -88,12 +108,31 @@ public partial class MainWindow : Window
         // 公告按钮里的快捷动作 → 同样跳到对应页面（白名单已限制在五个页面内）。
         Services.AppServices.Announcements.NavigationRequested += NavigateFromHomepage;
 
+        // 导航副标题栏：跟着导航宿主的状态刷新。
+        _nav.PropertyChanged += (_, e) =>
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(Services.NavigationHost.Subtitle):
+                    SubTitleText.Text = _nav.Subtitle ?? string.Empty;
+                    break;
+                case nameof(Services.NavigationHost.IsSecondary):
+                    SubTitleBar.Visibility = _nav.IsSecondary ? Visibility.Visible : Visibility.Collapsed;
+                    break;
+                case nameof(Services.NavigationHost.CanGoBack):
+                    BtnBack.IsEnabled = _nav.CanGoBack;
+                    break;
+            }
+        };
+
         _wired = true;
 
         // 构造完成后按 VM 的初始状态把界面刷一遍（默认是「主页」）。
         SyncTabCheck();
         SyncLeftSelection();
         ShowTabContent(_shell.CurrentTab);
+        SubTitleBar.Visibility = Visibility.Collapsed;
+        BtnBack.IsEnabled = false;
 
         // 任务栏进度：把 TaskCenter 的聚合进度同步到任务栏图标。
         // 放在构造末尾：此时 TaskbarItemInfo 已由 InitializeComponent 建好。
@@ -265,6 +304,14 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>副标题栏的返回按钮：退回上一层（对应 PCL 的 <c>PageBack</c>）。</summary>
+    private void BtnBack_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_nav.CanGoBack) return;
+
+        _nav.GoBackCommand.Execute(null);
+    }
+
     /// <summary>立即切换可见性（不含动画时序）。</summary>
     private void SwitchNow(AppTab tab)
     {
@@ -350,6 +397,73 @@ public partial class MainWindow : Window
     }
 
     // ================= 左栏菜单 =================
+
+    /// <summary>
+    /// 左栏选中项变化 → 同步到导航栈。
+    ///
+    /// 规则（对应 PCL-CE 的次级页面机制）：
+    ///   · 选到**次级**项 → 压栈（顶部出现「← 返回 + 标题」）；
+    ///   · 选到**主**项 → 清栈回到根（不再显示返回按钮）。
+    ///
+    /// 注意压栈时记的是 `tab/key`，这样"返回"能同时还原**选项卡**和**左栏项**
+    /// —— 只还原其中一个的话，回到上一层就会看到选项卡和内容对不上。
+    /// </summary>
+    private void OnNavChanged(string key)
+    {
+        ApplyNavOverride();
+
+        if (_syncingNavStack) return;
+
+        var item = _shell.LeftMenu.FirstOrDefault(i => i.Key == key);
+
+        // 规则本身在 NavStackMapping（纯逻辑，可测）；这里只负责执行。
+        var entry = Services.NavStackMapping.Resolve(item, _shell.CurrentTab, _nav.Navigation.Current.Page.Value);
+        if (entry is null) return;
+
+        if (entry.IsSecondary)
+            _nav.Navigation.Push(entry);
+        else
+            _nav.Navigation.NavigateRoot(entry);
+    }
+
+    /// <summary>
+    /// 导航栈变化 → 同步回左栏（选项卡 + 高亮项）。
+    ///
+    /// 这是"点返回"能正确回到上一层的原因：栈里记着 `tab/key`，
+    /// 这里把两者一起还原。
+    /// </summary>
+    private void OnNavigationStackChanged(object? sender, Core.UI.Navigation.NavigationSnapshot snapshot)
+    {
+        if (_syncingNavStack) return;
+
+        if (snapshot.Current.Parameter is not string navKey) return;
+
+        if (!Services.NavStackMapping.TryParse(snapshot.Current.Page.Value, out var tab, out var parsedKey))
+            return;
+
+        navKey = parsedKey;
+
+        _syncingNavStack = true;
+        try
+        {
+            if (_shell.CurrentTab != tab)
+            {
+                _shell.CurrentTab = tab;
+            }
+
+            if (_shell.CurrentNavKey != navKey)
+            {
+                _shell.CurrentNavKey = navKey;
+            }
+        }
+        finally
+        {
+            _syncingNavStack = false;
+        }
+
+        SyncLeftSelection();
+        ApplyNavOverride();
+    }
 
     /// <summary>左栏点击：把选中项交给 VM（唯一真相来源），高亮由 ListBoxItem 的选中态自己呈现。</summary>
     private void LeftMenuList_SelectionChanged(object sender, SelectionChangedEventArgs e)

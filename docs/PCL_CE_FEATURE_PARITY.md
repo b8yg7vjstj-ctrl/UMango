@@ -176,7 +176,7 @@
 |------|----------------------|------------|-----------|------|
 | 主窗口外壳（850×500、圆角6、留白10、标题栏48） | `Plain Craft Launcher 2/FormMain.xaml:1-263` | 否 | **已完成** | `src/UMango.App/MainWindow.xaml` + `Themes/PclTokens.xaml`；几何经 `docs/SCREENSHOT_CHECK.md` 逐像素校验 |
 | 主页面路由（启动/下载/设置/工具） | `FormMain.xaml.cs:1361-1421`（`enum PageType`：Launch=0, Download=1, Setup=2, Tools=3） | 否 | **已完成** | `MainWindow.xaml:143-151` 五个 banner 选项卡；`ViewModels/ShellViewModel.cs`（138 行）。UMango 多出「进度」页，PCL-CE 把任务管理放在副页面 |
-| 二级页面栈（压栈/返回/标题刷新） | `FormMain.xaml.cs:1652`（`PageChange`）、`:1474`（`PageNameGet`）、`:1476-1505`（副页面标题） | 否 | **部分** | UMango 仅 `Views/DownloaderView.xaml` 以一个折叠子视图实现"进入下载器"，**无通用导航栈**，无返回按钮与标题栈 |
+| 二级页面栈（压栈/返回/标题刷新） | `FormMain.xaml.cs:1652`（`PageChange`）、`:1474`（`PageNameGet`）、`:1476-1505`（副页面标题） | 否 | **已完成** | ✅ `src/UMango.Core/UI/Navigation/NavigationService.cs`（通用页栈：压栈/返回/定位/参数/标题）+ `src/UMango.App/Services/NavigationHost.cs`（栈→副标题栏/返回按钮）+ `src/UMango.App/Services/NavStackMapping.cs`（左栏↔栈的映射规则，纯逻辑可测）。**与原版四处差异**：① 原版靠"标题为空"判断是不是主页面 → 空标题的次级页无法存在，UMango 用显式 `IsSecondary`；② 原版 `PageBack` 只弹栈、不统一更新左侧高亮 → UMango 把"当前页+栈"收敛到一处，订阅者拿到的快照永远自洽；③ 原版 `PageStackData` 塞一堆 nullable 字段（`additional.Value`）→ UMango 用 `object?` 参数 + 强类型取值；④ 原版栈与 Minecraft 页面类型强耦合 → UMango 的页栈与内容无关，页面标识用 `{选项卡}/{菜单键}` 两段式（返回时同时还原选项卡与左栏高亮） |
 | banner 选项卡样式 | `FormMain.xaml`（`BannerTab` 样式） | 否 | **已完成** | `Themes/Styles.xaml` 的 `BannerTab` |
 | 左栏列表项与分组标题（项高36、分组字号12/透明度0.6） | `Pages/*/Page*Left.xaml`（如 `PageSetupLeft.xaml:10-148`） | 否 | **部分** | UMango 左栏改用 `ListBox`（`MainWindow.xaml:183`）+ 「分类/包源」两段表格，**形态与 PCL-CE 的 `MyListItem` RadioBox 列表不同**；逐像素校验只覆盖了尺寸与配色 |
 | 三大金刚键（最小化/最大化/关闭） | `FormMain.xaml`（28×28，右边距12、间距32） | 否 | **已完成** | `MainWindow.xaml:157-162`，`Click="BtnMin_Click"` 等 |

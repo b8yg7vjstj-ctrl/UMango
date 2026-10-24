@@ -18,8 +18,14 @@ public enum AppTab
 /// 左栏菜单项。
 /// <paramref name="Subtitle"/> 给需要第二行说明的入口留位置（例如包源分类的安装目录），
 /// 普通菜单项只填 Key/Title。
+/// <paramref name="IsSecondary"/> 标记这一项是否是**次级页面**。
+///
+/// 规则（对应 PCL-CE 的次级页面机制）：
+///   每个选项卡的**第一项是主视图**，其余项都是次级页面。
+///   进入次级页面会压栈（顶部出现「← 返回 + 页面标题」），
+///   点返回会回到上一个视图，并把左栏高亮一并还原。
 /// </summary>
-public sealed record NavItem(string Key, string Title, string? Subtitle = null);
+public sealed record NavItem(string Key, string Title, string? Subtitle = null, bool IsSecondary = false);
 
 /// <summary>
 /// 外壳 ViewModel：选项卡状态 + 随选项卡变化的左栏菜单。
@@ -105,38 +111,43 @@ public partial class ShellViewModel : ObservableObject
     /// </summary>
     private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
 
+    /// <summary>
+    /// 各选项卡对应的菜单项。Key 用稳定的英文标识（页面据此切换内容），Title 是界面文案。
+    ///
+    /// 第一项是主视图，其余是次级页面（<see cref="NavItem.IsSecondary"/>）。
+    /// </summary>
     private static NavItem[] MenuFor(AppTab tab) => tab switch
     {
         AppTab.Home =>
         [
             new NavItem("overview", L("Nav.Overview")),
-            new NavItem("records", L("Nav.Records"))
+            new NavItem("records", L("Nav.Records"), IsSecondary: true)
         ],
         AppTab.Download =>
         [
             new NavItem("sources", L("Nav.Sources")),
-            new NavItem("results", L("Nav.Results")),
-            new NavItem("favorites", L("Nav.Favorites"))
+            new NavItem("results", L("Nav.Results"), IsSecondary: true),
+            new NavItem("favorites", L("Nav.Favorites"), IsSecondary: true)
         ],
         AppTab.Progress =>
         [
             new NavItem("running", L("Nav.Running")),
-            new NavItem("finished", L("Nav.Finished"))
+            new NavItem("finished", L("Nav.Finished"), IsSecondary: true)
         ],
         AppTab.Settings =>
         [
             new NavItem("theme", L("Nav.Theme")),
-            new NavItem("debug", L("Nav.Debug")),
-            new NavItem("recordManage", L("Nav.RecordManage"))
+            new NavItem("debug", L("Nav.Debug"), IsSecondary: true),
+            new NavItem("recordManage", L("Nav.RecordManage"), IsSecondary: true)
         ],
         _ =>
         [
             // 下载器放在工具页下，对应 PCL-CE 的「百宝箱」位置
             new NavItem("downloader", L("Nav.Downloader")),
-            new NavItem("logs", L("Nav.Logs")),
-            new NavItem("diagnostics", L("Nav.Diagnostics")),
-            new NavItem("licenses", L("Nav.Licenses")),
-            new NavItem("about", L("Nav.About"))
+            new NavItem("logs", L("Nav.Logs"), IsSecondary: true),
+            new NavItem("diagnostics", L("Nav.Diagnostics"), IsSecondary: true),
+            new NavItem("licenses", L("Nav.Licenses"), IsSecondary: true),
+            new NavItem("about", L("Nav.About"), IsSecondary: true)
         ]
     };
 }

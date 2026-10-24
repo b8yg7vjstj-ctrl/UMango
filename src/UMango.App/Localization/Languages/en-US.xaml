@@ -501,4 +501,5 @@
     <sys:String x:Key="Announcement.NoAction">That announcement does not specify an action.</sys:String>
     <sys:String x:Key="Settings.Announcement.Hint">Enter a JSON URL returning {"content":[…]} to feed the homepage announcements; leave it empty to fetch nothing. Buttons inside an announcement can only trigger actions UMango has registered — remote content cannot run arbitrary commands.</sys:String>
     <sys:String x:Key="Settings.Announcement.Saved">Announcement source saved.</sys:String>
+    <sys:String x:Key="Window.Back">Back</sys:String>
 </ResourceDictionary>
