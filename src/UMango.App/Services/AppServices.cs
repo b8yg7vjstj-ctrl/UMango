@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows;
@@ -12,6 +13,7 @@ using UMango.Core.Download;
 using UMango.Core.Logging;
 using UMango.App.Network;
 using UMango.Core.Network;
+using UMango.Core.Network.Dns;
 using UMango.Core.Notifications;
 using UMango.Core.Platform;
 using UMango.Core.PackageManagers;
@@ -115,6 +117,71 @@ public static class AppServices
 
     /// <summary>统一的 HTTP 服务（更新检查等用）。</summary>
     public static HttpService Http { get; } = CreateHttp();
+
+    /// <summary>
+    /// DNS over HTTPS 解析器。
+    ///
+    /// **默认不启用任何上游**（<see cref="DohResolver.Upstreams"/> 为空）——
+    /// 也就是说不访问任何默认 DNS 地址，走系统解析器。
+    /// 用户在设置页填了上游才真正启用。
+    ///
+    /// 依赖 <see cref="Http"/>，必须排在它之后。
+    /// </summary>
+    public static DohResolver Dns { get; } = CreateDns();
+
+    private static DohResolver CreateDns()
+    {
+        var handler = new HttpClientHandler();
+        var manager = ProxyManager;
+        if (manager is not null)
+        {
+            handler.Proxy = manager;
+            handler.UseProxy = manager.Mode != ProxyMode.NoProxy;
+        }
+
+        var resolver = new DohResolver(new HttpDohTransport(new HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromMilliseconds(10_000),
+        }));
+
+        ApplyDnsSettings(resolver);
+        return resolver;
+    }
+
+    /// <summary>
+    /// 把设置页里的 DoH 配置套到解析器上。
+    /// 设置变更时也调用它（<see cref="RefreshDnsSettings"/>）。
+    /// </summary>
+    public static void ApplyDnsSettings(DohResolver resolver)
+    {
+        ArgumentNullException.ThrowIfNull(resolver);
+
+        var settings = AppSettings.Settings;
+        var upstreams = settings.Get<string>(UiSettings.DohUpstreamsKey);
+        resolver.Upstreams = ParseUpstreams(upstreams);
+        resolver.CacheTtlSeconds = settings.Get<int>(UiSettings.DohCacheTtlKey);
+        resolver.QueryTimeoutMs = settings.Get<int>(UiSettings.DohTimeoutKey);
+        resolver.ClearCache();
+    }
+
+    /// <summary>设置变更后重新套一次 DoH 配置。</summary>
+    public static void RefreshDnsSettings()
+    {
+        ApplyDnsSettings(Dns);
+    }
+
+    /// <summary>把逗号分隔的上游字符串拆成地址列表（去空白、丢空项）。</summary>
+    private static IReadOnlyList<string> ParseUpstreams(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return Array.Empty<string>();
+        }
+
+        return raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(u => u.Contains("://", StringComparison.Ordinal))
+            .ToArray();
+    }
 
     /// <summary>
     /// 公告（主页新闻）接入点。
@@ -343,6 +410,12 @@ public static class AppSettings
             if (key == UiSettings.DebugModeKey)
             {
                 TerminalBridge.DebugMode = service.Get<bool>(UiSettings.DebugModeKey);
+            }
+
+            // DoH 相关设置变了就重新套一次配置（上游列表/TTL/超时）并清缓存。
+            if (key is UiSettings.DohUpstreamsKey or UiSettings.DohCacheTtlKey or UiSettings.DohTimeoutKey)
+            {
+                AppServices.ApplyDnsSettings(AppServices.Dns);
             }
         };
         return service;

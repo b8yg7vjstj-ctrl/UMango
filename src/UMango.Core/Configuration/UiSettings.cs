@@ -107,6 +107,17 @@ public static class UiSettings
     /// <summary>模糊核类型（对应 PCL 的 <c>UiBlurType</c>）。</summary>
     public const string BlurKernelTypeKey = "ui.appearance.blurKernelType";
 
+    // ---------------- DoH（DNS over HTTPS） ----------------
+
+    /// <summary>DoH 上游地址（逗号分隔）。**留空表示不启用 DoH**，不访问任何默认地址。</summary>
+    public const string DohUpstreamsKey = "network.dohUpstreams";
+
+    /// <summary>DoH 缓存生存时间（秒）。</summary>
+    public const string DohCacheTtlKey = "network.dohCacheTtl";
+
+    /// <summary>DoH 查询超时（毫秒）。</summary>
+    public const string DohTimeoutKey = "network.dohTimeout";
+
     /// <summary>全部分组（按设置页展示顺序）</summary>
     public static readonly string[] SectionOrder =
         [SectionAppearance, SectionAnimation, SectionDebug, SectionBehavior];
@@ -469,6 +480,39 @@ public static class UiSettings
             Kind = SettingKind.Int,
             DefaultValue = 0,
             Order = 25
+        },
+
+        new SettingDescriptor
+        {
+            Key = DohUpstreamsKey,
+            Section = SectionBehavior,
+            Title = "DoH 上游",
+            Description = "DNS over HTTPS 服务器地址，多个用逗号分隔。留空表示不启用 DoH（使用系统 DNS）。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 40
+        },
+
+        new SettingDescriptor
+        {
+            Key = DohCacheTtlKey,
+            Section = SectionBehavior,
+            Title = "DoH 缓存时间",
+            Description = "DNS 结果缓存秒数。",
+            Kind = SettingKind.Int,
+            DefaultValue = 300,
+            Order = 41
+        },
+
+        new SettingDescriptor
+        {
+            Key = DohTimeoutKey,
+            Section = SectionBehavior,
+            Title = "DoH 超时",
+            Description = "单次 DoH 查询的超时毫秒数。",
+            Kind = SettingKind.Int,
+            DefaultValue = 5000,
+            Order = 42
         },
     ];
 
