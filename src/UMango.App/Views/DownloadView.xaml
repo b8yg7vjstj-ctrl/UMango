@@ -34,7 +34,7 @@
              xmlns:views="clr-namespace:UMango.App.Views"
              xmlns:core="clr-namespace:UMango.Core.PackageManagers;assembly=UMango.Core"
              FontFamily="{DynamicResource UiFont}"
-             Background="{DynamicResource BrBg}"
+             Background="Transparent"
              SnapsToDevicePixels="True">
 
   <UserControl.Resources>

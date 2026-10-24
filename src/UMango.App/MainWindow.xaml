@@ -236,6 +236,19 @@
           页面（如进度页）刻意留透明等外壳给底色，底色若也是白就会"白卡片糊在白底上"没有层次。
         -->
         <Grid Grid.Column="1" Background="{DynamicResource BrBg}">
+          <!--
+            ===== 动态背景层 =====
+            对应 PCL-CE 的 `Canvas x:Name="ImgBack"`（FormMain.xaml:112）：
+            它挂在内容区的**最底层**，页面画在上面。
+            PCL 的 ImgBack 是 Canvas（可放 MediaElement 视频），
+            这里用 Border（要挂 ImageBrush 才有平铺/四角对齐）+ MediaElement 两层。
+            页面本身的底色是透明的，所以背景能透出来；卡片（PclCard）仍是不透明的。
+          -->
+          <!-- 模糊半径（Border.Effect）由代码设置：BackgroundPresenter.ApplyAppearance -->
+          <Border x:Name="BgImage" Visibility="Collapsed" IsHitTestVisible="False"/>
+          <MediaElement x:Name="BgVideo" LoadedBehavior="Manual" UnloadedBehavior="Manual"
+                        Stretch="UniformToFill" Volume="0" IsHitTestVisible="False"
+                        Visibility="Collapsed"/>
           <views:HomeView x:Name="ViewHome"/>
           <views:DownloadView x:Name="ViewDownload" Visibility="Collapsed"/>
           <views:ProgressView x:Name="ViewProgress" Visibility="Collapsed"/>

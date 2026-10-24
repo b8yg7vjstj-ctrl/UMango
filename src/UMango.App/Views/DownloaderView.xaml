@@ -1,7 +1,7 @@
 <UserControl x:Class="UMango.App.Views.DownloaderView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{DynamicResource BrCard}">
+             Background="Transparent">
   <!--
     ============================================================================
     下载器页（对应 PCL-CE 的「百宝箱」下载功能）
@@ -19,7 +19,7 @@
     小节标题用 PclSectionTitle。
   -->
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                Padding="20,16,20,20" Background="{DynamicResource BrBg}">
+                Padding="20,16,20,20" Background="Transparent">
     <StackPanel MaxWidth="880" HorizontalAlignment="Left">
 
       <!-- ===================== 1) 下载任务卡 ===================== -->

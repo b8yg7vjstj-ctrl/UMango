@@ -9,6 +9,7 @@ using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
 using UMango.Core.Network;
+using UMango.Core.Media.Background;
 
 using UMango.App.Localization;
 
@@ -336,6 +337,166 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    // ---------------- 动态背景 ----------------
+
+    private string _backgroundDirectory = "";
+    private bool _backgroundEnabled;
+    private bool _backgroundVideoEnabled;
+    private bool _backgroundForcePlay;
+    private int _backgroundOpacity = 1000;
+    private int _backgroundBlur;
+    private BackgroundSuitMode _backgroundSuit = BackgroundSuitMode.Smart;
+    private string _backgroundStatusMessage = "";
+
+    /// <summary>动态背景是否启用。</summary>
+    public bool BackgroundEnabled
+    {
+        get => _backgroundEnabled;
+        set
+        {
+            if (value == _backgroundEnabled) return;
+            _backgroundEnabled = value;
+            OnPropertyChanged(nameof(BackgroundEnabled));
+            ApplyBackgroundSettings();
+        }
+    }
+
+    /// <summary>背景目录（留空 = 程序目录下的 Pictures）。</summary>
+    public string BackgroundDirectory
+    {
+        get => _backgroundDirectory;
+        set
+        {
+            if (value == _backgroundDirectory) return;
+            _backgroundDirectory = value;
+            OnPropertyChanged(nameof(BackgroundDirectory));
+            ApplyBackgroundSettings();
+        }
+    }
+
+    /// <summary>是否允许视频背景。</summary>
+    public bool BackgroundVideoEnabled
+    {
+        get => _backgroundVideoEnabled;
+        set
+        {
+            if (value == _backgroundVideoEnabled) return;
+            _backgroundVideoEnabled = value;
+            OnPropertyChanged(nameof(BackgroundVideoEnabled));
+            ApplyBackgroundSettings();
+        }
+    }
+
+    /// <summary>忙碌时是否强制播放背景。</summary>
+    public bool BackgroundForcePlay
+    {
+        get => _backgroundForcePlay;
+        set
+        {
+            if (value == _backgroundForcePlay) return;
+            _backgroundForcePlay = value;
+            OnPropertyChanged(nameof(BackgroundForcePlay));
+            ApplyBackgroundSettings();
+        }
+    }
+
+    /// <summary>背景不透明度（千分比，1000 = 完全不透明）。</summary>
+    public int BackgroundOpacity
+    {
+        get => _backgroundOpacity;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 1000);
+            if (clamped == _backgroundOpacity) return;
+            _backgroundOpacity = clamped;
+            OnPropertyChanged(nameof(BackgroundOpacity));
+            ApplyBackgroundSettings();
+        }
+    }
+
+    /// <summary>背景模糊半径（0 = 不模糊）。</summary>
+    public int BackgroundBlur
+    {
+        get => _backgroundBlur;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 30);
+            if (clamped == _backgroundBlur) return;
+            _backgroundBlur = clamped;
+            OnPropertyChanged(nameof(BackgroundBlur));
+            ApplyBackgroundSettings();
+        }
+    }
+
+    /// <summary>铺放方式选项（显示名走语言资源）。</summary>
+    public sealed record BackgroundSuitOption(BackgroundSuitMode Mode, string DisplayName);
+
+    /// <summary>铺放方式选项集合（顺序与 PCL 的下拉框一致：智能/居中/适应/拉伸/平铺/四角）。</summary>
+    public IReadOnlyList<BackgroundSuitOption> BackgroundSuits { get; } =
+    [
+        new(BackgroundSuitMode.Smart, ViewText.L("Settings.Background.Suit.Smart")),
+        new(BackgroundSuitMode.Center, ViewText.L("Settings.Background.Suit.Center")),
+        new(BackgroundSuitMode.Fit, ViewText.L("Settings.Background.Suit.Fit")),
+        new(BackgroundSuitMode.Stretch, ViewText.L("Settings.Background.Suit.Stretch")),
+        new(BackgroundSuitMode.Tile, ViewText.L("Settings.Background.Suit.Tile")),
+        new(BackgroundSuitMode.TopLeft, ViewText.L("Settings.Background.Suit.TopLeft")),
+        new(BackgroundSuitMode.TopRight, ViewText.L("Settings.Background.Suit.TopRight")),
+        new(BackgroundSuitMode.BottomLeft, ViewText.L("Settings.Background.Suit.BottomLeft")),
+        new(BackgroundSuitMode.BottomRight, ViewText.L("Settings.Background.Suit.BottomRight")),
+    ];
+
+    /// <summary>背景铺放方式。</summary>
+    public BackgroundSuitMode BackgroundSuit
+    {
+        get => _backgroundSuit;
+        set
+        {
+            if (value == _backgroundSuit) return;
+            _backgroundSuit = value;
+            OnPropertyChanged(nameof(BackgroundSuit));
+            ApplyBackgroundSettings();
+        }
+    }
+
+    /// <summary>背景相关设置的状态提示。</summary>
+    public string BackgroundStatusMessage
+    {
+        get => _backgroundStatusMessage;
+        private set
+        {
+            if (value == _backgroundStatusMessage) return;
+            _backgroundStatusMessage = value;
+            OnPropertyChanged(nameof(BackgroundStatusMessage));
+        }
+    }
+
+    /// <summary>
+    /// 把背景设置写穿到 Core 并通知界面层重新应用。
+    ///
+    /// 写穿到设置服务（唯一权威）+ 落盘；然后广播
+    /// <see cref="AppSettings.BackgroundChanged"/>，让 MainWindow 重新铺背景。
+    /// </summary>
+    private void ApplyBackgroundSettings()
+    {
+        try
+        {
+            AppSettings.Settings.Set(UiSettings.BackgroundEnabledKey, _backgroundEnabled);
+            AppSettings.Settings.Set(UiSettings.BackgroundDirectoryKey, _backgroundDirectory.Trim());
+            AppSettings.Settings.Set(UiSettings.BackgroundVideoEnabledKey, _backgroundVideoEnabled);
+            AppSettings.Settings.Set(UiSettings.BackgroundForcePlayKey, _backgroundForcePlay);
+            AppSettings.Settings.Set(UiSettings.BackgroundOpacityKey, _backgroundOpacity);
+            AppSettings.Settings.Set(UiSettings.BackgroundBlurKey, _backgroundBlur);
+            AppSettings.Settings.Set(UiSettings.BackgroundSuitKey, _backgroundSuit);
+            AppSettings.Save();
+            AppSettings.RaiseBackgroundChanged();
+            BackgroundStatusMessage = ViewText.L("Settings.Background.Saved");
+        }
+        catch (Exception ex)
+        {
+            BackgroundStatusMessage = ViewText.L("Settings.Background.Failed", ex.Message);
+        }
+    }
+
     /// <summary>语言选项（首项 = 跟随系统）。</summary>
     public IReadOnlyList<AppLocalization.LanguageOption> Languages { get; } =
         AppLocalization.BuildOptions();
@@ -352,6 +513,15 @@ public partial class SettingsViewModel : ObservableObject
         // 回显已保存的公告源（否则输入框是空的，用户会以为没保存过）。
         AppSettings.Load();
         _announcementSource = AppSettings.Settings.Get<string>(UiSettings.AnnouncementSourceKey);
+
+        // 回显已保存的背景设置（否则开关/滑块会显示成默认值，与实际生效值不符）。
+        _backgroundEnabled = AppSettings.Settings.Get<bool>(UiSettings.BackgroundEnabledKey);
+        _backgroundDirectory = AppSettings.Settings.Get<string>(UiSettings.BackgroundDirectoryKey);
+        _backgroundVideoEnabled = AppSettings.Settings.Get<bool>(UiSettings.BackgroundVideoEnabledKey);
+        _backgroundForcePlay = AppSettings.Settings.Get<bool>(UiSettings.BackgroundForcePlayKey);
+        _backgroundOpacity = AppSettings.Settings.Get<int>(UiSettings.BackgroundOpacityKey);
+        _backgroundBlur = AppSettings.Settings.Get<int>(UiSettings.BackgroundBlurKey);
+        _backgroundSuit = AppSettings.Settings.Get<BackgroundSuitMode>(UiSettings.BackgroundSuitKey);
 
         // 回显当前生效的语言（保存值 → 解析成选项；解析不到时回落"跟随系统"）
         var savedCode = AppLocalization.ReadSavedLanguageCode();

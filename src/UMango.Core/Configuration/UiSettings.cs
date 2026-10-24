@@ -1,4 +1,5 @@
 using UMango.Core.Animation;
+using UMango.Core.Media.Background;
 
 namespace UMango.Core.Configuration;
 
@@ -62,6 +63,27 @@ public static class UiSettings
 
     /// <summary>音乐目录（留空 = 用程序目录下的 Musics）。</summary>
     public const string MusicDirectoryKey = "music.directory";
+
+    /// <summary>动态背景开关（图片/视频背景总开关）。</summary>
+    public const string BackgroundEnabledKey = "background.enabled";
+
+    /// <summary>动态背景目录（留空 = 用程序目录下的 Pictures）。</summary>
+    public const string BackgroundDirectoryKey = "background.directory";
+
+    /// <summary>动态背景是否允许视频（关闭 = 只用静态图片，省资源）。</summary>
+    public const string BackgroundVideoEnabledKey = "background.videoEnabled";
+
+    /// <summary>动态背景是否在忙碌时强制继续播放。</summary>
+    public const string BackgroundForcePlayKey = "background.forcePlay";
+
+    /// <summary>动态背景的铺放方式（智能/居中/适应/拉伸/平铺/四角）。</summary>
+    public const string BackgroundSuitKey = "background.suit";
+
+    /// <summary>动态背景的不透明度（0~100，与 PCL 的千分比一致）。</summary>
+    public const string BackgroundOpacityKey = "background.opacity";
+
+    /// <summary>动态背景的模糊半径（0 表示不模糊）。</summary>
+    public const string BackgroundBlurKey = "background.blur";
 
     /// <summary>全部分组（按设置页展示顺序）</summary>
     public static readonly string[] SectionOrder =
@@ -278,6 +300,86 @@ public static class UiSettings
             Kind = SettingKind.String,
             DefaultValue = "",
             Order = 43
+        },
+
+        new SettingDescriptor
+        {
+            Key = BackgroundEnabledKey,
+            Section = SectionBehavior,
+            Title = "动态背景",
+            Description = "在界面底层显示图片或视频背景。视频会占用较多资源，"
+                          + "窗口最小化或在执行耗时任务时会自动暂停。",
+            Kind = SettingKind.Bool,
+            DefaultValue = false,
+            Order = 50
+        },
+
+        new SettingDescriptor
+        {
+            Key = BackgroundDirectoryKey,
+            Section = SectionBehavior,
+            Title = "背景目录",
+            Description = "留空则使用程序目录下的 Pictures 文件夹。目录不存在会自动创建。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 51
+        },
+
+        new SettingDescriptor
+        {
+            Key = BackgroundVideoEnabledKey,
+            Section = SectionBehavior,
+            Title = "允许视频背景",
+            Description = "关闭后只使用静态图片作为背景，更省资源。",
+            Kind = SettingKind.Bool,
+            DefaultValue = true,
+            Order = 52
+        },
+
+        new SettingDescriptor
+        {
+            Key = BackgroundForcePlayKey,
+            Section = SectionBehavior,
+            Title = "忙碌时强制播放",
+            Description = "打开后，即使正在执行耗时任务也继续播放动态背景。",
+            Kind = SettingKind.Bool,
+            DefaultValue = false,
+            Order = 53
+        },
+
+        new SettingDescriptor
+        {
+            Key = BackgroundSuitKey,
+            Section = SectionBehavior,
+            Title = "背景铺放方式",
+            Description = "智能：图片比窗口小就平铺，否则适应（与 PCL 一致）。"
+                          + "也可固定为居中 / 适应 / 拉伸 / 平铺 / 靠某个角。",
+            Kind = SettingKind.Enum,
+            EnumType = typeof(BackgroundSuitMode),
+            DefaultValue = BackgroundSuitMode.Smart,
+            Order = 54
+        },
+
+        new SettingDescriptor
+        {
+            Key = BackgroundOpacityKey,
+            Section = SectionBehavior,
+            Title = "背景不透明度",
+            Description = "0~1000，越小越透明（沿用 PCL 的千分比刻度：1000 = 完全不透明）。",
+            Kind = SettingKind.Int,
+            DefaultValue = 1000,
+            Order = 55
+        },
+
+        new SettingDescriptor
+        {
+            Key = BackgroundBlurKey,
+            Section = SectionBehavior,
+            Title = "背景模糊",
+            Description = "0 表示不模糊；数值越大越模糊（与 PCL 一致）。",
+            Kind = SettingKind.Int,
+            DefaultValue = 0,
+            Order = 56
         },
     ];
 

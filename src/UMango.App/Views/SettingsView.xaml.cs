@@ -439,6 +439,13 @@ public partial class SettingsView : UserControl
         UpdateProxyCustomVisibility();
     }
 
+    /// <summary>铺放方式变化：ComboBox 选中项换成 VM 的枚举值。</summary>
+    private void BackgroundSuitBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox box && box.SelectedItem is SettingsViewModel.BackgroundSuitOption option)
+            ViewModel.BackgroundSuit = option.Mode;
+    }
+
     /// <summary>代理密码改动：PasswordBox 没有可绑定的 Password 属性，只能走事件。</summary>
     private void ProxyPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
     {

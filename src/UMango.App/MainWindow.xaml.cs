@@ -143,6 +143,94 @@ public partial class MainWindow : Window
         // 放在任务栏桥接旁边：两者都订阅 TaskCenter.Changed，同一时机启动、同一时机释放。
         _toast = new Services.ToastBridge();
         Closed += (_, _) => _ = DisposeTaskbarAsync();
+
+        // 动态背景（对应 PCL-CE 的 ImgBack / VideoBack 两层）：
+        // 判定逻辑在 Core，窗口这里只负责把结论落到控件上。
+        _background = new Media.Background.BackgroundPresenter(BgImage, BgVideo);
+        _backgroundVm = new ViewModels.BackgroundViewModel(Services.AppSettings.Settings);
+        Services.AppSettings.BackgroundChanged += ApplyBackgroundSettings;
+        StateChanged += (_, _) => ApplyBackgroundPlayback();
+        Loaded += (_, _) => ApplyBackgroundSettings();
+    }
+
+    // ================= 动态背景 =================
+
+    /// <summary>动态背景的显示端。</summary>
+    private Media.Background.BackgroundPresenter? _background;
+
+    /// <summary>动态背景的判定与状态。</summary>
+    private ViewModels.BackgroundViewModel? _backgroundVm;
+
+    /// <summary>
+    /// 重新铺背景：扫目录 → 挑一个 → 交给显示端。
+    ///
+    /// 对应 PCL 的 <c>BackgroundRefresh</c>：目录为空就收起背景层；
+    /// 有内容就先试图片（图片静态、无资源开销），图片失败再退当视频。
+    /// </summary>
+    private void ApplyBackgroundSettings()
+    {
+        if (_background is null || _backgroundVm is null) return;
+
+        if (!_backgroundVm.Enabled)
+        {
+            _background.Clear();
+            return;
+        }
+
+        _background.ApplyAppearance(
+            Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BackgroundOpacityKey),
+            Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BackgroundBlurKey));
+
+        var picked = _backgroundVm.Refresh();
+        if (picked is null)
+        {
+            _background.Clear();
+            return;
+        }
+
+        var suit = Services.AppSettings.Settings
+            .Get<UMango.Core.Media.Background.BackgroundSuitMode>(
+                UMango.Core.Configuration.UiSettings.BackgroundSuitKey);
+
+        var image = _backgroundVm.Library.Images
+            .FirstOrDefault(i => string.Equals(i.Path, picked, StringComparison.OrdinalIgnoreCase));
+
+        if (image is not null)
+        {
+            // 容器尺寸决定「智能」铺放方式的判定（PCL 用 PanMain.ActualWidth/Height）。
+            _background.ShowImage(image, suit, ActualWidth, ActualHeight);
+            return;
+        }
+
+        var video = _backgroundVm.Library.Videos
+            .FirstOrDefault(v => string.Equals(v.Path, picked, StringComparison.OrdinalIgnoreCase));
+
+        if (video is not null && _backgroundVm.VideoEnabled)
+        {
+            _background.ShowVideo(video);
+            return;
+        }
+
+        _background.Clear();
+    }
+
+    /// <summary>
+    /// 窗口最小化 / 恢复时按策略暂停或继续播放。
+    /// 对应 PCL 的 <c>ModVideoBack.VideoPause</c> / <c>VideoPlay</c>。
+    /// </summary>
+    private void ApplyBackgroundPlayback()
+    {
+        if (_background is null || _backgroundVm is null) return;
+
+        var minimized = WindowState == WindowState.Minimized;
+        var environment = new UMango.Core.Media.Background.BackgroundEnvironment
+        {
+            IsMinimized = minimized,
+            IsBusy = false,
+            ForcePlay = _backgroundVm.ForcePlay,
+        };
+
+        _background.Apply(_backgroundVm.Library.Candidates.Count > 0, environment);
     }
 
     /// <summary>

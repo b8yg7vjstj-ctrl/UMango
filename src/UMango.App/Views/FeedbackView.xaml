@@ -1,7 +1,7 @@
 <UserControl x:Class="UMango.App.Views.FeedbackView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{DynamicResource BrBg}"
+             Background="Transparent"
              Loaded="FeedbackView_Loaded">
   <!--
     ============================================================================

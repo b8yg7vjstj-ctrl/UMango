@@ -1,7 +1,7 @@
 <UserControl x:Class="UMango.App.Views.HomeView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{DynamicResource BrCard}">
+             Background="Transparent">
   <!--
     ============================================================================
     主页（概览）：应用卡 / 包源状态卡 / 使用统计卡 / 最近操作卡
@@ -16,7 +16,7 @@
         （见 HomeSourceStatus.StatusBrush 的说明），这样颜色仍然随主题变化。
   -->
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                Padding="20,16,20,20" Background="{DynamicResource BrBg}">
+                Padding="20,16,20,20" Background="Transparent">
     <StackPanel MaxWidth="820" HorizontalAlignment="Left">
 
       <!-- ===================== 1) 应用卡 ===================== -->

@@ -501,6 +501,27 @@
     <sys:String x:Key="Announcement.NoAction">That announcement does not specify an action.</sys:String>
     <sys:String x:Key="Settings.Announcement.Hint">Enter a JSON URL returning {"content":[…]} to feed the homepage announcements; leave it empty to fetch nothing. Buttons inside an announcement can only trigger actions UMango has registered — remote content cannot run arbitrary commands.</sys:String>
     <sys:String x:Key="Settings.Announcement.Saved">Announcement source saved.</sys:String>
+    <sys:String x:Key="Settings.Background.Section">Dynamic background</sys:String>
+    <sys:String x:Key="Settings.Background.Hint">Show an image or video behind the interface. Leave the folder empty to use the Pictures folder next to the executable. Video backgrounds cost resources and pause automatically when the window is minimized or a long task is running.</sys:String>
+    <sys:String x:Key="Settings.Background.Saved">Background settings saved.</sys:String>
+    <sys:String x:Key="Settings.Background.Failed">Failed to save background settings: {0}</sys:String>
+    <sys:String x:Key="Settings.Background.Enabled">Enable dynamic background</sys:String>
+    <sys:String x:Key="Settings.Background.Directory">Background folder</sys:String>
+    <sys:String x:Key="Settings.Background.VideoEnabled">Allow video backgrounds</sys:String>
+    <sys:String x:Key="Settings.Background.ForcePlay">Keep playing while busy</sys:String>
+    <sys:String x:Key="Settings.Background.Opacity">Background opacity (0-1000)</sys:String>
+    <sys:String x:Key="Settings.Background.Blur">Background blur (0 = none)</sys:String>
+    <sys:String x:Key="Settings.Background.Suit">Placement</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Smart">Smart</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Center">Center</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Fit">Fit</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Stretch">Stretch</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Tile">Tile</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.TopLeft">Top left</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.TopRight">Top right</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.BottomLeft">Bottom left</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.BottomRight">Bottom right</sys:String>
+
     <sys:String x:Key="Window.Back">Back</sys:String>
     <sys:String x:Key="Nav.Feedback">Feedback</sys:String>
     <sys:String x:Key="Feedback.Refresh">Refresh</sys:String>

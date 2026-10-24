@@ -411,6 +411,14 @@ public static class AppSettings
 
     /// <summary>诊断/备份用：导出当前设置 JSON。</summary>
     public static string ExportJson() => Settings.ToJson();
+
+    /// <summary>
+    /// 背景相关设置发生变化时触发（MainWindow 监听它重新铺背景）。
+    /// </summary>
+    public static event Action? BackgroundChanged;
+
+    /// <summary>广播「背景设置变了」。</summary>
+    public static void RaiseBackgroundChanged() => BackgroundChanged?.Invoke();
 }
 
 /// <summary>

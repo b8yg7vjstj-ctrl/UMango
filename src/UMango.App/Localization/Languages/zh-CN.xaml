@@ -515,6 +515,27 @@
     <sys:String x:Key="Announcement.NoAction">该公告没有指定动作。</sys:String>
     <sys:String x:Key="Settings.Announcement.Hint">填入一个返回 {"content":[…]} 的 JSON 地址即可拉取主页公告；留空表示不抓取。公告里的按钮只能触发 UMango 已注册的动作，远程内容无法执行任意命令。</sys:String>
     <sys:String x:Key="Settings.Announcement.Saved">公告源已保存。</sys:String>
+    <sys:String x:Key="Settings.Background.Section">动态背景</sys:String>
+    <sys:String x:Key="Settings.Background.Hint">在界面底层显示图片或视频背景。目录留空则使用程序目录下的 Pictures 文件夹。视频会占用较多资源，窗口最小化或在执行耗时任务时会自动暂停。</sys:String>
+    <sys:String x:Key="Settings.Background.Saved">背景设置已保存。</sys:String>
+    <sys:String x:Key="Settings.Background.Failed">保存背景设置失败：{0}</sys:String>
+    <sys:String x:Key="Settings.Background.Enabled">启用动态背景</sys:String>
+    <sys:String x:Key="Settings.Background.Directory">背景目录</sys:String>
+    <sys:String x:Key="Settings.Background.VideoEnabled">允许视频背景</sys:String>
+    <sys:String x:Key="Settings.Background.ForcePlay">忙碌时强制播放</sys:String>
+    <sys:String x:Key="Settings.Background.Opacity">背景不透明度（0~1000）</sys:String>
+    <sys:String x:Key="Settings.Background.Blur">背景模糊（0 表示不模糊）</sys:String>
+    <sys:String x:Key="Settings.Background.Suit">铺放方式</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Smart">智能</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Center">居中</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Fit">适应</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Stretch">拉伸</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.Tile">平铺</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.TopLeft">靠左上角</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.TopRight">靠右上角</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.BottomLeft">靠左下角</sys:String>
+    <sys:String x:Key="Settings.Background.Suit.BottomRight">靠右下角</sys:String>
+
     <sys:String x:Key="Window.Back">返回</sys:String>
     <sys:String x:Key="Nav.Feedback">反馈</sys:String>
     <sys:String x:Key="Feedback.Refresh">刷新</sys:String>
