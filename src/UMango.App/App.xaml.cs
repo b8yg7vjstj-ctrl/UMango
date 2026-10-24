@@ -3,7 +3,9 @@ using System.Threading;
 using System.Windows;
 using UMango.App.Services;
 using UMango.App.Themes;
+using UMango.Core.App;
 using UMango.Core.App.Essentials;
+using UMango.Core.Cli;
 using UMango.Core.Configuration;
 using UMango.Core.Logging;
 
@@ -304,9 +306,44 @@ public static void Main(string[] args)
         return;
     }
 
+    // 命令行模式：只跑命令、只打印结果，**不开主窗口**。
+    //
+    // 为什么在 new App() 之前分流：new App() 会拖进全部 WPF 资源、
+    // 建主窗口、抢单实例锁。`umango search vite` 是个纯查询，
+    // 不该在用户机器上弹出一个界面，也不该因为「已经开着一个 UMango」
+    // 就把命令行请求踢到已有实例去。
+    if (UmangoCommandLine.TryParse(args, out _))
+    {
+        RunCli(args);
+        return;
+    }
+
     var app = new App();
     app.InitializeComponent();
     app.Run();
+}
+
+/// <summary>
+/// 命令行模式：执行命令并把结果打到标准输出，然后以退出码结束进程。
+///
+/// **不进入 WPF 启动路径**：没有 Application、没有窗口、没有主题、
+/// 没有单实例锁。若参数是自更新助手协议（保留词），
+/// <see cref="UmangoCommandLine.TryParse"/> 已经返回 false，走不到这里。
+/// </summary>
+private static void RunCli(string[] args)
+{
+    var service = new CliCommandService(AppServices.Registry, AppServices.Executor);
+
+    // 同步等待：命令行模式本来就是要等结果再退出，
+    // 而 WPF 的 Dispatcher 消息泵此刻并不存在。
+    var result = service.ExecuteAsync(args, CancellationToken.None)
+        .GetAwaiter().GetResult();
+
+    foreach (var line in result.Lines)
+        Console.Out.WriteLine(line);
+
+    Console.Out.Flush();
+    Environment.Exit(result.ExitCode);
 }
 
 /// <summary>

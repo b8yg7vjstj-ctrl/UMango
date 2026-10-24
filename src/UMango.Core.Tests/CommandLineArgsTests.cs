@@ -57,4 +57,33 @@ public class CommandLineArgsTests
         Assert.Equal("express", args.Positional[1]);
         Assert.Equal("npm", args.TryGetString("source", out var v) ? v : "");
     }
+
+    [Fact]
+    public void 开关不会吞掉后面的位置参数()
+    {
+        // 旧版实现里 "--debug install" 是没问题的（它不认空格分隔的值），
+        // 但如果照搬 PCL 的贪心规则，"--debug" 就会把 "install" 吃掉。
+        // 纯参数模式因此**不贪心**：值一律用 --key=value 给。
+        var args = CommandLineArgs.Parse(["--debug", "install", "express"]);
+        Assert.True(args.HasFlag("debug"));
+        Assert.Equal(["install", "express"], args.Positional);
+    }
+
+    [Fact]
+    public void 显式为假的开关不算开启()
+    {
+        // 旧版无法表达这个：--cache false 里的 false 会被当成位置参数，
+        // HasFlag("cache") 永远为真。
+        var args = CommandLineArgs.Parse(["--cache=false"]);
+        Assert.False(args.HasFlag("cache"));
+    }
+
+    [Fact]
+    public void 键名区分大小写()
+    {
+        var args = CommandLineArgs.Parse(["--SOURCE=npm"]);
+        Assert.False(args.TryGetString("source", out _));
+        Assert.True(args.TryGetString("SOURCE", out var v));
+        Assert.Equal("npm", v);
+    }
 }
