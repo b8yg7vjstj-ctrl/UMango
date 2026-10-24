@@ -27,11 +27,43 @@ public sealed class UpdateService
     /// <summary>版本信息源（GitHub Releases 的 latest）。</summary>
     public const string FeedUrl = "https://api.github.com/repos/UMango-Community/UMango/releases/latest";
 
+    /// <summary>
+    /// 备用源：一个极简的静态版本清单（JSON）。
+    ///
+    /// 存在的意义：GitHub 在部分网络环境下不可达时，官方源一挂就完全没法检查更新。
+    /// 清单里写死 {"version","url","size","notes"} 四个字段，可以放在任何静态托管上。
+    /// </summary>
+    public const string ManifestUrl = "https://raw.githubusercontent.com/UMango-Community/UMango/main/version.json";
+
     private readonly IHttpService _http;
 
     public UpdateService(IHttpService http)
     {
         _http = http;
+    }
+
+    /// <summary>当前使用的更新通道。</summary>
+    public UpdateChannelKind Channel { get; set; } = UpdateChannelKind.Stable;
+
+    /// <summary>
+    /// 构造版本源降级链。
+    ///
+    /// 顺序即优先级：**官方源在前，备用清单在后**。
+    /// 链子会在第一个成功的源处停下，失败原因记录在
+    /// <see cref="UpdateChannelChain.FailedSources"/> 里。
+    /// </summary>
+    public UpdateChannelChain BuildChain()
+    {
+        return new UpdateChannelChain()
+            .Add(new HttpUpdateSource("GitHub Releases", _http, FeedUrl, IsMyAsset))
+            .Add(new StaticManifestUpdateSource(
+                "静态清单",
+                async ct =>
+                {
+                    var response = await _http.GetStringAsync(ManifestUrl, ct).ConfigureAwait(false);
+                    return response.IsSuccess ? response.Value : null;
+                },
+                IsMyAsset));
     }
 
     /// <summary>本地版本号（来自程序集的 InformationalVersion，取不到返回 0.0.0）。</summary>
@@ -63,11 +95,22 @@ public sealed class UpdateService
         return name.Contains("linux-x64", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>检查更新。</summary>
-    public Task<object> CheckAsync(CancellationToken ct = default)
+    /// <summary>检查更新（走多源降级链）。</summary>
+    public async Task<object> CheckAsync(CancellationToken ct = default)
     {
-        var checker = new UpdateChecker(_http, IsMyAsset);
-        return checker.CheckAsync(new UpdateCheckRequest(LocalVersion, FeedUrl), ct);
+        var chain = BuildChain();
+        var result = await chain.ResolveAsync(Channel, LocalVersion, ct).ConfigureAwait(false);
+
+        // 记录降级过程：源挂了要能说清"为什么这次检查慢/走了备用源"
+        foreach (var (source, failure) in chain.FailedSources)
+            Log.Warn("Update", $"版本源 {source} 不可用：{failure.Message}");
+
+        if (chain.WinnerSource is { } winner && chain.FailedSources.Count > 0)
+            Log.Info("Update", $"版本信息来自备用源：{winner}");
+
+        return result.IsSuccess
+            ? result.Info!
+            : result.Failure!;
     }
 
     /// <summary>
