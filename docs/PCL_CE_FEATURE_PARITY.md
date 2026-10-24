@@ -606,7 +606,7 @@
 | P2-11 | 主题体系补齐（LAB 色彩、色调档、系统主题跟随） | **已完成**（等价实现，见主表「主题/配色」行的差异说明） | **中** | `UI/Theme/`（5 文件）、`UI/NColor.cs` | **部分**（原版 `SystemThemeHelper` 依赖注册表，UMango 改为跨平台探测，注册表读取只在 Windows 分支） |
 | P2-12 | 统一对话框/提示封装 | 部分 | **低** | `UI/MsgBoxWrapper.cs`、`SystemDialogs.cs`、`UI/HintWrapper.cs` | 否 |
 | P2-13 | 系统 Toast 通知 | **已完成** | **中** | `src/UMango.Core/UI/ToastNotification.cs` + `Utils/WinRT/**`（10 文件）+ `Utils/OS/AumidHelper.cs`（Apache-2.0 逐字采用）+ `src/UMango.App/Services/ToastBridge.cs`（自写桥接，7 测试） | **是**（WinRT 专用，net10.0-windows 支） |
-| P2-14 | SVG 图标运行时渲染 | 部分 | **中** | `UI/Controls/SvgIcon/`（10 文件） | **是**（WPF 几何） |
+| P2-14 | SVG 图标运行时渲染 | **已完成** | **中** | `UI/Controls/SvgIcon/`（11 文件 1,445 行） | **是**（WPF 几何）—— `src/UMango.Core/UI/Svg/`（7 文件）做**平台中立的解析与路径模型**（`SvgSourceParser`/`SvgDocumentParser`/`SvgPathTokenizer`/`SvgPathBuilder`/`SvgStyle`/`SvgIconKey`/`SvgPathModel`），App 层 `src/UMango.App/Controls/SvgIcon.cs` 负责渲染。⚠️ 相对原版的**实质差异**：① **内联 `style` 属性优先于直接属性**（PCL 原版反过来，与 CSS 层叠相反）；② 图标标识**显式拒绝绝对路径与空图标名**（原版 `Trim('/')` 会把 `material/` 静默当成 `material`，写错标识不报错而是悄悄显示成另一个图标）；③ 原版 `ScRgbMapping` 半成品不迁（UMango 用标准 sRGB） |
 | P2-15 | 模糊/特效 | **已完成**（部分，见主表「模糊/特效」行的差异说明） | **中** | `UI/Effects/`（4 文件） | **是**（`ShaderEffect` + 预编译 `.ps` 着色器，**不需要 P/Invoke**）—— 着色器需在 Windows 上用 FXC 预编译（PCL 原版附 `CompileShader.bat`），但**已编译产物可直接复用**，构建链无需 FXC |
 | P2-16 | 灰度（哀悼日）模式 | **已完成** | 低 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | **是**（WPF 画笔改写，非 Effect） |
 | P2-17 | 位图/图像处理 | 未做 | **低** | `Modules/Base/MyBitmap.cs`、`UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs` | 部分 |
