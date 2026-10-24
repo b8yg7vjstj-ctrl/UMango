@@ -443,4 +443,26 @@
 
     <!-- ============ 灰度模式 ============ -->
     <sys:String x:Key="Settings.GrayMode">Gray mode</sys:String>
-    <sys:String x:Key="Settings.GrayMode.Hint">Strip all color and keep only the light/dark layers — commonly used on mourning days. Takes effect immediately; the matching tone is picked for the current light or dark theme.</sys:String></ResourceDictionary>
+    <sys:String x:Key="Settings.GrayMode.Hint">Strip all color and keep only the light/dark layers — commonly used on mourning days. Takes effect immediately; the matching tone is picked for the current light or dark theme.</sys:String><!-- ============ 校验器 ============ -->
+    <sys:String x:Key="Validation.Empty">Input must not be empty.</sys:String>
+    <sys:String x:Key="Validation.Blank">Input must not be blank.</sys:String>
+    <sys:String x:Key="Validation.LeadingSpace">Must not start with a space.</sys:String>
+    <sys:String x:Key="Validation.TrailingSpace">Must not end with a space.</sys:String>
+    <sys:String x:Key="Validation.TrailingDot">Must not end with a dot.</sys:String>
+    <sys:String x:Key="Validation.InvalidChar">Must not contain these characters: {0}</sys:String>
+    <sys:String x:Key="Validation.ReservedWord">Must not use the reserved name: {0}</sys:String>
+    <sys:String x:Key="Validation.Ntfs83Name">Must not contain this special format.</sys:String>
+    <sys:String x:Key="Validation.DuplicateFile">Must not duplicate an existing file.</sys:String>
+    <sys:String x:Key="Validation.DuplicateFolder">Must not duplicate an existing folder.</sys:String>
+    <sys:String x:Key="Validation.ParentMissing">Parent folder does not exist: {0}</sys:String>
+    <sys:String x:Key="Validation.BadPathSegment">The path contains an invalid segment.</sys:String>
+    <sys:String x:Key="Validation.InvalidUrl">Invalid URL.</sys:String>
+    <sys:String x:Key="Validation.NotInteger">Please enter an integer.</sys:String>
+    <sys:String x:Key="Validation.NumberTooLong">Please enter a reasonably sized number.</sys:String>
+    <sys:String x:Key="Validation.AboveMax">Must not exceed {0}.</sys:String>
+    <sys:String x:Key="Validation.BelowMin">Must not be below {0}.</sys:String>
+    <sys:String x:Key="Validation.ExactLength">Length must be exactly {0} characters.</sys:String>
+    <sys:String x:Key="Validation.MinLength">Length must be at least {0} characters.</sys:String>
+    <sys:String x:Key="Validation.MaxLength">Length must be at most {0} characters.</sys:String>
+    <sys:String x:Key="Validation.RegexMismatch">Does not match the required format: {0}</sys:String>
+    <sys:String x:Key="Validation.Blacklisted">Must not contain this term: {0}</sys:String></ResourceDictionary>

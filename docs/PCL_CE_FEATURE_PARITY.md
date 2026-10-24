@@ -381,7 +381,7 @@
 | 文件/目录抽象与字节流 | `IO/Files.cs`、`Directories.cs`、`ByteStream.cs` | 否 | **部分** | UMango `IO/` 有 2 个文件，未细核 |
 | 进程间管道通信 | `IO/PipeComm.cs` | 否 | **未做** | |
 | 下载抽象（NDlFactory 等） | `IO/Download/`（**6 文件**：`NDlFactory.cs`、`IDlConnection.cs`、`IDlResourceMapping.cs`、`IDlWriter.cs`、`NDlConnectionInfo.cs`、`NDlSourceReport.cs`） | 否 | **不适用（死代码）** | ⚠️ **本表首轮把它列为可迁移项，是错的**。实测：`NDlFactory`/`IDlConnection`/`IDlWriter`/`IDlResourceMapping`/`NDlSourceReport` 在 `IO/Download/` 之外的引用数为 **0** —— **没有任何实现、没有任何调用点**，是废弃骨架。**不应列为迁移项** |
-| 验证器族 | `Utils/Validate/`（12 个 Validator **457 行** + FluentValidation） | 否（**有一处 MC 开关**） | **部分** | UMango 仅在 `Configuration/` 内有 `SettingDescriptor.Validate()`；**未引入 FluentValidation**（遵守"不加新 NuGet 依赖"约束）。⚠️ 迁移注意：`FileNameValidator.cs:13`/`FolderNameValidator.cs:12`/`FolderPathValidator.cs:9` 各有 `useMinecraftCharCheck = true` 开关（额外禁 `!;`），迁移时置 `false` 即可 |
+| 验证器族 | `Utils/Validate/`（12 个 Validator **457 行** + FluentValidation） | 否（**有一处 MC 开关**） | **已完成** | `src/UMango.Core/Validation/`（`Validators.cs` + `FileSystemValidator.cs`）+ `FluentValidation` 12.1.1（**Apache-2.0**，零传递依赖）。⚠️ 相对原版的三处**实质差异**：① 校验消息不再硬编码中文，改为 `ValidationText` 里的**资源键**，经 Core 的 `LocalizationService` 查（无 UI 环境回落为键本身，测试可直接断言键）；② `useMinecraftCharCheck` **默认关闭** —— Minecraft 不许 `!`，但 git 仓库名、npm 包名里它合法；③ **修掉原版两个真实缺陷**：`StringLengthValidator` 首条规则条件写反（长度恰好等于 `Max` 时被拒）、Minecraft 非法字符传的是单串 `"!;"` 而非两个字符（`"wow!"` 命不中）。另：原版每次校验重建规则（`PreValidate` + `_BuildRules`），UMango 改为构造时建一次 |
 | 哈希算法族 | `Utils/Hash/`（MD5/SHA1/SHA256/SHA512/MurmurHash2 + `HashCache.cs`） | 否 | **已完成** | UMango `Hash` 关键字命中仅 4 处 `HashSet`（**误命中**）  实现位置：Core/Hash/HashService.cs（MD5/SHA1/SHA256/SHA512） |
 | 加密算法族 | `Utils/Encryption/`（AES-CBC/GCM、ChaCha20-Poly1305 + 纯软件实现） | 否 | **已完成** |  实现位置：Core/Crypto/CryptoService.cs（AES-GCM / ChaCha20-Poly1305） |
 | 二进制差分（BsDiff/ItemDiff） | `Utils/Diff/`（`BsDiff.cs`、`IBinaryDiff.cs`、`ItemDiffResult.cs`） | 否 | **已完成** | 用于增量更新  实现位置：Core/Diff/BinaryDiff.cs |
@@ -390,7 +390,7 @@
 | 字符串/集合/任务扩展 | `Utils/Exts/`（8 文件：`StringExtension.cs`、`ListExtension.cs`、`TaskExtension.cs`、`UiExtension.cs`、`ConcurrentDictionaryExtension.cs`、`AsyncEnumerableExtensions.cs`、`ByteExtension.cs`、`HttpRequestExtension.cs`） | 否 | **已完成** |  实现位置：Core/Utils/ |
 | 语义化版本与版本范围 | `Utils/SemVer.cs`、`Utils/VersionRange.cs` | 否 | **部分** | UMango 有版本比较（各适配器内自建，注释多处讨论 semver 边界），**无 SemVer/VersionRange 公共类型**（`SemVer` 命中仅为注释） |
 | 相似度搜索 | `Utils/SimilaritySearch.cs` | 否 | **已完成** | PCL 用于模糊匹配 MC 版本名  实现位置：Core/Utils/（Levenshtein + 子串包含） |
-| 文本/正则/随机工具 | `Utils/RegexPatterns.cs`（**246 行**）、`RandomUtils.cs`、`TimeUtils.cs`、`Result.cs`（149 行）、`JsonCompat.cs`（236 行）、`StringStream.cs`、`ExpandoObjectConverter.cs` | 否（**`RegexPatterns` 大部分是 MC 正则**） | **部分** | UMango 各页自建少量工具。⚠️ **`RegexPatterns.cs` 不宜整文件迁移**：实测 `:78`/`:85`/`:101-122`/`:160`/`:215`/`:219` 是 MC 颜色代码、MOTD 格式码、MC 版本号（正式/快照/Indev/Infdev）、MC 实例解析等**MC 专属正则**；而 `Result`/`JsonCompat`/`SemVer`/`SimilaritySearch` 才是干净可用的 |
+| 文本/正则/随机工具 | `Utils/RegexPatterns.cs`（**246 行**）、`RandomUtils.cs`、`TimeUtils.cs`、`Result.cs`（149 行）、`JsonCompat.cs`（236 行）、`StringStream.cs`、`ExpandoObjectConverter.cs` | 否（**`RegexPatterns` 大部分是 MC 正则**） | **部分** | UMango 各页自建少量工具。⚠️ **`RegexPatterns.cs` 不宜整文件迁移**：实测 `:78`/`:85`/`:101-122`/`:160`/`:215`/`:219` 是 MC 颜色代码、MOTD 格式码、MC 版本号（正式/快照/Indev/Infdev）、MC 实例解析等**MC 专属正则**；而 `Result`/`JsonCompat`/`SemVer`/`SimilaritySearch` 才是干净可用的。**已采纳的部分**：`src/UMango.Core/Utils/RegexPatterns.cs` 取其 `NewLine`/`HttpUri`/`FullHttpUri`/`UncPath`/`Ntfs83FileName`/`SemVer`/`HasChineseChar` 七个**非 MC** 模式（保留 `[GeneratedRegex]` 源生成写法），MC 专属模式全部剔除；35 个测试钉住边界 |
 | 系统信息与硬件 | `Utils/OS/`（`SystemInfo.cs`、`HardwareInfo.cs`、`SystemPaths.cs`、`SystemTheme.cs`、`EnvironmentInterop.cs`、`ProcessInterop.cs`、`WindowInterop.cs`、`KernelInterop.cs`、`NtInterop.cs`、`AumidHelper.cs`、`ClipboardUtils.cs`、`DragHelper.cs`、`RegistryChangeMonitor.cs`、`NetworkUtils.cs`） | 否 | **部分** | UMango `Platform/SystemInfo.cs`（`Platform:…`、`IsWindows`、`HomeDirectory`、`Describe()`，2 文件 67 行）—— **覆盖面远小于 PCL-CE** |
 | 主题/配色（NColor、色调档、系统主题跟随） | `UI/Theme/`（`ThemeService.cs`、`SystemThemeHelper.cs`、`CatColorResource.cs`、`LabColor.cs`、`ToneProfile.cs`）、`UI/NColor.cs` | 否 | **部分** | UMango 有 4 套 token 字典 + `ThemeManager`；**无** LAB 色彩空间、色调档、系统主题跟随 |
 | 动画系统（完整） | `UI/Animation/`（**87 文件 / 2,742 行**：`Animatable/` 4、`Clock/` 5、`Core/` 21、`Easings/` 39、`ValueProcessor/` 9、`UIAccessProvider/` 2、根 7） | 否 | **部分** | 见 2.A「动画引擎」与 §4.6「第 2.5 层」。**仅 14/87 文件触及 WPF，且零使用 WPF 的 `DoubleAnimation`/`Storyboard`/`Timeline`** —— 自研帧驱动引擎，可移植性远高于初判 |
@@ -573,7 +573,7 @@
 | P1-4 | **线程/并发原语**（防抖、手动复位事件、限流任务池） | 未做 | **低** | `Utils/Threading/`（6 文件） | 否 |
 | P1-5 | **哈希算法族** | 未做 | **低** | `Utils/Hash/`（7 文件） | 否 |
 | P1-6 | **编码检测与转换** | 未做 | **低** | `Utils/Codecs/`（3 文件） | 否 |
-| P1-7 | **验证器族** | 部分 | **低** | `Utils/Validate/`（12 文件，基于 FluentValidation） | 否 —— 引入 `FluentValidation` 包 |
+| P1-7 | **验证器族** | **已完成** | **低** | `Utils/Validate/`（12 文件，基于 FluentValidation） | 否 —— `FluentValidation` 12.1.1 是 Apache-2.0，零传递依赖。迁移时把硬编码中文换成资源键、MC 字符开关默认关 |
 
 ### 4.3 P2 —— 中价值或形态需重新设计
 

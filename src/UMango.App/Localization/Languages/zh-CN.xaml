@@ -457,4 +457,26 @@
 
     <!-- ============ 灰度模式 ============ -->
     <sys:String x:Key="Settings.GrayMode">灰度模式（哀悼日）</sys:String>
-    <sys:String x:Key="Settings.GrayMode.Hint">整体去掉颜色，只留深浅层次 —— 常用于哀悼日。开关立即生效，主题深浅不同会自动套用对应的音色。</sys:String></ResourceDictionary>
+    <sys:String x:Key="Settings.GrayMode.Hint">整体去掉颜色，只留深浅层次 —— 常用于哀悼日。开关立即生效，主题深浅不同会自动套用对应的音色。</sys:String><!-- ============ 校验器 ============ -->
+    <sys:String x:Key="Validation.Empty">输入内容不能为空！</sys:String>
+    <sys:String x:Key="Validation.Blank">输入内容不能只包含空白！</sys:String>
+    <sys:String x:Key="Validation.LeadingSpace">不能以空格开头！</sys:String>
+    <sys:String x:Key="Validation.TrailingSpace">不能以空格结尾！</sys:String>
+    <sys:String x:Key="Validation.TrailingDot">不能以小数点结尾！</sys:String>
+    <sys:String x:Key="Validation.InvalidChar">不可包含这些字符：{0}</sys:String>
+    <sys:String x:Key="Validation.ReservedWord">不可使用系统保留名：{0}</sys:String>
+    <sys:String x:Key="Validation.Ntfs83Name">不可包含这一特殊格式！</sys:String>
+    <sys:String x:Key="Validation.DuplicateFile">不可与现有文件重名！</sys:String>
+    <sys:String x:Key="Validation.DuplicateFolder">不可与现有文件夹重名！</sys:String>
+    <sys:String x:Key="Validation.ParentMissing">父文件夹不存在：{0}</sys:String>
+    <sys:String x:Key="Validation.BadPathSegment">路径中存在错误的分段！</sys:String>
+    <sys:String x:Key="Validation.InvalidUrl">网址无效！</sys:String>
+    <sys:String x:Key="Validation.NotInteger">请输入一个整数！</sys:String>
+    <sys:String x:Key="Validation.NumberTooLong">请输入一个大小合理的数字！</sys:String>
+    <sys:String x:Key="Validation.AboveMax">不可超过 {0}！</sys:String>
+    <sys:String x:Key="Validation.BelowMin">不可低于 {0}！</sys:String>
+    <sys:String x:Key="Validation.ExactLength">长度必须为 {0} 个字符！</sys:String>
+    <sys:String x:Key="Validation.MinLength">长度至少为 {0} 个字符！</sys:String>
+    <sys:String x:Key="Validation.MaxLength">长度最长为 {0} 个字符！</sys:String>
+    <sys:String x:Key="Validation.RegexMismatch">不符合要求的格式：{0}</sys:String>
+    <sys:String x:Key="Validation.Blacklisted">不可包含这个词条：{0}</sys:String></ResourceDictionary>
