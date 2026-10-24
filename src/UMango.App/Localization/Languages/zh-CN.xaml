@@ -598,4 +598,19 @@
     <sys:String x:Key="Music.Error.FileNotFound">文件不存在：{0}</sys:String>
     <sys:String x:Key="Music.Error.PlaybackFailed">播放失败：{0}</sys:String>
     <sys:String x:Key="Nav.Music">音乐</sys:String>
+
+    <!-- 窗口外观 / 下载限额（配置观察者：对应 PCL-CE 的 ModSetup 观察者机制） -->
+    <sys:String x:Key="Settings.Appearance.Section">窗口外观</sys:String>
+    <sys:String x:Key="Settings.Appearance.Hint">这些选项由「配置观察者」直接落到运行中的窗口上，改完即生效。</sys:String>
+    <sys:String x:Key="Settings.Appearance.Opacity">窗口不透明度（千分比）</sys:String>
+    <sys:String x:Key="Settings.Appearance.LockSize">锁定窗口大小</sys:String>
+    <sys:String x:Key="Settings.Appearance.Font">界面字体（留空 = 主题默认）</sys:String>
+    <sys:String x:Key="Settings.Appearance.TitleBarText">标题栏文字（留空 = 应用名）</sys:String>
+    <sys:String x:Key="Settings.Appearance.TitleBarLeftAlign">标题栏选项卡左对齐</sys:String>
+
+    <sys:String x:Key="Settings.Limits.Section">下载限额</sys:String>
+    <sys:String x:Key="Settings.Limits.Hint">限制同时进行的连接数与总速率，避免占满带宽或连接。</sys:String>
+    <sys:String x:Key="Settings.Limits.Threads">最大连接数</sys:String>
+    <sys:String x:Key="Settings.Limits.PerHost">单主机连接数</sys:String>
+    <sys:String x:Key="Settings.Limits.Speed">全局限速（KB/秒，0 = 不限速）</sys:String>
 </ResourceDictionary>

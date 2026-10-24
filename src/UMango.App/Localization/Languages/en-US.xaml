@@ -584,4 +584,19 @@
     <sys:String x:Key="Music.Error.FileNotFound">File not found: {0}</sys:String>
     <sys:String x:Key="Music.Error.PlaybackFailed">Playback failed: {0}</sys:String>
     <sys:String x:Key="Nav.Music">Music</sys:String>
+
+    <!-- Window appearance / download limits (setup observers, mirroring PCL-CE ModSetup) -->
+    <sys:String x:Key="Settings.Appearance.Section">Window appearance</sys:String>
+    <sys:String x:Key="Settings.Appearance.Hint">These options are applied to the running window by the setup observers.</sys:String>
+    <sys:String x:Key="Settings.Appearance.Opacity">Window opacity (per mille)</sys:String>
+    <sys:String x:Key="Settings.Appearance.LockSize">Lock window size</sys:String>
+    <sys:String x:Key="Settings.Appearance.Font">Interface font (empty = theme default)</sys:String>
+    <sys:String x:Key="Settings.Appearance.TitleBarText">Title bar text (empty = app name)</sys:String>
+    <sys:String x:Key="Settings.Appearance.TitleBarLeftAlign">Left-align title bar tabs</sys:String>
+
+    <sys:String x:Key="Settings.Limits.Section">Download limits</sys:String>
+    <sys:String x:Key="Settings.Limits.Hint">Limit concurrent connections and total speed so the app does not saturate the network.</sys:String>
+    <sys:String x:Key="Settings.Limits.Threads">Max connections</sys:String>
+    <sys:String x:Key="Settings.Limits.PerHost">Connections per host</sys:String>
+    <sys:String x:Key="Settings.Limits.Speed">Global speed limit (KB/s, 0 = unlimited)</sys:String>
 </ResourceDictionary>

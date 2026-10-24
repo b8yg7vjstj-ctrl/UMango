@@ -337,6 +337,164 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    // ---------------- 窗口外观 ----------------
+
+    private int _windowOpacity = 1000;
+    private bool _lockWindowSize;
+    private string _uiFont = "";
+    private string _titleBarText = "";
+    private bool _titleBarLeftAlign;
+
+    /// <summary>窗口不透明度（千分比，1000 = 完全不透明）。</summary>
+    public int WindowOpacity
+    {
+        get => _windowOpacity;
+        set
+        {
+            var clamped = Math.Clamp(value, 200, 1000);
+            if (clamped == _windowOpacity) return;
+            _windowOpacity = clamped;
+            OnPropertyChanged(nameof(WindowOpacity));
+            PersistAppearanceSettings();
+        }
+    }
+
+    /// <summary>锁定窗口大小。</summary>
+    public bool LockWindowSize
+    {
+        get => _lockWindowSize;
+        set
+        {
+            if (value == _lockWindowSize) return;
+            _lockWindowSize = value;
+            OnPropertyChanged(nameof(LockWindowSize));
+            PersistAppearanceSettings();
+        }
+    }
+
+    /// <summary>界面字体（留空 = 主题默认）。</summary>
+    public string UiFont
+    {
+        get => _uiFont;
+        set
+        {
+            if (value == _uiFont) return;
+            _uiFont = value;
+            OnPropertyChanged(nameof(UiFont));
+            PersistAppearanceSettings();
+        }
+    }
+
+    /// <summary>标题栏文字（留空 = 应用名）。</summary>
+    public string TitleBarText
+    {
+        get => _titleBarText;
+        set
+        {
+            if (value == _titleBarText) return;
+            _titleBarText = value;
+            OnPropertyChanged(nameof(TitleBarText));
+            PersistAppearanceSettings();
+        }
+    }
+
+    /// <summary>标题栏选项卡左对齐。</summary>
+    public bool TitleBarLeftAlign
+    {
+        get => _titleBarLeftAlign;
+        set
+        {
+            if (value == _titleBarLeftAlign) return;
+            _titleBarLeftAlign = value;
+            OnPropertyChanged(nameof(TitleBarLeftAlign));
+            PersistAppearanceSettings();
+        }
+    }
+
+    /// <summary>把窗口外观相关设置写回设置服务（观察者会据此重应用）。</summary>
+    private void PersistAppearanceSettings()
+    {
+        try
+        {
+            var settings = AppSettings.Settings;
+            settings.Set(UiSettings.WindowOpacityKey, _windowOpacity);
+            settings.Set(UiSettings.LockWindowSizeKey, _lockWindowSize);
+            settings.Set(UiSettings.FontKey, _uiFont);
+            settings.Set(UiSettings.TitleBarTextKey, _titleBarText);
+            settings.Set(UiSettings.TitleBarLeftAlignKey, _titleBarLeftAlign);
+            AppSettings.Save();
+        }
+        catch (Exception)
+        {
+            // 落盘失败不该打断界面操作。
+        }
+    }
+
+    // ---------------- 下载限额 ----------------
+
+    private int _downloadThreadLimit = 8;
+    private int _downloadFileConnectionLimit = 4;
+    private int _downloadSpeedLimit;
+
+    /// <summary>全局最大连接数。</summary>
+    public int DownloadThreadLimit
+    {
+        get => _downloadThreadLimit;
+        set
+        {
+            var clamped = Math.Clamp(value, 1, 64);
+            if (clamped == _downloadThreadLimit) return;
+            _downloadThreadLimit = clamped;
+            OnPropertyChanged(nameof(DownloadThreadLimit));
+            PersistDownloadSettings();
+        }
+    }
+
+    /// <summary>单主机最大连接数。</summary>
+    public int DownloadFileConnectionLimit
+    {
+        get => _downloadFileConnectionLimit;
+        set
+        {
+            var clamped = Math.Clamp(value, 1, 64);
+            if (clamped == _downloadFileConnectionLimit) return;
+            _downloadFileConnectionLimit = clamped;
+            OnPropertyChanged(nameof(DownloadFileConnectionLimit));
+            PersistDownloadSettings();
+        }
+    }
+
+    /// <summary>全局限速（KB/秒，0 = 不限速）。</summary>
+    public int DownloadSpeedLimit
+    {
+        get => _downloadSpeedLimit;
+        set
+        {
+            var clamped = Math.Max(0, value);
+            if (clamped == _downloadSpeedLimit) return;
+            _downloadSpeedLimit = clamped;
+            OnPropertyChanged(nameof(DownloadSpeedLimit));
+            PersistDownloadSettings();
+        }
+    }
+
+    /// <summary>把下载限额写回设置服务。</summary>
+    private void PersistDownloadSettings()
+    {
+        try
+        {
+            var settings = AppSettings.Settings;
+            settings.Set(UiSettings.DownloadThreadLimitKey, _downloadThreadLimit);
+            settings.Set(UiSettings.DownloadFileConnectionLimitKey, _downloadFileConnectionLimit);
+            settings.Set(UiSettings.DownloadSpeedLimitKey, _downloadSpeedLimit);
+            AppSettings.Save();
+        }
+        catch (Exception)
+        {
+            // 落盘失败不该打断界面操作。
+        }
+    }
+
     // ---------------- 动态背景 ----------------
 
     private string _backgroundDirectory = "";
@@ -701,21 +859,50 @@ public partial class SettingsViewModel : ObservableObject
         // 否则设置页的选中项会与实际观感脱节。
         ThemeManager.ThemeChanged += SyncFromThemeManager;
 
-        // 代理：回显保存的模式与地址，并把代理管理器接到网络层
-        _selectedProxyMode = ProxyModes.FirstOrDefault(m => m.Mode == AppServices.ProxyManager.Mode) ?? ProxyModes[0];
-        _proxyAddress = AppServices.ProxyManager.CustomProxyAddress?.ToString() ?? "";
+        // 代理：回显保存的模式与地址，并把代理管理器接到网络层。
+        // 优先读设置服务（跨会话保持的权威），读不到再回落到代理管理器当前状态。
+        var savedProxyMode = Services.SetupObserver.ParseProxyMode(
+            AppSettings.Settings.Get<string>(UiSettings.ProxyModeKey));
+        _selectedProxyMode = ProxyModes.FirstOrDefault(m => m.Mode == savedProxyMode)
+            ?? ProxyModes.FirstOrDefault(m => m.Mode == AppServices.ProxyManager.Mode)
+            ?? ProxyModes[0];
+        _proxyAddress = AppSettings.Settings.Get<string>(UiSettings.ProxyAddressKey);
+        if (string.IsNullOrWhiteSpace(_proxyAddress))
+        {
+            _proxyAddress = AppServices.ProxyManager.CustomProxyAddress?.ToString() ?? "";
+        }
+        _proxyUsername = AppSettings.Settings.Get<string>(UiSettings.ProxyUsernameKey);
+        // 密码不从界面回显（属性是只写），但**必须**读回内存副本：
+        // 否则启动时 PersistProxySettings 会用空密码覆盖掉已保存的密码。
+        _proxyPassword = AppSettings.Settings.Get<string>(UiSettings.ProxyPasswordKey);
         ApplyProxySettings();
+
+        // 窗口外观 + 下载限额：回显保存值。
+        _windowOpacity = AppSettings.Settings.Get<int>(UiSettings.WindowOpacityKey);
+        _lockWindowSize = AppSettings.Settings.Get<bool>(UiSettings.LockWindowSizeKey);
+        _uiFont = AppSettings.Settings.Get<string>(UiSettings.FontKey);
+        _titleBarText = AppSettings.Settings.Get<string>(UiSettings.TitleBarTextKey);
+        _titleBarLeftAlign = AppSettings.Settings.Get<bool>(UiSettings.TitleBarLeftAlignKey);
+        _downloadThreadLimit = AppSettings.Settings.Get<int>(UiSettings.DownloadThreadLimitKey);
+        _downloadFileConnectionLimit = AppSettings.Settings.Get<int>(UiSettings.DownloadFileConnectionLimitKey);
+        _downloadSpeedLimit = AppSettings.Settings.Get<int>(UiSettings.DownloadSpeedLimitKey);
 
         RefreshRecords();
     }
 
     /// <summary>
     /// 把代理设置应用到代理管理器，并让网络层重建客户端。
+    ///
+    /// <para><b>现在还会落盘</b>：以前代理只存在内存里（<see cref="_proxyAddress"/> 等字段），
+    /// 关掉应用就丢；而 <see cref="Services.SetupObserver"/> 是靠设置服务的
+    /// <c>Changed</c> 事件驱动"重应用"的，不落盘就既不能跨会话保持、
+    /// 也不会触发观察者重跑。</para>
     /// </summary>
     private void ApplyProxySettings()
     {
         var manager = AppServices.ProxyManager;
-        manager.Mode = (SelectedProxyMode ?? ProxyModes[0]).Mode;
+        var mode = (SelectedProxyMode ?? ProxyModes[0]).Mode;
+        manager.Mode = mode;
 
         if (manager.Mode == ProxyMode.CustomProxy)
         {
@@ -735,6 +922,32 @@ public partial class SettingsViewModel : ObservableObject
 
         AppServices.Http.RefreshProxy();
         UpdateProxyStatus();
+
+        // 落盘（供下次启动与设置观察者使用）。写相同值时设置服务会短路，不会重复通知。
+        PersistProxySettings(mode);
+    }
+
+    /// <summary>把当前代理相关字段写回设置服务。</summary>
+    private void PersistProxySettings(ProxyMode mode)
+    {
+        try
+        {
+            var settings = AppSettings.Settings;
+            settings.Set(UiSettings.ProxyModeKey, mode switch
+            {
+                ProxyMode.SystemProxy => "system",
+                ProxyMode.CustomProxy => "custom",
+                _ => "none",
+            });
+            settings.Set(UiSettings.ProxyAddressKey, ProxyAddress);
+            settings.Set(UiSettings.ProxyUsernameKey, ProxyUsername);
+            settings.Set(UiSettings.ProxyPasswordKey, ProxyPassword);
+            AppSettings.Save();
+        }
+        catch (Exception)
+        {
+            // 落盘失败不该打断界面操作：内存里的代理已经生效了。
+        }
     }
 
     /// <summary>更新「系统代理探测状态」那一行。</summary>

@@ -653,6 +653,75 @@
         </StackPanel>
       </Border>
 
+      <!-- ==================== ①.12 窗口外观 ==================== -->
+      <!-- 对应 PCL-CE 的「界面设置 → 窗口」区。这些项全部由 SetupObserver（配置观察者）
+           直接落到运行中的 MainWindow 上，所以改完即生效、无需重启。 -->
+      <Border Style="{DynamicResource PclCard}" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Style="{DynamicResource PclSectionTitle}"
+                     Text="{DynamicResource Settings.Appearance.Section}"/>
+          <TextBlock FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}"
+                     Text="{DynamicResource Settings.Appearance.Hint}"/>
+
+          <TextBlock FontSize="12" Margin="0,10,0,0"
+                     Foreground="{DynamicResource BrG2}"
+                     Text="{DynamicResource Settings.Appearance.Opacity}"/>
+          <Slider Style="{DynamicResource PclSlider}" Margin="0,2,0,0"
+                  Minimum="200" Maximum="1000"
+                  Value="{Binding WindowOpacity, Mode=TwoWay}"/>
+
+          <CheckBox Style="{DynamicResource PclCheckBox}" Margin="0,10,0,0"
+                    Content="{DynamicResource Settings.Appearance.LockSize}"
+                    IsChecked="{Binding LockWindowSize, Mode=TwoWay}"/>
+
+          <TextBlock FontSize="12" Margin="0,10,0,0"
+                     Foreground="{DynamicResource BrG2}"
+                     Text="{DynamicResource Settings.Appearance.Font}"/>
+          <TextBox Margin="0,4,0,0"
+                   Text="{Binding UiFont, UpdateSourceTrigger=PropertyChanged}"/>
+
+          <TextBlock FontSize="12" Margin="0,10,0,0"
+                     Foreground="{DynamicResource BrG2}"
+                     Text="{DynamicResource Settings.Appearance.TitleBarText}"/>
+          <TextBox Margin="0,4,0,0"
+                   Text="{Binding TitleBarText, UpdateSourceTrigger=PropertyChanged}"/>
+
+          <CheckBox Style="{DynamicResource PclCheckBox}" Margin="0,10,0,0"
+                    Content="{DynamicResource Settings.Appearance.TitleBarLeftAlign}"
+                    IsChecked="{Binding TitleBarLeftAlign, Mode=TwoWay}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.13 下载限额 ==================== -->
+      <Border Style="{DynamicResource PclCard}" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Style="{DynamicResource PclSectionTitle}"
+                     Text="{DynamicResource Settings.Limits.Section}"/>
+          <TextBlock FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}"
+                     Text="{DynamicResource Settings.Limits.Hint}"/>
+
+          <TextBlock FontSize="12" Margin="0,10,0,0"
+                     Foreground="{DynamicResource BrG2}"
+                     Text="{DynamicResource Settings.Limits.Threads}"/>
+          <TextBox Margin="0,4,0,0"
+                   Text="{Binding DownloadThreadLimit, UpdateSourceTrigger=PropertyChanged}"/>
+
+          <TextBlock FontSize="12" Margin="0,10,0,0"
+                     Foreground="{DynamicResource BrG2}"
+                     Text="{DynamicResource Settings.Limits.PerHost}"/>
+          <TextBox Margin="0,4,0,0"
+                   Text="{Binding DownloadFileConnectionLimit, UpdateSourceTrigger=PropertyChanged}"/>
+
+          <TextBlock FontSize="12" Margin="0,10,0,0"
+                     Foreground="{DynamicResource BrG2}"
+                     Text="{DynamicResource Settings.Limits.Speed}"/>
+          <TextBox Margin="0,4,0,0"
+                   Text="{Binding DownloadSpeedLimit, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+      </Border>
+
       <!-- ==================== ② 调试 ==================== -->
       <Border Style="{DynamicResource PclCard}" Padding="14" Margin="0,0,0,12">
         <StackPanel>

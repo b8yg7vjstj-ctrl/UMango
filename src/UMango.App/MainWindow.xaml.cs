@@ -21,7 +21,7 @@ namespace UMango.App;
 ///   · 选项卡内的二级导航（例如下载页的"搜索结果"）属于页面自己的事，
 ///     外壳只把选中项写进 <see cref="ShellViewModel.CurrentNavKey"/>，页面想用就绑它。
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : Window, Services.IWindowAppearanceTarget
 {
     /// <summary>外壳 ViewModel（选项卡 + 左栏菜单的唯一真相来源）。</summary>
     private readonly ShellViewModel _shell = new();
@@ -138,6 +138,11 @@ public partial class MainWindow : Window
         // 放在构造末尾：此时 TaskbarItemInfo 已由 InitializeComponent 建好。
         _taskbar = new Services.TaskbarProgressBridge(this);
         _taskbar.Start();
+
+        // 配置观察者：把设置页里的选项真正落到窗口/下载/代理上。
+        // 放在构造末尾 —— 它要改窗口属性（FontFamily / Opacity / ResizeMode），
+        // 那些都要等 InitializeComponent 完成、主题资源可用之后才安全。
+        StartSetupObserver();
 
         // 系统通知：任务做完/失败时发一条 Windows Toast（窗口不在前台也能看到）。
         // 放在任务栏桥接旁边：两者都订阅 TaskCenter.Changed，同一时机启动、同一时机释放。
@@ -863,5 +868,73 @@ public partial class MainWindow : Window
     {
         public required string Message { get; init; }
         public required System.Windows.Media.Brush AccentBrush { get; init; }
+    }
+
+    // ================================================================
+    //  窗口外观（IWindowAppearanceTarget）—— 由设置观察者调用
+    // ================================================================
+
+    /// <summary>
+    /// 配置观察者（设置 → 实际应用）。
+    ///
+    /// <para>它在 <see cref="Services.SetupObserver"/> 里登记了"每个配置键对应哪个动作"，
+    /// 这里只负责提供"改窗口"的能力。拆成接口是为了让观察者逻辑能在
+    /// 无 WPF 的测试宿主（macOS）里被完整覆盖。</para>
+    /// </summary>
+    private Services.SetupObserver? _setupObserver;
+
+    /// <summary>启动配置观察者并把当前设置应用一遍。</summary>
+    internal void StartSetupObserver()
+    {
+        _setupObserver?.Dispose();
+        _setupObserver = new Services.SetupObserver(
+            Services.AppSettings.Settings,
+            this,
+            Services.AppServices.ProxyManager,
+            message => UMango.Core.Logging.Log.Warn("Setup", message));
+        _setupObserver.Subscribe();
+        _setupObserver.ApplyAll();
+    }
+
+    /// <inheritdoc />
+    void Services.IWindowAppearanceTarget.ApplyWindowOpacity(double opacity)
+    {
+        // 低于 20% 会让窗口点不中（Windows 的命中测试阈值），因此夹住下限。
+        Opacity = Math.Clamp(opacity, 0.2, 1.0);
+    }
+
+    /// <inheritdoc />
+    void Services.IWindowAppearanceTarget.ApplyWindowSizeLock(bool locked)
+    {
+        ResizeMode = locked ? ResizeMode.NoResize : ResizeMode.CanResize;
+    }
+
+    /// <inheritdoc />
+    void Services.IWindowAppearanceTarget.ApplyUiFont(string? fontFamily)
+    {
+        // 留空 = 回到主题默认字体（UiFont token）。
+        if (string.IsNullOrWhiteSpace(fontFamily))
+        {
+            FontFamily = (System.Windows.Media.FontFamily)FindResource("UiFont");
+            return;
+        }
+
+        FontFamily = new System.Windows.Media.FontFamily(fontFamily);
+    }
+
+    /// <inheritdoc />
+    void Services.IWindowAppearanceTarget.ApplyTitleBarText(string? text)
+    {
+        var value = string.IsNullOrWhiteSpace(text) ? "UMango" : text;
+        AppNameText.Text = value;
+        Title = value;
+    }
+
+    /// <inheritdoc />
+    void Services.IWindowAppearanceTarget.ApplyTitleBarAlignment(bool leftAligned)
+    {
+        BannerTabsPanel.HorizontalAlignment = leftAligned
+            ? HorizontalAlignment.Left
+            : HorizontalAlignment.Center;
     }
 }

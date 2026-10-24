@@ -118,6 +118,48 @@ public static class UiSettings
     /// <summary>DoH 查询超时（毫秒）。</summary>
     public const string DohTimeoutKey = "network.dohTimeout";
 
+    // ---------------- 窗口与标题栏 ----------------
+
+    /// <summary>窗口不透明度（千分比，1000 = 完全不透明）。</summary>
+    public const string WindowOpacityKey = "ui.appearance.windowOpacity";
+
+    /// <summary>锁定窗口大小（不允许拖拽调整）。</summary>
+    public const string LockWindowSizeKey = "ui.appearance.lockWindowSize";
+
+    /// <summary>界面字体（留空 = 用主题默认字体）。</summary>
+    public const string FontKey = "ui.appearance.font";
+
+    /// <summary>标题栏自定义文字（留空 = 用应用名）。</summary>
+    public const string TitleBarTextKey = "ui.appearance.titleBarText";
+
+    /// <summary>标题栏左对齐（选项卡靠左而不是居中）。</summary>
+    public const string TitleBarLeftAlignKey = "ui.appearance.titleBarLeftAlign";
+
+    // ---------------- 下载限额 ----------------
+
+    /// <summary>下载任务并发数。</summary>
+    public const string DownloadThreadLimitKey = "download.threadLimit";
+
+    /// <summary>单个文件的分段连接数。</summary>
+    public const string DownloadFileConnectionLimitKey = "download.fileConnectionLimit";
+
+    /// <summary>全局限速（KB/秒，0 = 不限速）。</summary>
+    public const string DownloadSpeedLimitKey = "download.speedLimit";
+
+    // ---------------- 代理 ----------------
+
+    /// <summary>代理模式：<c>none</c> / <c>system</c> / <c>custom</c>。</summary>
+    public const string ProxyModeKey = "network.proxy.mode";
+
+    /// <summary>自定义代理地址（仅 custom 模式生效）。</summary>
+    public const string ProxyAddressKey = "network.proxy.address";
+
+    /// <summary>自定义代理用户名。</summary>
+    public const string ProxyUsernameKey = "network.proxy.username";
+
+    /// <summary>自定义代理密码。</summary>
+    public const string ProxyPasswordKey = "network.proxy.password";
+
     /// <summary>全部分组（按设置页展示顺序）</summary>
     public static readonly string[] SectionOrder =
         [SectionAppearance, SectionAnimation, SectionDebug, SectionBehavior];
@@ -513,6 +555,144 @@ public static class UiSettings
             Kind = SettingKind.Int,
             DefaultValue = 5000,
             Order = 42
+        },
+
+        // ---------------- 窗口与标题栏 ----------------
+
+        new SettingDescriptor
+        {
+            Key = WindowOpacityKey,
+            Section = SectionAppearance,
+            Title = "窗口不透明度",
+            Description = "主窗口整体不透明度（千分比）。",
+            Kind = SettingKind.Int,
+            DefaultValue = 1000,
+            Order = 50
+        },
+
+        new SettingDescriptor
+        {
+            Key = LockWindowSizeKey,
+            Section = SectionAppearance,
+            Title = "锁定窗口大小",
+            Description = "禁止拖拽调整窗口大小。",
+            Kind = SettingKind.Bool,
+            DefaultValue = false,
+            Order = 51
+        },
+
+        new SettingDescriptor
+        {
+            Key = FontKey,
+            Section = SectionAppearance,
+            Title = "界面字体",
+            Description = "留空则使用主题默认字体。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 52
+        },
+
+        new SettingDescriptor
+        {
+            Key = TitleBarTextKey,
+            Section = SectionAppearance,
+            Title = "标题栏文字",
+            Description = "留空则使用应用名。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 53
+        },
+
+        new SettingDescriptor
+        {
+            Key = TitleBarLeftAlignKey,
+            Section = SectionAppearance,
+            Title = "标题栏左对齐",
+            Description = "选项卡靠左排列而不是居中。",
+            Kind = SettingKind.Bool,
+            DefaultValue = false,
+            Order = 54
+        },
+
+        // ---------------- 下载限额 ----------------
+
+        new SettingDescriptor
+        {
+            Key = DownloadThreadLimitKey,
+            Section = SectionBehavior,
+            Title = "下载任务并发数",
+            Description = "同时运行的下载任务数量上限。",
+            Kind = SettingKind.Int,
+            DefaultValue = 3,
+            Order = 50
+        },
+
+        new SettingDescriptor
+        {
+            Key = DownloadFileConnectionLimitKey,
+            Section = SectionBehavior,
+            Title = "单文件连接数",
+            Description = "单个文件的最大分段连接数。",
+            Kind = SettingKind.Int,
+            DefaultValue = 8,
+            Order = 51
+        },
+
+        new SettingDescriptor
+        {
+            Key = DownloadSpeedLimitKey,
+            Section = SectionBehavior,
+            Title = "全局限速",
+            Description = "所有下载合计限速（KB/秒），0 表示不限速。",
+            Kind = SettingKind.Int,
+            DefaultValue = 0,
+            Order = 52
+        },
+
+        // ---------------- 代理 ----------------
+
+        new SettingDescriptor
+        {
+            Key = ProxyModeKey,
+            Section = SectionBehavior,
+            Title = "代理模式",
+            Description = "none / system / custom。",
+            Kind = SettingKind.String,
+            DefaultValue = "none",
+            Order = 60
+        },
+
+        new SettingDescriptor
+        {
+            Key = ProxyAddressKey,
+            Section = SectionBehavior,
+            Title = "代理地址",
+            Description = "仅在 custom 模式下生效。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 61
+        },
+
+        new SettingDescriptor
+        {
+            Key = ProxyUsernameKey,
+            Section = SectionBehavior,
+            Title = "代理用户名",
+            Description = "仅在 custom 模式下生效。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 62
+        },
+
+        new SettingDescriptor
+        {
+            Key = ProxyPasswordKey,
+            Section = SectionBehavior,
+            Title = "代理密码",
+            Description = "仅在 custom 模式下生效。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 63
         },
     ];
 

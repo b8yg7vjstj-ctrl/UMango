@@ -139,7 +139,7 @@
                   Background="{DynamicResource BrTitleBarHover}">
             <TextBlock Text="🥭" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
-          <TextBlock Text="UMango" Foreground="{DynamicResource BrTitleBarForeHot}" FontSize="15"
+          <TextBlock x:Name="AppNameText" Text="UMango" Foreground="{DynamicResource BrTitleBarForeHot}" FontSize="15"
                      FontWeight="SemiBold" Margin="9,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
 
@@ -151,7 +151,7 @@
           WindowChrome.IsHitTestVisibleInChrome 必须开：标题栏整条都是窗口 caption 区，
           不声明的话鼠标消息被当作"拖动窗口"吃掉，选项卡点不动。
         -->
-        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
+        <StackPanel x:Name="BannerTabsPanel" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
                     VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
           <RadioButton x:Name="TabHome" Content="{DynamicResource Nav.Home}" Style="{StaticResource BannerTab}"
                        IsChecked="True" Checked="Tab_Checked" Tag="home"/>
