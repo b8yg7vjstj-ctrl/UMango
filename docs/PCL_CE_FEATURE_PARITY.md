@@ -611,7 +611,7 @@
 | P2-16 | 灰度（哀悼日）模式 | **已完成** | 低 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | **是**（WPF 画笔改写，非 Effect） |
 | P2-17 | 位图/图像处理 | 未做 | **低** | `Modules/Base/MyBitmap.cs`、`UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs` | 部分 |
 | P2-18 | 语义化版本公共类型 | 部分 | **低** | `Utils/SemVer.cs`、`Utils/VersionRange.cs` | 否 |
-| P2-19 | 相似度搜索 | **部分**（已有 `StringDistance`：Levenshtein / Similarity / ContainsIgnoreCase；缺 PCL 的多字段加权搜索 `SimilaritySearch`） | **低** | `Utils/SimilaritySearch.cs` | 否 |
+| P2-19 | 相似度搜索 | **已完成** —— `src/UMango.Core/Utils/SimilaritySearch.cs`（多字段加权）+ `src/UMango.Core/PackageManagers/PackageSearchRanking.cs`（包域映射） | **低** | `Utils/SimilaritySearch.cs` | 否 —— 与 PCL 的**实质差异**：① 分数归一化到 **0~1**（PCL 原版无上界，`1.4^(3+L)-3.6` 指数加权可到 10+），PCL 的 0.1/0.2/0.35 阈值因此不能照搬；② 只对**有命中的**字段求加权平均（PCL 把不命中字段也算进分母，「描述命中、名字不中」会被稀释到 0.09）；③ 位置奖励**不进分母**（PCL 用「查询对自己」当分母，那一对必拿满分位置奖励，真实匹配被平白除以约 6.7）；④ 源长度惩罚用 0.25 次幂而非平方根（平方根把长描述压到 0.56，与短包名不可比）；⑤ 归一化用 `ToLowerInvariant` + 去**所有**空白（PCL 只去 ASCII 空格且 `ToLower()` 区域敏感，土耳其语环境下 "I" 匹配不上 "i"）；⑥ 空白查询返回空列表（PCL 返回全部条目）；⑦ 补 null 防御。`DownloadViewModel` 的搜索结果排序已由「只看包名 + Levenshtein≥0.6」改用它 |
 | P2-20 | 自定义事件总线（XAML 附加事件） | 未做 | **中** | `Modules/Event/`（6 文件 741 行） | **是**（`XamlEventSanitizer`） |
 | P2-21 | **启动器自定义主页**（远程 XAML 渲染 + 热补丁 + 内置小提示） | 未做 | **中** | `Pages/PageLaunch/PageLaunchRight.xaml.cs`（898 行，⚠️ **位于自定义许可目录**，只能借鉴设计、不能复制代码） | **是**（WPF `LoadContent`） |
 | P2-22 | ↳ 该功能的**安全再设计**（**不建议照搬**） | 未做 | **中** | 在进程内加载并执行**远程 XAML** 等于开放任意代码执行面；PCL-CE 用 `XamlEventSanitizer` 缓解，但这是危险模式。若要"可自定义主页"，应改为**受限数据格式**（JSON 描述 + 内置模板）而非可执行 XAML | **是** |
