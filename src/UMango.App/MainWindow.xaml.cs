@@ -388,12 +388,14 @@ public partial class MainWindow : Window
         var onTools = _shell.CurrentTab == AppTab.Tools;
         var downloaderSelected = onTools && _shell.CurrentNavKey == "downloader";
         var logSelected = onTools && _shell.CurrentNavKey == "logs";
+        var feedbackSelected = onTools && _shell.CurrentNavKey == "feedback";
 
         ViewDownloader.Visibility = VisibleIf(downloaderSelected);
         ViewLog.Visibility = VisibleIf(logSelected);
+        ViewFeedback.Visibility = VisibleIf(feedbackSelected);
 
-        // 选中了这两个独立页面之一时把 ToolsView 收起，否则两层内容会叠在一起
-        ViewTools.Visibility = VisibleIf(onTools && !downloaderSelected && !logSelected);
+        // 选中了这些独立页面之一时把 ToolsView 收起，否则两层内容会叠在一起
+        ViewTools.Visibility = VisibleIf(onTools && !downloaderSelected && !logSelected && !feedbackSelected);
     }
 
     // ================= 左栏菜单 =================

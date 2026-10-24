@@ -45,6 +45,12 @@ public static class UiSettings
     /// <summary>已展示过的公告 id 列表（内部簿记，不需要用户看见）。</summary>
     public const string AnnouncementShowedKey = "announcement.showed";
 
+    /// <summary>反馈源地址（留空 = 不拉取反馈列表）。</summary>
+    public const string FeedbackSourceKey = "feedback.source";
+
+    /// <summary>提交反馈的目标地址（留空 = 只导出草稿，不跳转）。</summary>
+    public const string FeedbackSubmitUrlKey = "feedback.submitUrl";
+
     /// <summary>全部分组（按设置页展示顺序）</summary>
     public static readonly string[] SectionOrder =
         [SectionAppearance, SectionAnimation, SectionDebug, SectionBehavior];
@@ -191,6 +197,30 @@ public static class UiSettings
             Kind = SettingKind.String,
             DefaultValue = "",
             Order = 31
+        },
+
+        new SettingDescriptor
+        {
+            Key = FeedbackSourceKey,
+            Section = SectionBehavior,
+            Title = "反馈源",
+            Description = "留空表示不拉取反馈列表。填入一个返回 {\"items\":[…]} 的 JSON 地址即可，"
+                          + "形状与 GitHub Issues API 兼容；反馈内容只读展示，不会执行其中任何内容。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 32
+        },
+
+        new SettingDescriptor
+        {
+            Key = FeedbackSubmitUrlKey,
+            Section = SectionBehavior,
+            Title = "反馈提交地址",
+            Description = "填入后，点「提交反馈」会带上预填的诊断信息打开该地址（可用 {title} / {body} 占位符）；"
+                          + "留空则只把草稿复制到剪贴板。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 33
         },
     ];
 

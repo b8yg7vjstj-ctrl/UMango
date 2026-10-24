@@ -502,4 +502,27 @@
     <sys:String x:Key="Settings.Announcement.Hint">Enter a JSON URL returning {"content":[…]} to feed the homepage announcements; leave it empty to fetch nothing. Buttons inside an announcement can only trigger actions UMango has registered — remote content cannot run arbitrary commands.</sys:String>
     <sys:String x:Key="Settings.Announcement.Saved">Announcement source saved.</sys:String>
     <sys:String x:Key="Window.Back">Back</sys:String>
+    <sys:String x:Key="Nav.Feedback">Feedback</sys:String>
+    <sys:String x:Key="Feedback.Refresh">Refresh</sys:String>
+    <sys:String x:Key="Feedback.FillDiagnostics">Fill diagnostics</sys:String>
+    <sys:String x:Key="Feedback.Copy">Copy draft</sys:String>
+    <sys:String x:Key="Feedback.DraftTitle">Submit feedback</sys:String>
+    <sys:String x:Key="Feedback.NoSource">No feedback source is configured, so the list cannot be fetched.</sys:String>
+    <sys:String x:Key="Feedback.NoSourceHint">No feedback source is configured. Set a JSON URL returning {"items":[…]} in Settings (the shape is compatible with the GitHub Issues API).</sys:String>
+    <sys:String x:Key="Feedback.LoadFailed">Failed to fetch feedback.</sys:String>
+    <sys:String x:Key="Feedback.Loaded">Loaded {0} feedback items.</sys:String>
+    <sys:String x:Key="Feedback.Copied">The draft has been copied to the clipboard.</sys:String>
+    <sys:String x:Key="Feedback.DiagnosticHeader">The system information below is attached to a submitted feedback automatically. Please describe your problem above it.</sys:String>
+    <sys:String x:Key="Feedback.DiagnosticVersion">UMango version: {0}</sys:String>
+    <sys:String x:Key="Feedback.DiagnosticPlatform">Runtime: {0}</sys:String>
+    <sys:String x:Key="Feedback.Category.Uncategorized">Uncategorized</sys:String>
+    <sys:String x:Key="Feedback.Category.Processing">In progress</sys:String>
+    <sys:String x:Key="Feedback.Category.WaitingProcess">Waiting for triage</sys:String>
+    <sys:String x:Key="Feedback.Category.Wait">Waiting</sys:String>
+    <sys:String x:Key="Feedback.Category.Pause">Paused</sys:String>
+    <sys:String x:Key="Feedback.Category.Upnext">Up next</sys:String>
+    <sys:String x:Key="Feedback.Category.Completed">Completed</sys:String>
+    <sys:String x:Key="Feedback.Category.Decline">Declined</sys:String>
+    <sys:String x:Key="Feedback.Category.Ignored">Ignored</sys:String>
+    <sys:String x:Key="Feedback.Category.Duplicate">Duplicate</sys:String>
 </ResourceDictionary>

@@ -245,6 +245,8 @@
           <views:DownloaderView x:Name="ViewDownloader" Visibility="Collapsed"/>
           <!-- 日志页：工具页左栏选「日志」时显示 -->
           <views:LogView x:Name="ViewLog" Visibility="Collapsed"/>
+          <!-- 反馈页：工具页左栏选「反馈」时显示 -->
+          <views:FeedbackView x:Name="ViewFeedback" Visibility="Collapsed"/>
         </Grid>
       </Grid>
 

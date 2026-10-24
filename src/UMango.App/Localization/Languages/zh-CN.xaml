@@ -516,4 +516,27 @@
     <sys:String x:Key="Settings.Announcement.Hint">填入一个返回 {"content":[…]} 的 JSON 地址即可拉取主页公告；留空表示不抓取。公告里的按钮只能触发 UMango 已注册的动作，远程内容无法执行任意命令。</sys:String>
     <sys:String x:Key="Settings.Announcement.Saved">公告源已保存。</sys:String>
     <sys:String x:Key="Window.Back">返回</sys:String>
+    <sys:String x:Key="Nav.Feedback">反馈</sys:String>
+    <sys:String x:Key="Feedback.Refresh">刷新</sys:String>
+    <sys:String x:Key="Feedback.FillDiagnostics">填入诊断信息</sys:String>
+    <sys:String x:Key="Feedback.Copy">复制草稿</sys:String>
+    <sys:String x:Key="Feedback.DraftTitle">提交反馈</sys:String>
+    <sys:String x:Key="Feedback.NoSource">尚未配置反馈源，无法拉取反馈列表。</sys:String>
+    <sys:String x:Key="Feedback.NoSourceHint">尚未配置反馈源。可在「设置」里填一个返回 {"items":[…]} 的 JSON 地址（形状与 GitHub Issues API 兼容）。</sys:String>
+    <sys:String x:Key="Feedback.LoadFailed">获取反馈失败。</sys:String>
+    <sys:String x:Key="Feedback.Loaded">已加载 {0} 条反馈。</sys:String>
+    <sys:String x:Key="Feedback.Copied">草稿已复制到剪贴板。</sys:String>
+    <sys:String x:Key="Feedback.DiagnosticHeader">以下是提交反馈时自动附带的系统信息，请在上面补充你的问题描述。</sys:String>
+    <sys:String x:Key="Feedback.DiagnosticVersion">UMango 版本：{0}</sys:String>
+    <sys:String x:Key="Feedback.DiagnosticPlatform">运行环境：{0}</sys:String>
+    <sys:String x:Key="Feedback.Category.Uncategorized">未分类</sys:String>
+    <sys:String x:Key="Feedback.Category.Processing">处理中</sys:String>
+    <sys:String x:Key="Feedback.Category.WaitingProcess">等待处理</sys:String>
+    <sys:String x:Key="Feedback.Category.Wait">等待</sys:String>
+    <sys:String x:Key="Feedback.Category.Pause">暂停</sys:String>
+    <sys:String x:Key="Feedback.Category.Upnext">下一个</sys:String>
+    <sys:String x:Key="Feedback.Category.Completed">已完成</sys:String>
+    <sys:String x:Key="Feedback.Category.Decline">已拒绝</sys:String>
+    <sys:String x:Key="Feedback.Category.Ignored">已忽略</sys:String>
+    <sys:String x:Key="Feedback.Category.Duplicate">重复</sys:String>
 </ResourceDictionary>
