@@ -24,7 +24,8 @@ public sealed class FromToAnimation : AnimationBase
         int durationFrames,
         Easing? easing = null,
         ValueProcessorRegistry? registry = null,
-        IReadOnlyList<AnimationKeyframe>? keyframes = null)
+        IReadOnlyList<AnimationKeyframe>? keyframes = null,
+        AnimationValueType valueType = AnimationValueType.Absolute)
     {
         From = from;
         To = to;
@@ -32,10 +33,16 @@ public sealed class FromToAnimation : AnimationBase
         Easing = easing ?? Easing.Of(EasingKind.Linear);
         _registry = registry ?? new ValueProcessorRegistry();
         Keyframes = keyframes ?? [];
+        ValueType = valueType;
     }
 
     public object? From { get; set; }
     public object? To { get; set; }
+
+    /// <summary>
+    /// 值的解释方式：绝对值还是相对偏移。默认绝对值。
+    /// </summary>
+    public AnimationValueType ValueType { get; set; }
 
     private int _duration;
     public int Duration
@@ -54,6 +61,16 @@ public sealed class FromToAnimation : AnimationBase
     /// <summary>最后一帧实际写入的值（诊断与测试用）。</summary>
     public object? LastValue { get; private set; }
 
+    /// <summary>
+    /// 相对值模式下记录的"动画开始时目标的当前值"。
+    /// 相对值动画算的是**偏移量**，最后写回「起始值 + 偏移量」——
+    /// 若每帧都拿目标的当前值去加，就会逐帧累加（1、2、3…），那不是相对值而是螺旋。
+    /// </summary>
+    private object? _relativeStart;
+
+    /// <summary>相对值模式下的起始值（诊断与测试用）。</summary>
+    public object? RelativeStartValue => _relativeStart;
+
     protected override void ApplyFrameCore(int frame, double progress, IAnimatable target)
     {
         // 先做缓动，再按关键帧分段插值
@@ -70,8 +87,33 @@ public sealed class FromToAnimation : AnimationBase
             value = _registry.Process(a, b, localProgress) ?? b;
         }
 
+        if (ValueType == AnimationValueType.Relative)
+        {
+            // 起始值只在第一帧抓一次：之后目标已被动画改写，
+            // 再去读就成了"当前帧的值"，会逐帧累加。
+            _relativeStart ??= target.GetValue();
+
+            // 偏移量：从 0 插到 To。From 若非零，说明调用方给了起点偏移。
+            var offset = _registry.Subtract(value, From) ?? value;
+            var absolute = _registry.Add(_relativeStart, offset) ?? _relativeStart;
+
+            LastValue = absolute;
+            target.SetValue(absolute);
+            return;
+        }
+
         LastValue = value;
         target.SetValue(value);
+    }
+
+    /// <summary>
+    /// 复位：相对值模式下必须清掉"起始值"快照，
+    /// 否则同一个动画对象第二次播放时，偏移量会加到**上一次**的起始值上。
+    /// </summary>
+    public override void Reset()
+    {
+        base.Reset();
+        _relativeStart = null;
     }
 
     /// <summary>

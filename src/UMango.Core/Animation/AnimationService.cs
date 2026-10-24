@@ -92,6 +92,56 @@ public sealed class AnimationService : IDisposable
     /// <summary>一发即忘地运行（不关心完成时刻）。</summary>
     public void RunFireAndForget(AnimationBinding binding) => _ = RunAsync(binding);
 
+    /// <summary>
+    /// 按名字取消正在运行的动画。
+    ///
+    /// 为什么需要它：界面上"同一个元素只能有一个动画在跑"是常见约束 ——
+    /// 用户快速切换页签时，前一次的入场动画还在跑，两个动画会同时改同一个属性，
+    /// 表现为抖动/闪跳。按名取消让调用方能用一句话把旧动画撤掉。
+    ///
+    /// 名字取自 <see cref="IAnimation.Name"/>；匿名动画（名字为空或重复）不会被匹配到。
+    /// </summary>
+    /// <returns>被取消的动画数量。</returns>
+    public int CancelByName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return 0;
+
+        List<AnimationBinding> snapshot;
+        lock (_gate) snapshot = _running.ToList();
+
+        var cancelled = 0;
+        foreach (var binding in snapshot)
+        {
+            if (!string.Equals(binding.Animation.Name, name, StringComparison.Ordinal)) continue;
+
+            binding.Animation.Cancel();
+            Complete(binding);
+            cancelled++;
+        }
+
+        return cancelled;
+    }
+
+    /// <summary>某个名字的动画是否正在运行。</summary>
+    public bool IsRunning(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+
+        lock (_gate)
+        {
+            return _running.Any(b => string.Equals(b.Animation.Name, name, StringComparison.Ordinal));
+        }
+    }
+
+    /// <summary>正在运行的动画名（诊断用）。</summary>
+    public IReadOnlyList<string> RunningNames
+    {
+        get
+        {
+            lock (_gate) return _running.Select(b => b.Animation.Name).ToList();
+        }
+    }
+
     /// <summary>取消全部正在运行的动画。</summary>
     public void CancelAll()
     {

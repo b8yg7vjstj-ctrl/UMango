@@ -25,6 +25,32 @@ public interface IValueProcessor
 
     /// <summary>按进度插值。progress 已由缓动处理过，这里只做线性插值。</summary>
     object? Process(object? from, object? to, double progress);
+
+    // ---- 算术运算 ----
+    //
+    // PCL-CE 的 `ValueProcessor/IValueProcessor.cs`（Apache-2.0）把 Filter/Add/
+    // Subtract/Scale/DefaultValue/Equal 六个方法都放在接口里，因为它要支持
+    // "相对值动画"（Relative）—— 相对模式下动画值是与**目标当前值**相加的，
+    // 而不是直接赋值。
+    //
+    // UMango 之前只有插值（Process），所以做不了相对值动画。
+    // 这里把算术运算补上：Filter 已被 Process 取代（进度插值不需要"过滤"），
+    // 其余五个照搬语义。
+
+    /// <summary>两值相加。相对值动画靠它把偏移量加到当前值上。</summary>
+    object? Add(object? value1, object? value2);
+
+    /// <summary>两值相减。</summary>
+    object? Subtract(object? value1, object? value2);
+
+    /// <summary>按因子缩放。</summary>
+    object? Scale(object? value, double factor);
+
+    /// <summary>该类型的初始值（相对值动画的基准）。</summary>
+    object? DefaultValue();
+
+    /// <summary>两值是否相等（用容差比较，避免浮点误差导致"每帧都算变了"）。</summary>
+    bool Equal(object? value1, object? value2);
 }
 
 /// <summary>double 插值（位移、透明度、缩放、进度条都用它）。</summary>
@@ -55,6 +81,18 @@ public sealed class DoubleValueProcessor : IValueProcessor
         long l => l,
         _ => 0d
     };
+
+    public object? Add(object? value1, object? value2) => ToDouble(value1) + ToDouble(value2);
+
+    public object? Subtract(object? value1, object? value2) => ToDouble(value1) - ToDouble(value2);
+
+    public object? Scale(object? value, double factor) => ToDouble(value) * factor;
+
+    public object? DefaultValue() => 0d;
+
+    /// <summary>容差 1e-6（与 PCL-CE 的 <c>DoubleValueProcessor.Equal</c> 一致）。</summary>
+    public bool Equal(object? value1, object? value2)
+        => Math.Abs(ToDouble(value1) - ToDouble(value2)) < 1e-6;
 }
 
 /// <summary>
@@ -93,5 +131,46 @@ public sealed class ValueProcessorRegistry
     {
         var processor = Find(from?.GetType() ?? to?.GetType());
         return processor?.Process(from, to, progress);
+    }
+
+    // ---- 算术运算的注册表入口 ----
+    //
+    // 找不到处理器时：**加/减返回 null、缩放返回原值、相等按引用比较**。
+    // 不抛异常的理由与 Process 相同：动画是表现层的东西，
+    // 缺一个处理器不该让整个动画流程崩掉。
+
+    /// <summary>两值相加；找不到处理器时返回 null。</summary>
+    public object? Add(object? value1, object? value2)
+    {
+        var processor = Find(value1?.GetType() ?? value2?.GetType());
+        return processor?.Add(value1, value2);
+    }
+
+    /// <summary>两值相减；找不到处理器时返回 null。</summary>
+    public object? Subtract(object? value1, object? value2)
+    {
+        var processor = Find(value1?.GetType() ?? value2?.GetType());
+        return processor?.Subtract(value1, value2);
+    }
+
+    /// <summary>按因子缩放；找不到处理器时原样返回。</summary>
+    public object? Scale(object? value, double factor)
+    {
+        var processor = Find(value?.GetType());
+        return processor?.Scale(value, factor) ?? value;
+    }
+
+    /// <summary>该类型的初始值；找不到处理器时返回 null。</summary>
+    public object? DefaultValue(Type? valueType)
+    {
+        var processor = Find(valueType);
+        return processor?.DefaultValue();
+    }
+
+    /// <summary>两值是否相等；找不到处理器时按引用比较。</summary>
+    public bool Equal(object? value1, object? value2)
+    {
+        var processor = Find(value1?.GetType() ?? value2?.GetType());
+        return processor is null ? ReferenceEquals(value1, value2) : processor.Equal(value1, value2);
     }
 }
