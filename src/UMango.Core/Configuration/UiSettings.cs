@@ -39,6 +39,12 @@ public static class UiSettings
     public const string ShowUnsupportedSourcesKey = "behavior.showUnsupportedSources";
     public const string ConfirmBeforeInstallKey = "behavior.confirmBeforeInstall";
 
+    /// <summary>公告源地址（留空 = 不拉取公告）。</summary>
+    public const string AnnouncementSourceKey = "announcement.source";
+
+    /// <summary>已展示过的公告 id 列表（内部簿记，不需要用户看见）。</summary>
+    public const string AnnouncementShowedKey = "announcement.showed";
+
     /// <summary>全部分组（按设置页展示顺序）</summary>
     public static readonly string[] SectionOrder =
         [SectionAppearance, SectionAnimation, SectionDebug, SectionBehavior];
@@ -162,6 +168,29 @@ public static class UiSettings
             Kind = SettingKind.Bool,
             DefaultValue = true,
             Order = 20
+        },
+
+        new SettingDescriptor
+        {
+            Key = AnnouncementSourceKey,
+            Section = SectionBehavior,
+            Title = "公告源",
+            Description = "留空表示不拉取主页公告。填入一个返回 {\"content\":[…]} 的 JSON 地址即可；"
+                          + "公告里的按钮只能触发已注册的动作，远程内容无法执行任意命令。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 30
+        },
+
+        new SettingDescriptor
+        {
+            Key = AnnouncementShowedKey,
+            Section = SectionBehavior,
+            Title = "已展示的公告",
+            Description = "内部簿记：记录已经弹过的公告 id，避免每次启动重复弹窗。",
+            Kind = SettingKind.String,
+            DefaultValue = "",
+            Order = 31
         },
     ];
 

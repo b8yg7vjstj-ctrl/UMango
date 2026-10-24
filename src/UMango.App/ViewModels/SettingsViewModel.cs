@@ -282,6 +282,60 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    private string _announcementSource = "";
+    private string _announcementStatusMessage = "";
+
+    /// <summary>
+    /// 公告源地址（留空 = 不抓取公告）。
+    ///
+    /// 写穿到 Core 的设置服务（唯一权威），落盘后下次启动仍在。
+    ///
+    /// **为什么带一个内存副本**：设置服务是唯一权威，但界面需要一个"上一次输入的值"
+    /// 来判断"用户是不是又打了同样的字"（同样的字不该反复落盘、反复刷提示）。
+    /// 这个副本在构造时从设置服务初始化，所以它和权威值一开始是一致的；
+    /// 若不初始化，"清空输入框"会撞上"值没变"的短路分支而**永远存不进去** ——
+    /// 那正是"把公告源删掉"这个最常见的操作失效。
+    /// </summary>
+    public string AnnouncementSource
+    {
+        get => _announcementSource;
+        set
+        {
+            if (value == _announcementSource) return;
+            _announcementSource = value;
+            OnPropertyChanged(nameof(AnnouncementSource));
+            ApplyAnnouncementSource();
+        }
+    }
+
+    /// <summary>公告源的状态提示（例如"留空表示不抓取"）。</summary>
+    public string AnnouncementStatusMessage
+    {
+        get => _announcementStatusMessage;
+        private set
+        {
+            if (value == _announcementStatusMessage) return;
+            _announcementStatusMessage = value;
+            OnPropertyChanged(nameof(AnnouncementStatusMessage));
+        }
+    }
+
+    private void ApplyAnnouncementSource()
+    {
+        try
+        {
+            AppSettings.Settings.Set(UiSettings.AnnouncementSourceKey, _announcementSource.Trim());
+            AppSettings.Save();
+            AnnouncementStatusMessage = string.IsNullOrWhiteSpace(_announcementSource)
+                ? ViewText.L("Announcement.NoSource")
+                : ViewText.L("Settings.Announcement.Saved");
+        }
+        catch (Exception ex)
+        {
+            AnnouncementStatusMessage = ViewText.L("Announcement.Failed", ex.Message);
+        }
+    }
+
     /// <summary>语言选项（首项 = 跟随系统）。</summary>
     public IReadOnlyList<AppLocalization.LanguageOption> Languages { get; } =
         AppLocalization.BuildOptions();
@@ -294,6 +348,10 @@ public partial class SettingsViewModel : ObservableObject
         var (kind, dark) = ReadCurrentTheme();
         _selectedTheme = Themes.FirstOrDefault(t => t.Kind == kind) ?? Themes[0];
         _isDark = dark;
+
+        // 回显已保存的公告源（否则输入框是空的，用户会以为没保存过）。
+        AppSettings.Load();
+        _announcementSource = AppSettings.Settings.Get<string>(UiSettings.AnnouncementSourceKey);
 
         // 回显当前生效的语言（保存值 → 解析成选项；解析不到时回落"跟随系统"）
         var savedCode = AppLocalization.ReadSavedLanguageCode();

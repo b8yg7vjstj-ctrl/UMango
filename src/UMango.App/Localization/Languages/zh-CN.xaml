@@ -507,4 +507,12 @@
     <sys:String x:Key="Homepage.UnknownAction">未注册的动作：{0}</sys:String>
     <sys:String x:Key="Homepage.Tag">标签</sys:String>
 
+    <sys:String x:Key="Announcement.Section">公告</sys:String>
+    <sys:String x:Key="Announcement.MarkShown">标记为已读</sys:String>
+    <sys:String x:Key="Announcement.NoSource">尚未配置公告源。可在「设置」里填一个返回 {"content":[…]} 的 JSON 地址。</sys:String>
+    <sys:String x:Key="Announcement.NoNew">没有新的公告。</sys:String>
+    <sys:String x:Key="Announcement.Failed">获取公告失败：{0}</sys:String>
+    <sys:String x:Key="Announcement.NoAction">该公告没有指定动作。</sys:String>
+    <sys:String x:Key="Settings.Announcement.Hint">填入一个返回 {"content":[…]} 的 JSON 地址即可拉取主页公告；留空表示不抓取。公告里的按钮只能触发 UMango 已注册的动作，远程内容无法执行任意命令。</sys:String>
+    <sys:String x:Key="Settings.Announcement.Saved">公告源已保存。</sys:String>
 </ResourceDictionary>

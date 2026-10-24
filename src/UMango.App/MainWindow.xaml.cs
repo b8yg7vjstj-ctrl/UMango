@@ -85,6 +85,9 @@ public partial class MainWindow : Window
         // 自定义主页卡片里的快捷动作 → 跳到对应页面（声明式主页的落点）。
         Services.AppServices.Homepage.NavigationRequested += NavigateFromHomepage;
 
+        // 公告按钮里的快捷动作 → 同样跳到对应页面（白名单已限制在五个页面内）。
+        Services.AppServices.Announcements.NavigationRequested += NavigateFromHomepage;
+
         _wired = true;
 
         // 构造完成后按 VM 的初始状态把界面刷一遍（默认是「主页」）。

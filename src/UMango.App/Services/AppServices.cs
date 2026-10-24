@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Threading;
+using UMango.Core.Announcements;
 using UMango.Core.Install;
 using UMango.Core.Animation;
 using UMango.Core.Caching;
@@ -114,6 +115,18 @@ public static class AppServices
 
     /// <summary>统一的 HTTP 服务（更新检查等用）。</summary>
     public static HttpService Http { get; } = CreateHttp();
+
+    /// <summary>
+    /// 公告（主页新闻）接入点。
+    ///
+    /// 抓取源由用户在设置页填（<see cref="UiSettings.AnnouncementSourceKey"/>）——
+    /// 留空就不抓取，也不访问任何默认地址。
+    ///
+    /// 注意声明顺序：它依赖 <see cref="Http"/>，必须排在 Http 之后
+    /// （静态字段初始化按声明顺序执行，写在前面会拿到还没初始化的 null）。
+    /// </summary>
+    public static AnnouncementHost Announcements { get; } = new(
+        new AnnouncementService(Http, AppSettings.Settings));
 
     /// <summary>
     /// RPC 宿主（让已在运行的实例能被命令行/脚本调用）。

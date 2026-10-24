@@ -91,6 +91,7 @@ public partial class HomeViewModel : ObservableObject
     public HomeViewModel(Services.HomepageHost homepageHost)
     {
         Homepage = new HomepageSectionViewModel(homepageHost);
+        Announcements = new AnnouncementSectionViewModel(AppServices.Announcements);
     }
 
     /// <summary>包源状态行（标题=包管理器名、副标题=安装目录，与下载页左栏口径一致）。</summary>
@@ -140,6 +141,9 @@ public partial class HomeViewModel : ObservableObject
 
     /// <summary>自定义主页区（卡片 + 提示 + 清单路径）。</summary>
     public HomepageSectionViewModel Homepage { get; }
+
+    /// <summary>公告区（远程内容，按钮走白名单）。</summary>
+    public AnnouncementSectionViewModel Announcements { get; }
 
     [ObservableProperty]
     private bool _isBusy;
