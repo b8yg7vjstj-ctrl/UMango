@@ -67,8 +67,17 @@ public partial class MainWindow : Window
         _shell.NavChanged += _ => ApplyNavOverride();
 
         // 全局提示浮层：PCL 的 HintWrapper 经 PclUiBridge 汇入 NotificationService，
-        // 这里订阅同一事件把提示渲染成右下角浮条（对应 PCL 的 PanHint）。
-        Services.AppServices.Notifications.OnShow += ShowToast;
+        // 再汇入 Core 的提示队列（HintService）。
+        // 渲染**不**直接挂 OnShow —— 按 PCL 的做法，由下面的心跳 Tick 驱动队列出队，
+        // 这样"去重 / 条数上限 / 停留时长"只有一处规则（Core 的 HintService）。
+        Services.AppServices.Notifications.Hints.Cleared += ClearToasts;
+        _hintPump = new Services.HintPump(Services.AppServices.Notifications.Hints);
+        _hintTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(40),
+        };
+        _hintTimer.Tick += (_, _) => PumpHints();
+        _hintTimer.Start();
 
         // 选项卡也可能被别处改（快捷键、将来页面内的跳转）→ 跟着切右区、勾选顶部 banner。
         _shell.PropertyChanged += OnShellPropertyChanged;
@@ -405,36 +414,45 @@ public partial class MainWindow : Window
     /// <summary>当前显示中的提示条（ObservableCollection 以便自动消失时移除）。</summary>
     private readonly System.Collections.ObjectModel.ObservableCollection<ToastItem> _toasts = [];
 
+    /// <summary>提示队列的心跳计时器（对应 PCL 的每帧 Tick）。</summary>
+    private readonly System.Windows.Threading.DispatcherTimer _hintTimer;
+
+    /// <summary>提示泵：把 Core 的队列动作翻译成「显示 / 撤掉」事件。</summary>
+    private readonly Services.HintPump _hintPump;
+
     /// <summary>
-    /// 展示一条全局提示（右下角浮条），到时自动消失。
+    /// 心跳：向 Core 的提示队列要一步动作，并把结果画成右下角浮条。
     ///
-    /// 与 PCL-CE HintService 的行为对齐：同时只保留有限条数（避免刷屏把界面糊住），
-    /// 相同文案的重复提示合并（PCL 也是这么做的）。
+    /// 这对应 PCL-CE 的 <c>HintService.Tick()</c> —— 队列里的提示**不是**来一条就画一条，
+    /// 而是每个心跳拍出一批；去重与条数上限在 Core 里已经判过了，
+    /// 这里只负责"把这一条画出来 / 把最旧的那条撤掉"。
+    ///
+    /// 实际的翻译逻辑在 <see cref="Services.HintPump"/>（无界面依赖，可单测）。
     /// </summary>
-    private void ShowToast(UMango.Core.Notifications.Notification notification)
+    private void PumpHints()
     {
-        // 线程编组（必须）：
-        // NotificationService.OnShow 的触发方可能是**后台线程** ——
-        //   · PCL 侧的调用方（安装/下载工作线程）会调 HintWrapper.Show；
-        //   · AppServices.Initialize 本身就被 ProgressView 用 Task.Run 在后台线程跑过。
-        // 而下面要改的 _toasts 是绑定的 ObservableCollection：一旦在非 UI 线程上改，
-        // WPF 会抛"集合被非拥有线程修改"。本项目此前已经踩过同类坑（见 InstallExecutor 的
-        // 线程亲和性注释），所以这里显式编组，而不是指望调用方在 UI 线程。
-        if (!Dispatcher.CheckAccess())
+        foreach (var ev in _hintPump.Pump())
         {
-            Dispatcher.BeginInvoke(() => ShowToast(notification));
-            return;
+            switch (ev.Kind)
+            {
+                case Services.HintPumpEventKind.Show:
+                    AddToast(ev.Text, ev.Type, ev.DurationMs);
+                    break;
+
+                case Services.HintPumpEventKind.Dismiss:
+                    RemoveToast(ev.Text);
+                    break;
+            }
         }
+    }
 
-        // 列队策略（去重 + 上限）抽到 ToastPolicy 里，以便无界面测试 —— 见该类的注释
-        if (!ToastPolicy.ShouldEnqueue(_toasts.Select(t => t.Message), notification.Message)) return;
-
-        for (var i = ToastPolicy.EvictionsNeeded(_toasts.Count); i > 0; i--) _toasts.RemoveAt(0);
-
+    /// <summary>画一条提示浮条，到时自动撤掉。</summary>
+    private void AddToast(string message, UMango.Core.Notifications.HintType type, int durationMs)
+    {
         var item = new ToastItem
         {
-            Message = notification.Message,
-            AccentBrush = AccentFor(notification.Type),
+            Message = message,
+            AccentBrush = AccentFor(type),
         };
         _toasts.Add(item);
 
@@ -445,22 +463,51 @@ public partial class MainWindow : Window
         // 直接改 _toasts（绑定目标）会抛"集合被非拥有线程修改"。
         var timer = new System.Windows.Threading.DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(Math.Max(800, notification.DurationMs)),
+            Interval = TimeSpan.FromMilliseconds(Math.Max(800, durationMs)),
         };
         timer.Tick += (_, _) =>
         {
             timer.Stop();
+            // 这条可能已经被"挤掉"提前撤走了 → 那时它早就不在集合里了，
+            // 此时**不能**再去 NotifyDismissed：同文案可能已经重新入列并显示着，
+            // 误报会把"已显示"列表里的那条一并抹掉（后面同文案的提示就能重复上屏了）。
+            if (!_toasts.Contains(item)) return;
             _toasts.Remove(item);
+            // 通知 Core：该条已经不在屏幕上了 → 从"已显示"列表移除，
+            // 否则同样文案再来一次会被查重挡掉（而用户已经看不到它了）。
+            Services.AppServices.Notifications.Hints.NotifyDismissed(message);
         };
         timer.Start();
     }
 
-    /// <summary>按提示类型取左侧色条颜色（走主题 token，明暗主题都会跟着变）。</summary>
-    private System.Windows.Media.Brush AccentFor(UMango.Core.Notifications.NotificationType type) => type switch
+    /// <summary>撤掉指定文案的提示条（被更旧的挤掉时）。</summary>
+    private void RemoveToast(string message)
     {
-        UMango.Core.Notifications.NotificationType.Error => (System.Windows.Media.Brush)FindResource("BrError"),
-        UMango.Core.Notifications.NotificationType.Warning => (System.Windows.Media.Brush)FindResource("BrWarnAmber"),
-        UMango.Core.Notifications.NotificationType.Success => (System.Windows.Media.Brush)FindResource("BrProgressSuccess"),
+        var item = _toasts.FirstOrDefault(t => t.Message == message);
+        if (item is null) return;
+        _toasts.Remove(item);
+        // 回报 Core 由 <see cref="Services.HintPump"/> 负责（它知道这是"淘汰"而不是"到期"）。
+        // 这里不再重复回报，避免把同文案的其它条目也抹掉。
+    }
+
+    /// <summary>全部提示被清空时，把屏幕上的浮条一并撤掉。</summary>
+    private void ClearToasts()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(ClearToasts);
+            return;
+        }
+
+        _toasts.Clear();
+    }
+
+    /// <summary>按提示类型取左侧色条颜色（走主题 token，明暗主题都会跟着变）。</summary>
+    private System.Windows.Media.Brush AccentFor(UMango.Core.Notifications.HintType type) => type switch
+    {
+        UMango.Core.Notifications.HintType.Error => (System.Windows.Media.Brush)FindResource("BrError"),
+        UMango.Core.Notifications.HintType.Warning => (System.Windows.Media.Brush)FindResource("BrWarnAmber"),
+        UMango.Core.Notifications.HintType.Success => (System.Windows.Media.Brush)FindResource("BrProgressSuccess"),
         _ => (System.Windows.Media.Brush)FindResource("BrC3"),
     };
 
