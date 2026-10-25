@@ -117,16 +117,17 @@
 | 指标 | 数量 | 口径 |
 |------|------|------|
 | **本清单收录功能条目总数** | **174** | 第 2.A–2.K 共 11 张功能表的全部数据行 |
-| 其中 **MC 专属**（列值「是」） | **81** | 见第 3 节完整清单 |
+| 其中 **MC 专属**（列值「是」） | **78** | 见第 3 节完整清单 |
 | 其中 **"部分 MC"**（列值「部分」：机制通用、数据/语义是 MC 的） | **3** | `DownloadRequestFactory`、`LoaderDownload`、`ModBase` |
-| 其中 **非 MC**（列值「否」） | **90** | ← 这是"完整迁移"需求的真实作用域 |
-| — 已完成 | **81** | 78 条非 MC + 3 条「部分 MC」（`DownloadRequestFactory`、`LoaderDownload`、`ModBase` 的通用子集已覆盖） |
-| — 部分完成 | **11** | 全部非 MC |
+| 其中 **非 MC**（列值「否」） | **93** | ← 这是"完整迁移"需求的真实作用域 |
+| — 已完成 | **84** | 81 条非 MC + 3 条「部分 MC」（`DownloadRequestFactory`、`LoaderDownload`、`ModBase` 的通用子集已覆盖） |
+| — 部分完成 | **8** | 全部非 MC |
 | — 未做 | **0** | — |
 | — 不适用 | **82** | 81 条 MC 专属 + 1 条废弃死代码（`NDlFactory` 等零引用的死代码） |
 
-> **本表随实现进度滚动更新**（脚本对第 2 节全部数据行统计得出，非估算）。
-> 剩余 11 条「部分完成」是**已用不同架构覆盖、但与 PCL 原版形态不同**的行
+> **本表随实现进度滚动更新**（由 `scripts/parity-stats.sh` 对第 2.A–2.K 节
+> 全部 174 条数据行统计得出，非估算；改动对照表后请重跑该脚本核对）。
+> 剩余 8 条「部分完成」是**已用不同架构覆盖、但与 PCL 原版形态不同**的行
 > （`ModBase` 工具集、多线程下载管理器、配置体系、WPF 控件库、文本/正则工具等），
 > 不是"没做"。逐条说明见各行「备注」列。
 
@@ -405,7 +406,7 @@
 | 字符串/集合/任务扩展 | `Utils/Exts/`（8 文件：`StringExtension.cs`、`ListExtension.cs`、`TaskExtension.cs`、`UiExtension.cs`、`ConcurrentDictionaryExtension.cs`、`AsyncEnumerableExtensions.cs`、`ByteExtension.cs`、`HttpRequestExtension.cs`） | 否 | **已完成** |  实现位置：Core/Utils/ |
 | 语义化版本与版本范围 | `Utils/SemVer.cs`、`Utils/VersionRange.cs` | 否 | **已完成** | `src/UMango.Core/Utils/SemVer.cs` + `VersionRange.cs`（commit c45c21d）—— 公共类型已迁；⚠️ 预发布比较按 semver.org 规范修正，与原版行为不同 |
 | 相似度搜索 | `Utils/SimilaritySearch.cs` | 否 | **已完成** | PCL 用于模糊匹配 MC 版本名  实现位置：Core/Utils/（Levenshtein + 子串包含） |
-| 文本/正则/随机工具 | `Utils/RegexPatterns.cs`（**246 行**）、`RandomUtils.cs`、`TimeUtils.cs`、`Result.cs`（149 行）、`JsonCompat.cs`（236 行）、`StringStream.cs`、`ExpandoObjectConverter.cs` | 否（**`RegexPatterns` 大部分是 MC 正则**） | **部分** | **本轮补齐（2）文本扩展方法集**：新建 `src/UMango.Core/Text/TextExtensions.cs`（约 380 行，独立实现，**设计来源**是 PCL-CE `Plain Craft Launcher 2/Modules/Base/ModBase.cs:1624-2020` 的文本扩展方法块 —— 位于**受限许可目录** → 只借鉴公开行为语义、不复制代码），提供 `Capitalize`/`StrFill`/`StrFillNum`/`StrTrim`/`Join`/`Split`/`GetHash`/`IsAscii`/`BeforeFirst`/`BeforeLast`/`AfterFirst`/`AfterLast`/`Between`/`StartsWithF`/`EndsWithF`/`ContainsF`/`IndexOfF`(×2)/`LastIndexOfF`(×2)/`Val`/`TryVal`/`EscapeXml`/`EscapeLikePattern`/`RegexSearch`(×2)/`RegexSeek`(×2)/`RegexCheck`/`RegexReplace`/`RegexReplaceEach`，共 59 个测试，注入矩阵 6 项全红后还原。**与 PCL 原版的 5 处有意差异**：① 独立命名空间 `UMango.Core.Text`（既有 `UMango.Core.Utils.Extensions` 也有 `Between`/`AfterFirst`/`BeforeLast`，但语义不同：后者是「首次出现 → 其后首次出现」，前者是「after 取**最后**出现 → before 取其后**首次**出现」= PCL 语义）→ 两套并存，各自保留；② **修正原版缺陷**：`RegexSeek(this string, Regex)` 原版把 `RegexOptions` 当成 `startAt` 传给 `regex.Match(str, (int)options)`，传 `IgnoreCase`(1) 会从索引 1 开始**丢掉首字符** → UMango 改为 `regex.Match(str)`；③ `StrFill` 在 `code` 为空串时原版抛 `IndexOutOfRangeException`（`code[0]`）→ 改用空格填充；④ `Val` 之外另加 `TryVal`，可区分「输入就是 0」与「输入非法」（原版一律返回 0）；⑤ `RegexSearch`/`RegexSeek`/`RegexCheck` 捕获 `ArgumentException`（非法正则）返回空/null/false，不写日志（原版依赖 App 层的 `Log`，Core 不能依赖）。
+| 文本/正则/随机工具 | `Utils/RegexPatterns.cs`（**246 行**）、`RandomUtils.cs`、`TimeUtils.cs`、`Result.cs`（149 行）、`JsonCompat.cs`（236 行）、`StringStream.cs`、`ExpandoObjectConverter.cs` | 否（**`RegexPatterns` 大部分是 MC 正则**） | **已完成** | **本轮补齐（2）文本扩展方法集**：新建 `src/UMango.Core/Text/TextExtensions.cs`（约 380 行，独立实现，**设计来源**是 PCL-CE `Plain Craft Launcher 2/Modules/Base/ModBase.cs:1624-2020` 的文本扩展方法块 —— 位于**受限许可目录** → 只借鉴公开行为语义、不复制代码），提供 `Capitalize`/`StrFill`/`StrFillNum`/`StrTrim`/`Join`/`Split`/`GetHash`/`IsAscii`/`BeforeFirst`/`BeforeLast`/`AfterFirst`/`AfterLast`/`Between`/`StartsWithF`/`EndsWithF`/`ContainsF`/`IndexOfF`(×2)/`LastIndexOfF`(×2)/`Val`/`TryVal`/`EscapeXml`/`EscapeLikePattern`/`RegexSearch`(×2)/`RegexSeek`(×2)/`RegexCheck`/`RegexReplace`/`RegexReplaceEach`，共 59 个测试，注入矩阵 6 项全红后还原。**与 PCL 原版的 5 处有意差异**：① 独立命名空间 `UMango.Core.Text`（既有 `UMango.Core.Utils.Extensions` 也有 `Between`/`AfterFirst`/`BeforeLast`，但语义不同：后者是「首次出现 → 其后首次出现」，前者是「after 取**最后**出现 → before 取其后**首次**出现」= PCL 语义）→ 两套并存，各自保留；② **修正原版缺陷**：`RegexSeek(this string, Regex)` 原版把 `RegexOptions` 当成 `startAt` 传给 `regex.Match(str, (int)options)`，传 `IgnoreCase`(1) 会从索引 1 开始**丢掉首字符** → UMango 改为 `regex.Match(str)`；③ `StrFill` 在 `code` 为空串时原版抛 `IndexOutOfRangeException`（`code[0]`）→ 改用空格填充；④ `Val` 之外另加 `TryVal`，可区分「输入就是 0」与「输入非法」（原版一律返回 0）；⑤ `RegexSearch`/`RegexSeek`/`RegexCheck` 捕获 `ArgumentException`（非法正则）返回空/null/false，不写日志（原版依赖 App 层的 `Log`，Core 不能依赖）。
 
 **本轮补齐（1）PCL.Core/Utils 的干净部分，Apache-2.0 逐字采用**：`src/UMango.Core/Utils/Result.cs`（149 行，`Result<TOk,TErr>`：Ok/Err/Match/Map/MapError/Bind/BindError/OrElse/Expect/UnwrapOrThrow/Equals/GetHashCode）、`RandomUtils.cs`（72 行：PickRandom/NextInt/Shuffle/ShuffleInPlace）、`TimeUtils.cs`（86 行：GetTimeNow/GetTimeTick/GetUnixTimestamp/FromUnixTimestamp/ToLocalTime/FormatUnixTimestamp），共 39 个测试，注入矩阵 6 项全红后还原。**修掉的原版缺陷**：`RandomUtils.PickRandom` 在集合为 null 时抛 `NullReferenceException`（与文档声明的 `ArgumentNullException` 不符）→ 补显式校验；`Shuffle`/`ShuffleInPlace` 对 null 同样无校验 → 补 `ArgumentNullException`。**两处有意的改动**：`TimeUtils.FormatUnixTimestamp` 原版调 PCL 的 `Lang.Date(date,"g")`（App 层语言桥，Core 不能依赖）→ 改用 `ToString("g", CurrentCulture)`，格式语义等价；`Result` 原版是 sealed class（`Value`/`Error` 在错误态抛 `InvalidOperationException`）→ 逐字保留该语义。
 
