@@ -15,21 +15,21 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using UMango.App.Localization;
-using UMango.App.Media.Music;
-using UMango.App.Services;
 using UMango.Core.Configuration;
+using UMango.Core.Localization;
 using UMango.Core.Media.Music;
+using UMango.Shell.Capabilities;
+using UMango.Shell.Localization;
 using UMango.Shell.Services;
 
-namespace UMango.App.ViewModels;
+namespace UMango.Shell.ViewModels;
 
 /// <summary>音乐页 ViewModel：曲库、播放控制、失败提示。</summary>
 public partial class MusicViewModel : ObservableObject
 {
     private readonly MusicLibrary _library;
     private readonly MusicPlaybackController _controller;
-    private readonly NaudioMusicPlayer? _player;
+    private readonly IMusicOutput? _player;
     private readonly string? _directoryOverride;
     private readonly SettingsService? _settings;
 
@@ -37,8 +37,9 @@ public partial class MusicViewModel : ObservableObject
     /// 构造 ViewModel。
     /// </summary>
     /// <param name="player">
-    /// NAudio 播放后端。留 null 表示「没有音频后端」（例如非 Windows 宿主或测试）——
-    /// 此时所有播放命令都不做事，只保留曲库浏览能力。
+    /// 音频播放后端（WPF 侧是 NAudio）。留 null 表示「没有音频后端」
+    /// （例如非 Windows 宿主或测试）—— 此时所有播放命令都不做事，
+    /// 只保留曲库浏览能力。
     /// </param>
     /// <param name="directoryOverride">
     /// 音乐目录的**覆盖值**。给 null 时从设置里读。
@@ -54,11 +55,14 @@ public partial class MusicViewModel : ObservableObject
     /// 没有它，ViewModel 的测试就只能覆盖「没有设置」这一条路径。
     /// </param>
     public MusicViewModel(
-        NaudioMusicPlayer? player = null,
+        IMusicOutput? player = null,
         string? directoryOverride = null,
         SettingsService? settings = null,
         MusicLibrary? library = null)
     {
+        // 没显式注入时从注册表取（各壳在启动时装上自己的音频后端）。
+        player ??= ShellCapabilities.MusicOutput;
+
         _directoryOverride = directoryOverride;
         _settings = settings;
         _library = player?.Library ?? library ?? new MusicLibrary();
@@ -70,6 +74,8 @@ public partial class MusicViewModel : ObservableObject
             _controller.StateChanged += OnControllerStateChanged;
         }
     }
+
+
 
     /// <summary>曲库（全部曲目）。</summary>
     public ObservableCollection<MusicTrack> Tracks { get; } = [];
@@ -103,9 +109,9 @@ public partial class MusicViewModel : ObservableObject
     /// <summary>当前状态文本。</summary>
     public string StateText => _controller.State switch
     {
-        MusicPlaybackState.Playing => ViewText.L("Music.State.Playing"),
-        MusicPlaybackState.Paused => ViewText.L("Music.State.Paused"),
-        _ => ViewText.L("Music.State.Stopped"),
+        MusicPlaybackState.Playing => ShellText.L("Music.State.Playing"),
+        MusicPlaybackState.Paused => ShellText.L("Music.State.Paused"),
+        _ => ShellText.L("Music.State.Stopped"),
     };
 
     /// <summary>是否正在播放。</summary>
@@ -161,7 +167,7 @@ public partial class MusicViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = ViewText.L("Music.DirectoryFailed", ex.Message);
+            StatusMessage = ShellText.L("Music.DirectoryFailed", ex.Message);
             return;
         }
 
@@ -172,8 +178,8 @@ public partial class MusicViewModel : ObservableObject
 
         OnPropertyChanged(nameof(IsEmpty));
         StatusMessage = count == 0
-            ? ViewText.L("Music.NoTracks")
-            : ViewText.L("Music.Loaded", count);
+            ? ShellText.L("Music.NoTracks")
+            : ShellText.L("Music.Loaded", count);
     }
 
     /// <summary>播放（或继续播放）。</summary>
@@ -198,7 +204,7 @@ public partial class MusicViewModel : ObservableObject
         var track = _controller.Play(Shuffle);
         if (track is null)
         {
-            StatusMessage = ViewText.L("Music.NoTracks");
+            StatusMessage = ShellText.L("Music.NoTracks");
             OnControllerStateChanged();
             return;
         }
@@ -225,7 +231,7 @@ public partial class MusicViewModel : ObservableObject
         var track = _controller.PlayNext(Shuffle);
         if (track is null)
         {
-            StatusMessage = ViewText.L("Music.NoTracks");
+            StatusMessage = ShellText.L("Music.NoTracks");
             OnControllerStateChanged();
             return;
         }
@@ -263,7 +269,7 @@ public partial class MusicViewModel : ObservableObject
         try
         {
             _player.PlayFile(track.Path);
-            StatusMessage = ViewText.L("Music.NowPlaying", track.Title);
+            StatusMessage = ShellText.L("Music.NowPlaying", track.Title);
         }
         catch (Exception ex)
         {
@@ -274,14 +280,14 @@ public partial class MusicViewModel : ObservableObject
 
             StatusMessage = kind switch
             {
-                MusicFailureKind.DeviceBusy => ViewText.L("Music.Error.DeviceBusy"),
-                MusicFailureKind.DeviceChanged => ViewText.L("Music.Error.DeviceChanged"),
+                MusicFailureKind.DeviceBusy => ShellText.L("Music.Error.DeviceBusy"),
+                MusicFailureKind.DeviceChanged => ShellText.L("Music.Error.DeviceChanged"),
                 MusicFailureKind.PropertyChangeUnsupported =>
-                    ViewText.L("Music.Error.PropertyChangeUnsupported", track.FileName),
+                    ShellText.L("Music.Error.PropertyChangeUnsupported", track.FileName),
                 MusicFailureKind.UnsupportedFormat =>
-                    ViewText.L("Music.Error.UnsupportedFormat", track.FileName),
-                MusicFailureKind.FileNotFound => ViewText.L("Music.Error.FileNotFound", track.FileName),
-                _ => ViewText.L("Music.Error.PlaybackFailed", track.FileName),
+                    ShellText.L("Music.Error.UnsupportedFormat", track.FileName),
+                MusicFailureKind.FileNotFound => ShellText.L("Music.Error.FileNotFound", track.FileName),
+                _ => ShellText.L("Music.Error.PlaybackFailed", track.FileName),
             };
 
             // 播放失败的曲目从库里剔除，并继续下一首（PCL 的行为）。

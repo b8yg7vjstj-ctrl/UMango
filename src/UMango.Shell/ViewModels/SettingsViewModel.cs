@@ -1,22 +1,20 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using UMango.Core.Localization;
 using CommunityToolkit.Mvvm.Input;
-using UMango.App.Services;
-using UMango.App.Themes;
 using UMango.Core.Animation;
 using UMango.Core.Configuration;
-using UMango.Shell.Localization;
+using UMango.Core.Localization;
+using UMango.Core.Media.Background;
+using UMango.Core.Network;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
-using UMango.Core.Network;
-using UMango.Core.Media.Background;
-
-using UMango.App.Localization;
+using UMango.Shell.Capabilities;
+using UMango.Shell.Localization;
 using UMango.Shell.Services;
-using UMango.Shell.ViewModels;
+using UMango.Shell.Theming;
+using ThemeKind = UMango.Shell.Theming.ThemeKind;
 
-namespace UMango.App.ViewModels;
+namespace UMango.Shell.ViewModels;
 
 /// <summary>设置页里一个可选项：主题族（深浅由独立开关决定）。</summary>
 public sealed record ThemeOption(ThemeKind Kind, string Title, string Description);
@@ -36,8 +34,26 @@ public sealed record AnimationDirectionOption(
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
+    private readonly IGrayModeApplier? _grayApplier;
+
     /// <summary>可选主题。深浅是独立开关，所以这里只有两族。</summary>
-    private static string L(string key, params object?[] args) => LocalizationService.Text(key, args);
+
+
+    /// <summary>
+    /// 解析代理模式（与 WPF 侧 <c>SetupObserver.ParseProxyMode</c> 同一份语义）。
+    ///
+    /// <para>
+    /// 刻意在这里保留一份而**不**引用 WPF 侧的 <c>SetupObserver</c>：那个类在
+    /// <c>UMango.App</c>（WPF 工程）里，Shell 层引用它就等于把 WPF 拖回来。
+    /// 代价是两处要同步 —— 因此两边都用同一组测试锁住行为。
+    /// </para>
+    /// </summary>
+    public static ProxyMode ParseProxyMode(string? raw) => raw?.Trim().ToLowerInvariant() switch
+    {
+        "system" => ProxyMode.SystemProxy,
+        "custom" => ProxyMode.CustomProxy,
+        _ => ProxyMode.NoProxy,
+    };
 
     /// <summary>
     /// 检查更新卡片的 VM。与主题/动画这些"改完即生效"的设置项不同，
@@ -138,16 +154,16 @@ public partial class SettingsViewModel : ObservableObject
     /// </summary>
     public bool GrayMode
     {
-        get => AppSettings.Settings.Get<bool>(UMango.App.Themes.GrayModeController.GrayModeKey);
+        get => AppSettings.Settings.Get<bool>(UiSettings.GrayModeKey);
         set
         {
             if (value == GrayMode) return;
-            AppSettings.Settings.Set(UMango.App.Themes.GrayModeController.GrayModeKey, value);
+            AppSettings.Settings.Set(UiSettings.GrayModeKey, value);
             AppSettings.Save();
 
             // 立即施加，而不是只写设置项等下次启动：开关类设置项的反馈必须是即时的。
             // 无 UI 宿主（单元测试）里 Gray 为 null，此时只落盘。
-            App.Gray?.SetEnabled(value, App.GrayResources);
+            _grayApplier?.SetEnabled(value);
             OnPropertyChanged(nameof(GrayMode));
         }
     }
@@ -174,10 +190,10 @@ public partial class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<ThemeOption> Themes { get; } =
     [
-        new ThemeOption(ThemeKind.PclClassic, L("Settings.Theme.PclName"),
-            L("Settings.Theme.PclDesc")),
-        new ThemeOption(ThemeKind.Fluent10, L("Settings.Theme.Fluent10Name"),
-            L("Settings.Theme.Fluent10Desc"))
+        new ThemeOption(ThemeKind.PclClassic, ShellText.L("Settings.Theme.PclName"),
+            ShellText.L("Settings.Theme.PclDesc")),
+        new ThemeOption(ThemeKind.Fluent10, ShellText.L("Settings.Theme.Fluent10Name"),
+            ShellText.L("Settings.Theme.Fluent10Desc"))
     ];
 
     [ObservableProperty]
@@ -186,10 +202,10 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>动画方向选项：UMango 自有矢量 / 与 PCL-CE 一致</summary>
     public IReadOnlyList<AnimationDirectionOption> AnimationDirections { get; } =
     [
-        new AnimationDirectionOption(AnimationDirectionMode.Mirrored, L("Settings.Anim.MirroredName"),
-            L("Settings.Anim.MirroredDesc")),
-        new AnimationDirectionOption(AnimationDirectionMode.PclCompatible, L("Settings.Anim.PclCompatibleName"),
-            L("Settings.Anim.PclCompatibleDesc"))
+        new AnimationDirectionOption(AnimationDirectionMode.Mirrored, ShellText.L("Settings.Anim.MirroredName"),
+            ShellText.L("Settings.Anim.MirroredDesc")),
+        new AnimationDirectionOption(AnimationDirectionMode.PclCompatible, ShellText.L("Settings.Anim.PclCompatibleName"),
+            ShellText.L("Settings.Anim.PclCompatibleDesc"))
     ];
 
     /// <summary>
@@ -352,12 +368,12 @@ public partial class SettingsViewModel : ObservableObject
             AppSettings.Settings.Set(UiSettings.AnnouncementSourceKey, _announcementSource.Trim());
             AppSettings.Save();
             AnnouncementStatusMessage = string.IsNullOrWhiteSpace(_announcementSource)
-                ? ViewText.L("Announcement.NoSource")
-                : ViewText.L("Settings.Announcement.Saved");
+                ? ShellText.L("Announcement.NoSource")
+                : ShellText.L("Settings.Announcement.Saved");
         }
         catch (Exception ex)
         {
-            AnnouncementStatusMessage = ViewText.L("Announcement.Failed", ex.Message);
+            AnnouncementStatusMessage = ShellText.L("Announcement.Failed", ex.Message);
         }
     }
 
@@ -616,15 +632,15 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>铺放方式选项集合（顺序与 PCL 的下拉框一致：智能/居中/适应/拉伸/平铺/四角）。</summary>
     public IReadOnlyList<BackgroundSuitOption> BackgroundSuits { get; } =
     [
-        new(BackgroundSuitMode.Smart, ViewText.L("Settings.Background.Suit.Smart")),
-        new(BackgroundSuitMode.Center, ViewText.L("Settings.Background.Suit.Center")),
-        new(BackgroundSuitMode.Fit, ViewText.L("Settings.Background.Suit.Fit")),
-        new(BackgroundSuitMode.Stretch, ViewText.L("Settings.Background.Suit.Stretch")),
-        new(BackgroundSuitMode.Tile, ViewText.L("Settings.Background.Suit.Tile")),
-        new(BackgroundSuitMode.TopLeft, ViewText.L("Settings.Background.Suit.TopLeft")),
-        new(BackgroundSuitMode.TopRight, ViewText.L("Settings.Background.Suit.TopRight")),
-        new(BackgroundSuitMode.BottomLeft, ViewText.L("Settings.Background.Suit.BottomLeft")),
-        new(BackgroundSuitMode.BottomRight, ViewText.L("Settings.Background.Suit.BottomRight")),
+        new(BackgroundSuitMode.Smart, ShellText.L("Settings.Background.Suit.Smart")),
+        new(BackgroundSuitMode.Center, ShellText.L("Settings.Background.Suit.Center")),
+        new(BackgroundSuitMode.Fit, ShellText.L("Settings.Background.Suit.Fit")),
+        new(BackgroundSuitMode.Stretch, ShellText.L("Settings.Background.Suit.Stretch")),
+        new(BackgroundSuitMode.Tile, ShellText.L("Settings.Background.Suit.Tile")),
+        new(BackgroundSuitMode.TopLeft, ShellText.L("Settings.Background.Suit.TopLeft")),
+        new(BackgroundSuitMode.TopRight, ShellText.L("Settings.Background.Suit.TopRight")),
+        new(BackgroundSuitMode.BottomLeft, ShellText.L("Settings.Background.Suit.BottomLeft")),
+        new(BackgroundSuitMode.BottomRight, ShellText.L("Settings.Background.Suit.BottomRight")),
     ];
 
     /// <summary>背景铺放方式。</summary>
@@ -671,11 +687,11 @@ public partial class SettingsViewModel : ObservableObject
             AppSettings.Settings.Set(UiSettings.BackgroundSuitKey, _backgroundSuit);
             AppSettings.Save();
             AppSettings.RaiseBackgroundChanged();
-            BackgroundStatusMessage = ViewText.L("Settings.Background.Saved");
+            BackgroundStatusMessage = ShellText.L("Settings.Background.Saved");
         }
         catch (Exception ex)
         {
-            BackgroundStatusMessage = ViewText.L("Settings.Background.Failed", ex.Message);
+            BackgroundStatusMessage = ShellText.L("Settings.Background.Failed", ex.Message);
         }
     }
 
@@ -734,7 +750,7 @@ public partial class SettingsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            BackgroundStatusMessage = ViewText.L("Settings.Hidden.Failed", ex.Message);
+            BackgroundStatusMessage = ShellText.L("Settings.Hidden.Failed", ex.Message);
         }
     }
 
@@ -792,9 +808,9 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>模糊核类型选项集合（对应 PCL 的 UiBlurType 三个取值）。</summary>
     public IReadOnlyList<BlurKernelTypeOption> BlurKernelTypes { get; } =
     [
-        new(0, ViewText.L("Settings.Blur.Kernel.Gaussian")),
-        new(1, ViewText.L("Settings.Blur.Kernel.Radial")),
-        new(2, ViewText.L("Settings.Blur.Kernel.Diagonal")),
+        new(0, ShellText.L("Settings.Blur.Kernel.Gaussian")),
+        new(1, ShellText.L("Settings.Blur.Kernel.Radial")),
+        new(2, ShellText.L("Settings.Blur.Kernel.Diagonal")),
     ];
 
     /// <summary>模糊核类型选项（当前选中）。</summary>
@@ -837,19 +853,29 @@ public partial class SettingsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            BackgroundStatusMessage = ViewText.L("Settings.Blur.Failed", ex.Message);
+            BackgroundStatusMessage = ShellText.L("Settings.Blur.Failed", ex.Message);
         }
     }
 
     /// <summary>语言选项（首项 = 跟随系统）。</summary>
     public IReadOnlyList<ShellLocalization.LanguageOption> Languages { get; } =
-        WpfLocalizationBridge.BuildOptions();
+        ShellLocalization.BuildOptions();
 
     [ObservableProperty]
     private ShellLocalization.LanguageOption? _selectedLanguage;
 
-    public SettingsViewModel()
+    /// <summary>
+    /// 构造设置页 ViewModel。
+    /// </summary>
+    /// <param name="grayApplier">
+    /// 灰度模式施加器（WPF 侧是 <c>GrayModeController</c>）。留 null 表示
+    /// 「本壳没有灰度实现」—— 此时灰度开关只落设置项，不做即时视觉反馈。
+    /// </param>
+    public SettingsViewModel(IGrayModeApplier? grayApplier = null)
     {
+        // 没显式注入时从注册表取（各壳在启动时装上自己的实现）。
+        _grayApplier = grayApplier ?? ShellCapabilities.GrayModeApplier;
+
         var (kind, dark) = ReadCurrentTheme();
         _selectedTheme = Themes.FirstOrDefault(t => t.Kind == kind) ?? Themes[0];
         _isDark = dark;
@@ -876,16 +902,16 @@ public partial class SettingsViewModel : ObservableObject
         _blurKernelType = AppSettings.Settings.Get<int>(UiSettings.BlurKernelTypeKey);
 
         // 回显当前生效的语言（保存值 → 解析成选项；解析不到时回落"跟随系统"）
-        var savedCode = WpfLocalizationBridge.ReadSavedLanguageCode();
+        var savedCode = ShellLocalization.ReadSavedLanguageCode();
         _selectedLanguage = Languages.FirstOrDefault(o => o.Code == savedCode) ?? Languages[0];
 
         // 主题可能被别处（快捷键/其它页面）切换：跟着走，
         // 否则设置页的选中项会与实际观感脱节。
-        ThemeManager.ThemeChanged += SyncFromThemeManager;
+        ShellThemeController.ThemeChanged += SyncFromThemeManager;
 
         // 代理：回显保存的模式与地址，并把代理管理器接到网络层。
         // 优先读设置服务（跨会话保持的权威），读不到再回落到代理管理器当前状态。
-        var savedProxyMode = Services.SetupObserver.ParseProxyMode(
+        var savedProxyMode = ParseProxyMode(
             AppSettings.Settings.Get<string>(UiSettings.ProxyModeKey));
         _selectedProxyMode = ProxyModes.FirstOrDefault(m => m.Mode == savedProxyMode)
             ?? ProxyModes.FirstOrDefault(m => m.Mode == AppServices.ProxyManager.Mode)
@@ -980,11 +1006,11 @@ public partial class SettingsViewModel : ObservableObject
         var manager = AppServices.ProxyManager;
         ProxyStatusMessage = manager.Mode switch
         {
-            ProxyMode.NoProxy => L("Settings.Proxy.Status.None"),
-            ProxyMode.CustomProxy => L("Settings.Proxy.Status.Custom", manager.CustomProxyAddress?.ToString() ?? "-"),
+            ProxyMode.NoProxy => ShellText.L("Settings.Proxy.Status.None"),
+            ProxyMode.CustomProxy => ShellText.L("Settings.Proxy.Status.Custom", manager.CustomProxyAddress?.ToString() ?? "-"),
             _ => manager.SystemProxyAvailable
-                ? L("Settings.Proxy.Status.SystemFound", manager.GetProxyUrl() ?? "-")
-                : L("Settings.Proxy.Status.SystemNone"),
+                ? ShellText.L("Settings.Proxy.Status.SystemFound", manager.GetProxyUrl() ?? "-")
+                : ShellText.L("Settings.Proxy.Status.SystemNone"),
         };
     }
 
@@ -993,8 +1019,8 @@ public partial class SettingsViewModel : ObservableObject
     private void ApplyLanguage()
     {
         var option = SelectedLanguage ?? Languages[0];
-        WpfLocalizationBridge.SetLanguage(option.Code);
-        StatusMessage = L("Settings.Language.Switched", option.DisplayName);
+        ShellLocalization.SetLanguage(option.Code);
+        StatusMessage = ShellText.L("Settings.Language.Switched", option.DisplayName);
     }
 
     /// <summary>应用所选主题（PCL 经典 / Win10 Fluent × 浅/深）。</summary>
@@ -1007,11 +1033,11 @@ public partial class SettingsViewModel : ObservableObject
             if (FollowSystem)
             {
                 // 跟随系统：深浅色由系统决定，用户选的 IsDark 只是回显。
-                ThemeManager.ApplyFollowMode(UMango.Core.UI.Theme.ThemeFollowMode.System);
+                ShellThemeController.ApplyFollowMode(Core.UI.Theme.ThemeFollowMode.System);
             }
             else
             {
-                ThemeManager.Apply(option.Kind, IsDark);
+                ShellThemeController.Apply(option.Kind, IsDark);
             }
 
             // 持久化：否则重启后又回到默认主题（之前审计发现的缺口）
@@ -1020,14 +1046,14 @@ public partial class SettingsViewModel : ObservableObject
             AppSettings.Settings.Set(UiSettings.DarkModeKey, IsDark);
             AppSettings.Save();
 
-            StatusMessage = L("Settings.Theme.Applied", option.Title, L(IsDark ? "Settings.Dark" : "Settings.Light"));
+            StatusMessage = ShellText.L("Settings.Theme.Applied", option.Title, ShellText.L(IsDark ? "Settings.Dark" : "Settings.Light"));
         }
         catch (Exception ex)
         {
             // 主题字典缺失/路径写错不该让设置页崩掉：给出可读原因即可。
             // 注意 Apply 内部会触发 ThemeChanged，若它在半途失败，界面可能停在旧主题上，
             // 所以这里必须把"失败了"明确说出来，而不是假装成功。
-            StatusMessage = L("Settings.Theme.SwitchFailed", ex.Message);
+            StatusMessage = ShellText.L("Settings.Theme.SwitchFailed", ex.Message);
         }
     }
 
@@ -1039,11 +1065,11 @@ public partial class SettingsViewModel : ObservableObject
         {
             AppServices.Records.Clear();
             RefreshRecords();
-            StatusMessage = L("Settings.Records.Cleared");
+            StatusMessage = ShellText.L("Settings.Records.Cleared");
         }
         catch (Exception ex)
         {
-            StatusMessage = L("Settings.Records.ClearFailed", ex.Message);
+            StatusMessage = ShellText.L("Settings.Records.ClearFailed", ex.Message);
         }
     }
 
@@ -1061,7 +1087,7 @@ public partial class SettingsViewModel : ObservableObject
     /// 不会散落在多个属性里。
     /// </summary>
     private static (ThemeKind Kind, bool Dark) ReadCurrentTheme() =>
-        (ThemeManager.CurrentKind, ThemeManager.IsDark);
+        (ShellThemeController.CurrentKind, ShellThemeController.IsDark);
 
     /// <summary>重建记录统计快照并通知界面。</summary>
     private void RefreshRecords()

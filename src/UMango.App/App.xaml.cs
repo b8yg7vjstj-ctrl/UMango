@@ -9,6 +9,7 @@ using UMango.Core.Cli;
 using UMango.Core.Configuration;
 using UMango.Core.Logging;
 using UMango.Shell.Services;
+using ThemeKind = UMango.Shell.Theming.ThemeKind;
 
 namespace UMango.App;
 
@@ -89,6 +90,13 @@ public partial class App : Application
         _gray = _grayInstance = new Themes.GrayModeController();
         _gray.ApplyFromSettings(Current.Resources);
         ThemeManager.ThemeChanged += OnThemeChangedForGray;
+
+        // 外壳能力注册：把 WPF 侧的实现装进 Shell 的能力注册表，
+        // 让 Shell 层的 ViewModel（设置页/音乐页/反馈页）在两个壳里都能用。
+        UMango.Shell.Services.ShellCapabilities.Clipboard = new Services.WpfClipboardService();
+        UMango.Shell.Services.ShellCapabilities.GrayModeApplier = new Themes.WpfGrayModeApplier(
+            static () => GrayResources);
+        UMango.Shell.Services.ShellCapabilities.MusicOutput = CreateMusicOutput();
 
         // 单实例：第二个实例通知首个实例激活主窗口后自行退出。
         // 思路来源：PCL-CE SingleInstanceService（Apache-2.0）—— 单例锁 + 命名管道传激活指令。
@@ -284,6 +292,29 @@ public partial class App : Application
     /// 启动时把前者读出来交给后者，就实现了"恢复上次的主题"。
     /// 没有保存过设置时读到的是描述符里的默认值 = PCL 经典 + 浅色，正是需求要求的缺省。
     /// </summary>
+    /// <summary>
+    /// 创建 WPF 侧的音频输出后端。
+    ///
+    /// <para>
+    /// NAudio 在没有音频设备的环境（虚拟机、CI）构造时可能抛 —— 那时音乐页
+    /// 只保留曲库浏览，不该让整个应用起不来。
+    /// </para>
+    /// </summary>
+    private static UMango.Shell.Capabilities.IMusicOutput? CreateMusicOutput()
+    {
+        try
+        {
+            var library = new UMango.Core.Media.Music.MusicLibrary();
+            var controller = new UMango.Core.Media.Music.MusicPlaybackController(library);
+            return new Media.Music.NaudioMusicPlayer(library, controller);
+        }
+        catch (Exception ex)
+        {
+            Log.ErrorAt("App", ex, member: "CreateMusicOutput");
+            return null;
+        }
+    }
+
     /// <summary>
     /// 应用已保存的语言（在主题之后、主窗口创建之前）。
     ///

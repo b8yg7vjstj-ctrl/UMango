@@ -1,16 +1,17 @@
 using Xunit;
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.Localization;
 
-namespace UMango.App.Tests;
+namespace UMango.Shell.Tests;
 
 /// <summary>
 /// 设置页 ViewModel 的用例。
 ///
-/// **为什么在 App.Tests 而不是 Shell.Tests**：
-/// <c>SettingsViewModel</c> 目前仍在 <c>UMango.App</c>（它引用了 WPF 的主题/对话框），
-/// 而 Shell.Tests 只引用 Shell，不引用 App —— 否则跨平台测试会被 PresentationFramework 拖住。
-/// 等 SettingsViewModel 也下沉到 Shell 后，这一组再搬过去。
+/// <para>
+/// 这些用例现在住在 <c>Shell.Tests</c> —— <c>SettingsViewModel</c> 已经下沉到
+/// <c>UMango.Shell</c>（平台中立），因此它们可以在 macOS/Linux 上直接跑，
+/// 不再被 PresentationFramework 拖住。
+/// </para>
 /// </summary>
 public class SettingsViewModelTests
 {
@@ -115,45 +116,5 @@ public class SettingsViewModelTests
         Assert.True(vm.SuccessCount >= 0);
         Assert.True(vm.FailureCount >= 0);
         Assert.True(vm.SuccessCount + vm.FailureCount <= vm.TotalRecords);
-    }
-}
-
-/// <summary>
-/// 测试用的中文文案提供器：把 <c>zh-CN.xaml</c> 里的键→文案装进
-/// <see cref="LocalizationService"/>，让断言能写具体中文（而不是资源键）。
-/// </summary>
-internal sealed class ChineseProvider : UMango.Core.Localization.ITextProvider
-{
-    private static readonly System.Collections.Generic.Dictionary<string, string> Table =
-        new(System.StringComparer.Ordinal);
-
-    private const string Pattern = "<sys:String x:Key=\"" + "([^\"]+)\"" + ">(.*)</sys:String>";
-
-    static ChineseProvider()
-    {
-        var path = System.IO.Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "..", "UMango.App", "Localization", "Languages", "zh-CN.xaml");
-        if (!System.IO.File.Exists(path)) return;
-        foreach (var line in System.IO.File.ReadAllLines(path))
-        {
-            var m = System.Text.RegularExpressions.Regex.Match(line, Pattern);
-            if (m.Success) Table[m.Groups[1].Value] = m.Groups[2].Value;
-        }
-    }
-
-    public string Text(string key) => Table.TryGetValue(key, out var v) ? v : key;
-
-    public static ScopeHandle Scope()
-    {
-        var previous = UMango.Core.Localization.LocalizationService.CurrentProvider;
-        UMango.Core.Localization.LocalizationService.SetTextProvider(new ChineseProvider());
-        return new ScopeHandle(previous);
-    }
-
-    internal readonly struct ScopeHandle : System.IDisposable
-    {
-        private readonly UMango.Core.Localization.ITextProvider _restore;
-        public ScopeHandle(UMango.Core.Localization.ITextProvider restore) => _restore = restore;
-        public void Dispose() => UMango.Core.Localization.LocalizationService.SetTextProvider(_restore);
     }
 }

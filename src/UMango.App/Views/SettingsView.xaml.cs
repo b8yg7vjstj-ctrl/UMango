@@ -5,13 +5,14 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using UMango.App.Services;
 using UMango.App.Themes;
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Localization;
 using UMango.Shell.Localization;
 using UMango.App.Localization;
 using UMango.Shell.Services;
+using ThemeKind = UMango.Shell.Theming.ThemeKind;
 
 namespace UMango.App.Views;
 

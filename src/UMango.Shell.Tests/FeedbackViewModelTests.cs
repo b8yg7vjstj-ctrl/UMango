@@ -1,9 +1,9 @@
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.Feedback;
 using UMango.Core.Network;
 using Xunit;
 
-namespace UMango.App.Tests;
+namespace UMango.Shell.Tests;
 
 /// <summary>
 /// 反馈页 ViewModel 的测试。

@@ -3,12 +3,13 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using UMango.App.Animation;
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.Animation;
 
 using UMango.App.Themes;
 using UMango.Shell.Services;
 using UMango.Shell.ViewModels;
+using ThemeKind = UMango.Shell.Theming.ThemeKind;
 
 namespace UMango.App;
 

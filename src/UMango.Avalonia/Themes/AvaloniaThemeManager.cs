@@ -41,15 +41,13 @@ using UMango.Shell.Services;
 
 namespace UMango.Avalonia.Themes;
 
-/// <summary>可选主题族。深浅色是同一族的第二个维度。</summary>
-public enum ThemeKind
-{
-    /// <summary>PCL 经典：1:1 复刻 PCL-CE 的观感（数值有录屏逐像素校验依据，不得改动）。</summary>
-    PclClassic,
-
-    /// <summary>Windows 10 Fluent：还原 Win10「设置」的观感。注意 Fluent Design ≠ WinUI3/Win11。</summary>
-    Fluent10,
-}
+/// <summary>
+/// 可选主题族。深浅色是同一族的第二个维度。
+///
+/// 枚举本体在 Shell 层（<c>UMango.Shell.Theming.ThemeKind</c>），两个壳共用一份。
+/// </summary>
+using ThemeKind = UMango.Shell.Theming.ThemeKind;
+using UMango.Shell.Theming;
 
 /// <summary>
 /// Avalonia 侧的主题运行时切换器。
@@ -68,11 +66,18 @@ public static class AvaloniaThemeManager
     public const string LightFluent10Path = "Themes/Tokens.Light.Fluent10.axaml";
     public const string DarkFluent10Path = "Themes/Tokens.Dark.Fluent10.axaml";
 
-    /// <summary>当前主题族，默认 PCL 经典。</summary>
-    public static ThemeKind CurrentKind { get; private set; } = ThemeKind.PclClassic;
+    /// <summary>
+    /// 当前主题族，默认 PCL 经典。
+    ///
+    /// <para>
+    /// 状态的**唯一真相源**在 Shell 层（<see cref="ShellThemeState"/>）—— WPF 与
+    /// Avalonia 两个壳共用同一份，两个壳里的「深色」永远指同一个东西。
+    /// </para>
+    /// </summary>
+    public static ThemeKind CurrentKind => ShellThemeState.Current.Kind;
 
     /// <summary>当前是否为深色。默认浅色（与 WPF 侧一致）。</summary>
-    public static bool IsDark { get; private set; }
+    public static bool IsDark => ShellThemeState.Current.IsDark;
 
     /// <summary>当前主题族（WPF 侧同名成员的对应物）。</summary>
     public static ThemeKind Current => CurrentKind;
@@ -95,21 +100,47 @@ public static class AvaloniaThemeManager
     /// </summary>
     public static void Apply(ThemeKind kind, bool dark)
     {
+        // 主题切换的**编排**在 Shell 层（状态、动效预设、跟随系统策略），
+        // Avalonia 这一侧只负责「换哪份资源字典」。与 WPF 壳走同一条路径。
+        EnsureHooked();
+        UMango.Shell.Theming.ShellThemeController.Apply(kind, dark);
+    }
+
+    /// <summary>把「换资源字典」的回调挂到 Shell 编排层上（只挂一次）。</summary>
+    private static void EnsureHooked()
+    {
+        if (_hooked) return;
+        _hooked = true;
+        UMango.Shell.Theming.ShellThemeController.HostApply = SwapDictionaries;
+    }
+
+    private static bool _hooked;
+
+    /// <summary>
+    /// 把 Avalonia 的 token 资源字典换成指定主题那一份。
+    ///
+    /// <para>
+    /// 这一步是 Avalonia 专属的（<see cref="IResourceDictionary"/> + avares URI），
+    /// 因此留在 Avalonia 层；状态与策略在 Shell 层。
+    /// </para>
+    /// </summary>
+    private static void SwapDictionaries(ThemeKind kind, bool dark)
+    {
         var app = Application.Current;
 
-        // 设计时 / 单元测试里可能没有 Application：只记录状态，不抛异常。
+        // 设计时 / 单元测试里可能没有 Application：不换字典，不抛异常。
         if (app is null)
         {
-            CurrentKind = kind;
-            IsDark = dark;
             ThemeChanged?.Invoke();
             return;
         }
 
         // 资源字典只能在 UI 线程上换。
+        // 注意：这里 post 的是 **SwapDictionaries 自己**，不是 Apply ——
+        // 若 post Apply，会让 Shell 编排层再跑一遍（写两次动效预设、派发两次事件）。
         if (!Dispatcher.UIThread.CheckAccess())
         {
-            Dispatcher.UIThread.Post(() => Apply(kind, dark));
+            Dispatcher.UIThread.Post(() => SwapDictionaries(kind, dark));
             return;
         }
 
@@ -129,15 +160,6 @@ public static class AvaloniaThemeManager
         // 追加到末尾：Avalonia 的资源查找同样是后加入者优先。
         merged.Add(dictionary);
 
-        CurrentKind = kind;
-        IsDark = dark;
-
-        // 动效预设随主题同步（与 WPF 侧行为一致）。
-        // 只写 profile 一个键 —— 读改写会覆盖用户单独改过的其他动画设置。
-        AppSettings.Settings.Set(
-            UiSettings.AnimationProfileKey,
-            kind == ThemeKind.PclClassic ? MotionProfileKind.Pcl : MotionProfileKind.Fluent);
-
         ThemeChanged?.Invoke();
     }
 
@@ -150,9 +172,9 @@ public static class AvaloniaThemeManager
     /// </summary>
     public static void ApplyFollowMode(UMango.Core.UI.Theme.ThemeFollowMode mode)
     {
-        var system = SystemThemeProbe.Detect();
-        var resolved = UMango.Core.UI.Theme.SystemThemeResolver.Resolve(mode, system, IsDark);
-        Apply(CurrentKind, resolved);
+        EnsureHooked();
+        UMango.Shell.Theming.ShellThemeController.SystemThemeProbe ??= SystemThemeProbe.AsInterface;
+        UMango.Shell.Theming.ShellThemeController.ApplyFollowMode(mode);
     }
 
     /// <summary>
@@ -217,7 +239,26 @@ public static class AvaloniaThemeManager
 /// </summary>
 internal static class SystemThemeProbe
 {
-    public static bool? Detect()
+    /// <summary>
+    /// 把静态探测器适配成 Shell 编排层要的实例接口
+    /// （静态类不能实现接口 —— CS0714；而 Shell 层要一个可替换的实例，
+    /// 测试才能塞个假探测器）。
+    /// </summary>
+    public static UMango.Shell.Theming.ISystemThemeProbe AsInterface { get; } = new ProbeAdapter();
+
+    private sealed class ProbeAdapter : UMango.Shell.Theming.ISystemThemeProbe
+    {
+        public UMango.Core.UI.Theme.SystemThemeState Detect()
+        {
+            var dark = DetectNullable();
+            return dark is null
+                ? UMango.Core.UI.Theme.SystemThemeState.Unknown
+                : UMango.Core.UI.Theme.SystemThemeState.Known(dark.Value);
+        }
+    }
+
+    /// <summary>探测系统是否为深色；探测不到返回 null。</summary>
+    public static bool? DetectNullable()
     {
         try
         {

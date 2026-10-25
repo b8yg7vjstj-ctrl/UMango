@@ -1,5 +1,5 @@
 using UMango.App.Services;
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.UI.Navigation;
 using Xunit;
 

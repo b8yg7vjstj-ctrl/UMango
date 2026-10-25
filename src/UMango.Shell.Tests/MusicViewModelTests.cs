@@ -1,9 +1,9 @@
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.Configuration;
 using UMango.Core.Media.Music;
 using Xunit;
 
-namespace UMango.App.Tests;
+namespace UMango.Shell.Tests;
 
 /// <summary>
 /// 音乐页 ViewModel 的测试。

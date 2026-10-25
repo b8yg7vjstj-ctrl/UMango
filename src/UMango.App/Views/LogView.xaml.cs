@@ -1,5 +1,5 @@
 using System.Windows.Controls;
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Shell.ViewModels;
 
 namespace UMango.App.Views;

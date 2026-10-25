@@ -19,6 +19,7 @@
 using System;
 using System.Diagnostics;
 using UMango.Core.UI.Theme;
+using UMango.Shell.Theming;
 
 namespace UMango.App.Themes;
 
@@ -27,6 +28,21 @@ namespace UMango.App.Themes;
 /// </summary>
 public static class SystemThemeProbe
 {
+    /// <summary>
+    /// 把静态探测器适配成 Shell 编排层要的实例接口。
+    ///
+    /// <para>
+    /// 静态类不能实现接口（CS0714），而 Shell 层的编排要一个可替换的实例
+    /// （测试可以塞个假探测器）。这里用一个薄适配器把两者接上。
+    /// </para>
+    /// </summary>
+    public static ISystemThemeProbe AsInterface { get; } = new ProbeAdapter();
+
+    private sealed class ProbeAdapter : ISystemThemeProbe
+    {
+        public UMango.Core.UI.Theme.SystemThemeState Detect() => SystemThemeProbe.Detect();
+    }
+
     /// <summary>探测系统主题。读不到时返回 <see cref="SystemThemeState.Unknown"/>。</summary>
     public static SystemThemeState Detect()
     {

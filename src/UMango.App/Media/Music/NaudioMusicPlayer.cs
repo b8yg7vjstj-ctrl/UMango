@@ -18,20 +18,9 @@
 
 using NAudio.Wave;
 using UMango.Core.Media.Music;
+using UMango.Shell.Capabilities;
 
 namespace UMango.App.Media.Music;
-
-/// <summary>音频格式不被当前后端支持。</summary>
-public sealed class MusicFormatNotSupportedException : Exception
-{
-    /// <summary>创建异常。</summary>
-    public MusicFormatNotSupportedException(string extension)
-        : base($"当前音频后端不支持该格式：{extension}")
-        => Extension = extension;
-
-    /// <summary>不被支持的扩展名。</summary>
-    public string Extension { get; }
-}
 
 /// <summary>
 /// 基于 NAudio 的背景音乐播放器。
@@ -39,7 +28,7 @@ public sealed class MusicFormatNotSupportedException : Exception
 /// **线程模型**：所有 NAudio 调用都在调用方线程同步完成；
 /// NAudio 的 `WaveOutEvent` 自己在后台线程拉数据，不需要额外泵。
 /// </summary>
-public sealed class NaudioMusicPlayer : IDisposable
+public sealed class NaudioMusicPlayer : IDisposable, IMusicOutput
 {
     private readonly MusicLibrary _library;
     private readonly MusicPlaybackController _controller;

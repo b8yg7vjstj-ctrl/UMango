@@ -8,7 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.PackageManagers;
 using UMango.Core.Localization;
 using UMango.App.Localization;

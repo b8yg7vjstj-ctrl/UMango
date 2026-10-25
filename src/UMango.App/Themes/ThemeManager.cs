@@ -4,19 +4,21 @@ using System;
 using System.Windows;
 using UMango.Core.Animation;
 
+using UMango.Shell.Theming;
+
 namespace UMango.App.Themes;
 
 /// <summary>
 /// 可选主题族。深浅色是同一族的第二个维度（见 <see cref="ThemeManager.Apply"/>）。
+///
+/// <para>
+/// 枚举本体在 Shell 层（<see cref="Shell.ThemeKind"/>），WPF 与 Avalonia 两个壳
+/// 共用同一份 —— 否则「深色」在两个壳里会指不同的东西，切换逻辑也没法共用。
+/// 本文件用 <c>using</c> 别名把它引进来，因此本命名空间下写 <c>ThemeKind</c>
+/// 仍然指的是同一个类型。
+/// </para>
 /// </summary>
-public enum ThemeKind
-{
-    /// <summary>PCL 经典：1:1 复刻 PCL-CE 的观感（数值有录屏逐像素校验依据，不得改动）。</summary>
-    PclClassic,
-
-    /// <summary>Windows 10 Fluent：还原 Win10「设置」的观感。注意 Fluent Design ≠ WinUI3/Win11。</summary>
-    Fluent10,
-}
+using ThemeKind = UMango.Shell.Theming.ThemeKind;
 
 /// <summary>
 /// 主题运行时切换器。
@@ -56,11 +58,18 @@ public static class ThemeManager
         "Tokens.Dark.Fluent10.xaml",
     };
 
-    /// <summary>当前主题族，默认 PCL 经典。</summary>
-    public static ThemeKind CurrentKind { get; private set; } = ThemeKind.PclClassic;
+    /// <summary>
+    /// 当前主题族，默认 PCL 经典。
+    ///
+    /// <para>
+    /// 状态的**唯一真相源**在 Shell 层（<see cref="ShellThemeState"/>）—— WPF 与
+    /// Avalonia 两个壳共用。WPF 侧只负责"换成哪份资源字典"，状态本身不自己存一份。
+    /// </para>
+    /// </summary>
+    public static ThemeKind CurrentKind => ShellThemeState.Current.Kind;
 
     /// <summary>当前是否为深色。默认浅色（与改造前的界面一致）。</summary>
-    public static bool IsDark { get; private set; }
+    public static bool IsDark => ShellThemeState.Current.IsDark;
 
     /// <summary>
     /// 主题已经换过之后触发；自绘内容（或需要按主题重算的布局）可以挂这里。
@@ -113,14 +122,38 @@ public static class ThemeManager
     /// </summary>
     public static void Apply(ThemeKind kind, bool dark)
     {
+        // 主题切换的**编排**在 Shell 层（状态、动效预设、跟随系统策略），
+        // WPF 这一侧只负责「换哪份资源字典」。这样两个壳走同一条路径。
+        EnsureHooked();
+        UMango.Shell.Theming.ShellThemeController.Apply(kind, dark);
+    }
+
+    /// <summary>把「换资源字典」的回调挂到 Shell 编排层上（只挂一次）。</summary>
+    private static void EnsureHooked()
+    {
+        if (_hooked) return;
+        _hooked = true;
+        UMango.Shell.Theming.ShellThemeController.HostApply = SwapDictionaries;
+    }
+
+    private static bool _hooked;
+
+    /// <summary>
+    /// 把 WPF 的 token 资源字典换成指定主题那一份。
+    ///
+    /// <para>
+    /// 这一步是 WPF 专属的（<see cref="ResourceDictionary"/> + pack URI），
+    /// 因此留在 App 层；状态与策略在 Shell 层。
+    /// </para>
+    /// </summary>
+    private static void SwapDictionaries(ThemeKind kind, bool dark)
+    {
         var app = Application.Current;
 
         // 设计时（XAML 设计器）或单元测试里可能没有 Application：
-        // 此时只记录状态、不抛异常，否则设计器一打开窗口就会崩。
+        // 此时不换字典、不抛异常，否则设计器一打开窗口就会崩。
         if (app is null)
         {
-            CurrentKind = kind;
-            IsDark = dark;
             ThemeChanged?.Invoke();
             return;
         }
@@ -154,15 +187,6 @@ public static class ThemeManager
         // 后加入的字典优先级最高，因此即便有别的浅色字典漏在外面也不会遮住新主题。
         merged.Add(themeDictionary);
 
-        CurrentKind = kind;
-        IsDark = dark;
-
-        // 动效预设随主题同步（需求：「动效之类的在 PCL 主题中完整保留」）。
-        // 只写 profile 一个键 —— 读改写会覆盖用户单独改过的其他动画设置。
-        UMango.Shell.Services.AppSettings.Settings.Set(
-            UMango.Core.Configuration.UiSettings.AnimationProfileKey,
-            kind == ThemeKind.PclClassic ? MotionProfileKind.Pcl : MotionProfileKind.Fluent);
-
         // 字典变更本身已让所有 {DynamicResource} 引用重新求值；
         // 该事件是给"需要主动重算"的调用方（自绘、图表配色）留的钩子。
         ThemeChanged?.Invoke();
@@ -182,9 +206,11 @@ public static class ThemeManager
     /// </summary>
     public static void ApplyFollowMode(UMango.Core.UI.Theme.ThemeFollowMode mode)
     {
-        var system = SystemThemeProbe.Detect();
-        var resolved = UMango.Core.UI.Theme.SystemThemeResolver.Resolve(mode, system, IsDark);
-        Apply(CurrentKind, resolved);
+        // 探测系统主题的实现在 WPF 侧（读注册表 / defaults / gsettings），
+        // 策略解析在 Shell 层 —— 两个壳共用同一份策略。
+        EnsureHooked();
+        UMango.Shell.Theming.ShellThemeController.SystemThemeProbe ??= SystemThemeProbe.AsInterface;
+        UMango.Shell.Theming.ShellThemeController.ApplyFollowMode(mode);
     }
 
     /// <summary>

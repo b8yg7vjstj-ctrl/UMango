@@ -13,7 +13,7 @@ using UMango.Core.Platform;
 using UMango.Core.Terminal;
 using UMango.Core.Localization;
 using UMango.App.Localization;
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Shell.Services;
 using UMango.Shell.ViewModels;
 
@@ -107,7 +107,7 @@ public partial class ToolsView : UserControl
 /// <summary>
 /// 工具页 ViewModel：系统判断 + 逐包源 CLI 探测明细 + 合规声明/第三方许可。
 ///
-/// 与既有 <see cref="UMango.App.ViewModels.ToolsViewModel"/> 的分工：
+/// 与既有 <see cref="UMango.Shell.ViewModels.ToolsViewModel"/> 的分工：
 ///   · 既有那份覆盖"平台/记录/终端通道 + 包源可用性概览"（由 ViewModels 目录的文件负责维护）；
 ///   · 本类是**本页面自己的**诊断视图：真正把每个包源的 CLI 路径、CLI 版本、探测明细
 ///     一行一行列出来（需求对工具页的要求），并承载合规声明与第三方许可清单。

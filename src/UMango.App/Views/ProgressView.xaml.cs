@@ -8,7 +8,7 @@ using System.Windows.Data;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using UMango.App.Services;
-using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.App.Tasks;
 using UMango.Core.Terminal;
 using UMango.Core.Localization;

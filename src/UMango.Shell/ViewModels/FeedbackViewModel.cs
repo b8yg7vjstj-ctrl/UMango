@@ -1,20 +1,23 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using UMango.App.Localization;
-using UMango.App.Services;
 using UMango.Core.Feedback;
+using UMango.Core.Localization;
+using UMango.Shell.Capabilities;
+using UMango.Shell.Localization;
 using UMango.Shell.Services;
 
-namespace UMango.App.ViewModels;
+namespace UMango.Shell.ViewModels;
 
 /// <summary>反馈页 ViewModel：抓取反馈列表、按分类分组、拼装提交反馈的草稿。</summary>
 public partial class FeedbackViewModel : ObservableObject
 {
     private readonly FeedbackService _service;
     private readonly string? _sourceOverride;
+    private readonly IClipboardService? _clipboard;
+
+
 
     /// <summary>
     /// 构造 ViewModel。
@@ -25,9 +28,14 @@ public partial class FeedbackViewModel : ObservableObject
     /// 之所以留这个口子，是因为源地址存在设置里，而测试环境没有设置文件 ——
     /// 没有它，ViewModel 的测试就只能覆盖「未配置源」这一条路径。
     /// </param>
-    public FeedbackViewModel(FeedbackService? service = null, string? sourceOverride = null)
+    public FeedbackViewModel(
+        FeedbackService? service = null,
+        string? sourceOverride = null,
+        IClipboardService? clipboard = null)
     {
         _sourceOverride = sourceOverride;
+        // 没显式注入时从注册表取（各壳在启动时装上自己的剪贴板实现）。
+        _clipboard = clipboard ?? ShellCapabilities.Clipboard;
         _service = service ?? new FeedbackService(
             AppServices.Http,
             new FeedbackTagMap(),
@@ -82,16 +90,16 @@ public partial class FeedbackViewModel : ObservableObject
             switch (result.Status)
             {
                 case FeedbackFetchStatus.NoSource:
-                    StatusMessage = ViewText.L("Feedback.NoSource");
+                    StatusMessage = ShellText.L("Feedback.NoSource");
                     break;
                 case FeedbackFetchStatus.Failed:
-                    ErrorMessage = result.Error ?? ViewText.L("Feedback.LoadFailed");
+                    ErrorMessage = result.Error ?? ShellText.L("Feedback.LoadFailed");
                     StatusMessage = null;
                     break;
                 default:
                     foreach (var group in _service.Group(result.Items))
                         Groups.Add(new FeedbackGroupViewModel(group));
-                    StatusMessage = ViewText.L("Feedback.Loaded", result.Items.Count);
+                    StatusMessage = ShellText.L("Feedback.Loaded", result.Items.Count);
                     break;
             }
 
@@ -119,8 +127,9 @@ public partial class FeedbackViewModel : ObservableObject
             var text = string.IsNullOrWhiteSpace(DraftTitle)
                 ? DraftBody
                 : $"{DraftTitle}\n\n{DraftBody}";
-            Clipboard.SetText(text);
-            StatusMessage = ViewText.L("Feedback.Copied");
+            // 没有剪贴板后端（无 UI 宿主 / 测试）时只落盘文本，不抛。
+            _clipboard?.SetText(text);
+            StatusMessage = ShellText.L("Feedback.Copied");
         }
         catch (Exception ex)
         {
@@ -143,9 +152,9 @@ public partial class FeedbackViewModel : ObservableObject
     private static FeedbackDiagnosticInfo BuildDiagnostics()
     {
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine(ViewText.L("Feedback.DiagnosticHeader"));
-        sb.AppendLine(ViewText.L("Feedback.DiagnosticVersion", VersionText()));
-        sb.AppendLine(ViewText.L("Feedback.DiagnosticPlatform", Core.Platform.SystemInfo.Describe()));
+        sb.AppendLine(ShellText.L("Feedback.DiagnosticHeader"));
+        sb.AppendLine(ShellText.L("Feedback.DiagnosticVersion", VersionText()));
+        sb.AppendLine(ShellText.L("Feedback.DiagnosticPlatform", Core.Platform.SystemInfo.Describe()));
         return new FeedbackDiagnosticInfo
         {
             Content = sb.ToString().TrimEnd()
@@ -169,7 +178,7 @@ public sealed class FeedbackGroupViewModel
     internal FeedbackGroupViewModel(FeedbackGroup group)
     {
         Category = group.Category;
-        Title = ViewText.L($"Feedback.Category.{group.Category}");
+        Title = ShellText.L($"Feedback.Category.{group.Category}");
         Items = group.Items.Select(i => new FeedbackItemViewModel(i)).ToList();
     }
 
