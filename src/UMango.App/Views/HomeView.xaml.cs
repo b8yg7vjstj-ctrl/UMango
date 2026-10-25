@@ -10,6 +10,7 @@ using UMango.Core.Platform;
 using UMango.Core.Records;
 using UMango.Core.Localization;
 using UMango.App.Localization;
+using UMango.Shell.Services;
 
 namespace UMango.App.Views;
 
@@ -88,7 +89,7 @@ public partial class HomeViewModel : ObservableObject
 
     /// <summary>创建主页 ViewModel。</summary>
     /// <param name="homepageHost">自定义主页接入点（由组合根提供，全进程一份）。</param>
-    public HomeViewModel(Services.HomepageHost homepageHost)
+    public HomeViewModel(UMango.Shell.Services.HomepageHost homepageHost)
     {
         Homepage = new HomepageSectionViewModel(homepageHost);
         Announcements = new AnnouncementSectionViewModel(AppServices.Announcements);

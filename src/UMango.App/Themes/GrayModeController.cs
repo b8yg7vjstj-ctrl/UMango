@@ -142,7 +142,7 @@ public sealed class GrayModeController : IDisposable
     /// <param name="resources">目标资源字典，通常是 <c>Application.Current.Resources</c>。</param>
     public void ApplyFromSettings(ResourceDictionary? resources)
     {
-        Config = Config with { IsEnabled = Services.AppSettings.Settings.Get<bool>(GrayModeKey) };
+        Config = Config with { IsEnabled = UMango.Shell.Services.AppSettings.Settings.Get<bool>(GrayModeKey) };
         Apply(resources);
     }
 
@@ -152,7 +152,7 @@ public sealed class GrayModeController : IDisposable
     public void SetEnabled(bool enabled, ResourceDictionary? resources)
     {
         Config = Config with { IsEnabled = enabled };
-        Services.AppSettings.Settings.Set(GrayModeKey, enabled);
+        UMango.Shell.Services.AppSettings.Settings.Set(GrayModeKey, enabled);
         Apply(resources);
     }
 

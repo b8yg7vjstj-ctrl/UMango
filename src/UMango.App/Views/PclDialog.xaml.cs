@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using PCL.Core.UI;
 using UMango.Core.Localization;
+using UMango.Shell.Services;
 
 namespace UMango.App.Views;
 

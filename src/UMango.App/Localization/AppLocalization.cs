@@ -6,34 +6,51 @@ using UMango.Core.Configuration;
 using UMango.App.Services;
 using UMango.Core.Localization;
 using UMango.Core.Logging;
+using UMango.Shell.Localization;
+using UMango.Shell.Services;
 
 namespace UMango.App.Localization;
 
 /// <summary>
-/// App 层的本地化接线：把 <see cref="LocalizationService"/>（Core，平台中立）
+/// App 层的本地化接线：把 <see cref="UMango.Core.Localization.LocalizationService"/>（Core，平台中立）
 /// 与 WPF 的资源字典机制接起来。
 ///
-/// **思路来源**：PCL-CE <c>LocalizationService._ApplyLanguageResourcesCore</c>（Apache-2.0）：
+/// <para>
+/// <b>文案来自哪</b>：<c>UMango.Shell</c> 内嵌的纯文本语言文件（<c>Localization/Languages/*.txt</c>）——
+/// 那是**唯一真相源**，Avalonia 壳读的是同一份内嵌资源。WPF 侧的 <c>.xaml</c> 资源字典
+/// 是由 <c>scripts/sync-language-xaml.py</c> 从 <c>.txt</c> 生成的**派生产物**，
+/// 启动时不再从 pack URI 读它（那会与真相源分叉）。
+/// </para>
+///
+/// <para>
+/// <b>思路来源</b>：PCL-CE <c>LocalizationService._ApplyLanguageResourcesCore</c>（Apache-2.0）：
 /// 兜底层字典（默认语言）始终加载，当前语言字典叠加在其后 —— 后加载的同名键
 /// 在 <see cref="ResourceDictionary"/> 查找中优先，因此非默认语言只需写差异键。
 /// XAML 侧必须用 <c>{DynamicResource 键}</c> 才能在运行时切换后自动刷新。
+/// </para>
 /// </summary>
 public static class AppLocalization
 {
-    // ⚠ 路径必须**小写**：WPF 编译时把资源名规范化成小写
-//    （实测 UMango.g.resources 里是 localization/languages/zh-cn.baml），
-//    而 pack URI 在部分宿主（pack://application:,,,）下对大小写并不总是宽容。
-//    这里与资源名严格一致，不赌行为。
-private const string DictPrefix = "pack://application:,,,/umango.app;component/localization/languages/";
-
-    private static ResourceDictionary? _fallbackDict;
-    private static ResourceDictionary? _currentDict;
-
     /// <summary>设置项键：UI 语言。</summary>
     public const string LanguageSettingKey = "ui.language";
 
     /// <summary>设置项键：展示格式区域性。</summary>
     public const string FormatCultureSettingKey = "ui.formatCulture";
+
+    /// <summary>当前生效的语言目录（供需要按语言取值的场合使用）。</summary>
+    private static LanguageCatalog? _catalog;
+
+    /// <summary>
+    /// 上次灌入的语言字典实例。
+    ///
+    /// **只移除自己那一个** —— 应用级 <see cref="ResourceDictionary.MergedDictionaries"/>
+    /// 里还有主题字典（PclTokens / Styles / Controls.Pcl），全清会把主题一起干掉，
+    /// 界面会瞬间退回 WPF 默认外观。
+    /// </summary>
+    private static ResourceDictionary? _languageDictionary;
+
+    /// <summary>当前生效的语言目录；未初始化时为 null。</summary>
+    public static LanguageCatalog? CurrentCatalog => _catalog;
 
     /// <summary>
     /// 启动时调用：按已保存的设置应用语言。
@@ -47,15 +64,12 @@ private const string DictPrefix = "pack://application:,,,/umango.app;component/l
         var changed = LocalizationService.Apply(language, format);
         if (changed)
         {
-            ApplyDictionaries(LocalizationService.CurrentLanguage.Code);
             Log.Info("Localization", $"已应用语言：{LocalizationService.CurrentLanguage.Code}，" +
                                     $"展示格式：{LocalizationService.CurrentFormatCulture.Name}");
         }
-        else
-        {
-            // 即使语言没变，也要保证字典在位（例：启动时资源里还没有兜底层）
-            ApplyDictionaries(LocalizationService.CurrentLanguage.Code);
-        }
+
+        // 无论语言是否变化，都要把字典灌好（首次启动时字典还不存在）。
+        ApplyDictionaries(LocalizationService.CurrentLanguage.Code);
     }
 
     /// <summary>
@@ -86,52 +100,50 @@ private const string DictPrefix = "pack://application:,,,/umango.app;component/l
     public static event Action? LocalizedTextRefreshRequested;
 
     /// <summary>
-    /// 重建资源字典栈：先移除旧的，再加兜底层，最后（非默认语言时）加叠加层。
+    /// 重建资源字典栈：清空旧条目，灌入**当前语言合并后**的文案。
     /// 必须在 UI 线程调用（<see cref="Application.Resources"/> 是 DispatcherObject）。
+    ///
+    /// <para>
+    /// 为什么不按「兜底层 + 叠加层」两层分别灌：合并后灌一次即可 ——
+    /// 两层合并的语义与 <see cref="LanguageCatalog"/> 完全一致（叠加层覆盖兜底层），
+    /// 而 WPF 的 <see cref="ResourceDictionary"/> 本来就是后者优先。
+    /// 少一层 = 少一个可能分叉的地方。
+    /// </para>
     /// </summary>
     private static void ApplyDictionaries(string languageCode)
     {
         var app = Application.Current;
         if (app is null) return;
 
-        var dicts = app.Resources.MergedDictionaries;
-
-        if (_fallbackDict is not null) dicts.Remove(_fallbackDict);
-        if (_currentDict is not null) dicts.Remove(_currentDict);
-
-        // ① 兜底层：默认语言，始终加载
-        _fallbackDict = LoadDictionary(LocalizationModels.DefaultLanguageCode);
-        if (_fallbackDict is not null) dicts.Add(_fallbackDict);
-
-        // ② 叠加层：仅当不是默认语言
-        _currentDict = null;
-        if (!LocalizationModels.IsDefaultLanguage(languageCode))
-        {
-            _currentDict = LoadDictionary(languageCode);
-            if (_currentDict is not null) dicts.Add(_currentDict);
-        }
-        PublishTextProvider();
-    }
-
-    private static ResourceDictionary? LoadDictionary(string languageCode)
-    {
+        // ① 读真相源（内嵌纯文本）。失败也不该把启动挡掉 —— 退回「只返回键」。
+        LanguageCatalog catalog;
         try
         {
-            return new ResourceDictionary
-            {
-                Source = new Uri($"{DictPrefix}{languageCode}.xaml", UriKind.Absolute)
-            };
+            catalog = LanguageCatalog.Load(languageCode);
         }
         catch (Exception ex)
         {
-            // 语言文件缺失/损坏不应把启动挡掉：退回只用默认语言
             Log.Warn("Localization", $"加载语言 {languageCode} 失败，将使用默认语言：{ex.Message}");
-            return null;
+            catalog = LanguageCatalog.Load(LanguageCatalog.FallbackLanguageCode);
         }
+
+        _catalog = catalog;
+
+        // ② 灌进 WPF 的资源字典。**只动自己那一个**，别碰主题字典。
+        var dicts = app.Resources.MergedDictionaries;
+        if (_languageDictionary is not null) dicts.Remove(_languageDictionary);
+
+        var dictionary = new ResourceDictionary();
+        foreach (var pair in catalog.AllEntries()) dictionary.Add(pair.Key, pair.Value);
+        dicts.Add(dictionary);
+        _languageDictionary = dictionary;
+
+        // ③ 让业务层/ViewModel 侧的取文案也走同一份目录。
+        PublishTextProvider();
     }
 
     /// <summary>
-    /// 读设置（语言）。设置服务是 <see cref="Services.AppServices.Settings"/>；
+    /// 读设置（语言）。设置服务是 <see cref="UMango.Shell.Services.AppServices.Settings"/>；
     /// 读不到/抛错时返回 null（调用方按"未设置"处理，等于跟随系统）。
     /// </summary>
     private static string? ReadSetting(string key)
@@ -146,6 +158,9 @@ private const string DictPrefix = "pack://application:,,,/umango.app;component/l
         }
     }
 
+    /// <summary>
+    /// 写设置（语言）。写失败只记日志，不抛 —— 语言切换不该让界面崩掉。
+    /// </summary>
     private static void WriteSetting(string key, string value)
     {
         try
@@ -188,7 +203,7 @@ private const string DictPrefix = "pack://application:,,,/umango.app;component/l
     /// <see cref="BuildOptions"/> 的说明（避免在无 UI 环境碰 Application 类型）。
     /// </summary>
     private static string FollowSystemDisplayName() =>
-        System.Globalization.CultureInfo.CurrentUICulture.Name is { Length: > 0 } ui
+        CultureInfo.CurrentUICulture.Name is { Length: > 0 } ui
             ? $"{LocalizationModels.Auto}（{ui}）"
             : LocalizationModels.Auto;
 
@@ -197,7 +212,7 @@ private const string DictPrefix = "pack://application:,,,/umango.app;component/l
     {
         // ⚠ 首项文案**不要**调 <see cref="Text"/>：那会碰 Application 类型，
         //   而 PresentationFramework 只存在于 Windows，macOS 上测试宿主直接
-        // FileNotFoundException（7 个 SettingsViewModel 用例就是这样全军覆没的）。
+        //   FileNotFoundException（7 个 SettingsViewModel 用例就是这样全军覆没的）。
         // 「跟随系统」这句话本身就该跟着界面语言走，而 DisplayName 恰好就是
         // 各语言自称，语义等价且零依赖。
         var options = new List<LanguageOption>
@@ -215,28 +230,21 @@ private const string DictPrefix = "pack://application:,,,/umango.app;component/l
     public sealed record LanguageOption(string Code, string DisplayName);
 
     /// <summary>
-    /// 把 WPF 资源字典包装成 <see cref="ITextProvider"/>，装进
-    /// <see cref="LocalizationService"/>。这样业务层/ViewModel 就能在**不引用
-    /// Application 类型**的前提下取本地化文案 —— 那个类型在 macOS 测试宿主里
-    /// 会让 PresentationFramework 加载失败（App.Tests 56 处构造 ViewModel）。
-    /// </summary>
-    private sealed class ResourceDictionaryTextProvider : ITextProvider
-    {
-        private readonly Func<string, string?> _lookup;
-
-        public ResourceDictionaryTextProvider(Func<string, string?> lookup) => _lookup = lookup;
-
-        public string Text(string key) => _lookup(key) ?? key;
-    }
-
-    /// <summary>
-    /// 让 <see cref="LocalizationService.Text"/> 走本类的资源字典查找。
-    /// 在 <see cref="ApplyDictionaries"/> 之后调用（字典已就位）。
+    /// 让 <see cref="LocalizationService.Text"/> 走 <see cref="LanguageCatalog"/>。
+    /// 这样业务层/ViewModel 就能在**不引用 Application 类型**的前提下取本地化文案 ——
+    /// 那个类型在 macOS 测试宿主里会让 PresentationFramework 加载失败
+    /// （App.Tests 56 处构造 ViewModel）。
     /// </summary>
     private static void PublishTextProvider()
     {
-        LocalizationService.SetTextProvider(
-            new ResourceDictionaryTextProvider(key => Application.Current?.TryFindResource(key) as string));
+        var catalog = _catalog;
+        if (catalog is null)
+        {
+            LocalizationService.SetTextProvider(KeyOnlyTextProvider.Instance);
+            return;
+        }
+
+        LocalizationService.SetTextProvider(new CatalogTextProvider(catalog));
     }
 }
 

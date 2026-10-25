@@ -662,7 +662,7 @@
                      Text="{DynamicResource Settings.Appearance.Section}"/>
           <TextBlock FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrG3}"
-                     Text="{DynamicResource Settings.Appearance.Hint}"/>
+                     Text="{DynamicResource Settings.Appearance.WindowHint}"/>
 
           <TextBlock FontSize="12" Margin="0,10,0,0"
                      Foreground="{DynamicResource BrG2}"

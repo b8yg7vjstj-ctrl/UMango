@@ -1,10 +1,11 @@
-using UMango.App.Services;
 using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.App.Tasks;
 using UMango.Core.Configuration;
 using UMango.Core.Logging;
 using UMango.Core.PackageManagers;
 using Xunit;
+using UMango.Shell.Services;
 
 namespace UMango.App.Tests;
 
@@ -72,7 +73,6 @@ public class WiringSmokeTests
         var shell = new ShellViewModel();
         var download = new DownloadViewModel();
         var progress = new ProgressViewModel();
-        var settings = new SettingsViewModel();
         var tools = new ToolsViewModel();
         var downloader = new DownloaderViewModel();
         var log = new LogViewModel();
@@ -135,6 +135,7 @@ public class WiringSmokeTests
         TaskCenter.Remove(task);
 
         // ── 6) 设置页：读一遍全部公开状态，再逐个改动 ──
+        var settings = new SettingsViewModel();
         Assert.Equal(2, settings.Themes.Count);
         Assert.Equal(2, settings.AnimationDirections.Count);
 

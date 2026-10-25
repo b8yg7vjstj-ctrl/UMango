@@ -1,8 +1,9 @@
-using UMango.App.Services;
 using UMango.App.ViewModels;
+using UMango.Shell.ViewModels;
 using UMango.Core.Configuration;
 using UMango.Core.Terminal;
 using Xunit;
+using UMango.Shell.Services;
 
 namespace UMango.App.Tests;
 

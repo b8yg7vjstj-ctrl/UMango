@@ -159,7 +159,7 @@ public static class ThemeManager
 
         // 动效预设随主题同步（需求：「动效之类的在 PCL 主题中完整保留」）。
         // 只写 profile 一个键 —— 读改写会覆盖用户单独改过的其他动画设置。
-        Services.AppSettings.Settings.Set(
+        UMango.Shell.Services.AppSettings.Settings.Set(
             UMango.Core.Configuration.UiSettings.AnimationProfileKey,
             kind == ThemeKind.PclClassic ? MotionProfileKind.Pcl : MotionProfileKind.Fluent);
 

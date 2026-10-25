@@ -2,6 +2,7 @@ using PCL.Core.UI;
 using UMango.App.Services;
 using UMango.Core.Notifications;
 using Xunit;
+using UMango.Shell.Services;
 
 namespace UMango.App.Tests;
 

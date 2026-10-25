@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using UMango.App.Localization;
 using UMango.App.Services;
 using UMango.Core.UI.Homepage;
+using UMango.Shell.Services;
 
 namespace UMango.App.Views;
 

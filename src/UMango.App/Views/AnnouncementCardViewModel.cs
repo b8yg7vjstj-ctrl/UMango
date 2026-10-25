@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using UMango.App.Localization;
 using UMango.App.Services;
 using UMango.Core.Announcements;
+using UMango.Shell.Services;
 
 namespace UMango.App.Views;
 

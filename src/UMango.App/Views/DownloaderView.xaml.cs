@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using UMango.App.Services;
 using UMango.App.ViewModels;
 using UMango.Core.Download;
+using UMango.Shell.Services;
+using UMango.Shell.ViewModels;
 
 namespace UMango.App.Views;
 

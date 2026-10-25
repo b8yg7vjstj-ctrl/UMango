@@ -7,6 +7,8 @@ using UMango.App.ViewModels;
 using UMango.Core.Animation;
 
 using UMango.App.Themes;
+using UMango.Shell.Services;
+using UMango.Shell.ViewModels;
 
 namespace UMango.App;
 
@@ -90,8 +92,8 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
         // 再汇入 Core 的提示队列（HintService）。
         // 渲染**不**直接挂 OnShow —— 按 PCL 的做法，由下面的心跳 Tick 驱动队列出队，
         // 这样"去重 / 条数上限 / 停留时长"只有一处规则（Core 的 HintService）。
-        Services.AppServices.Notifications.Hints.Cleared += ClearToasts;
-        _hintPump = new Services.HintPump(Services.AppServices.Notifications.Hints);
+        UMango.Shell.Services.AppServices.Notifications.Hints.Cleared += ClearToasts;
+        _hintPump = new Services.HintPump(UMango.Shell.Services.AppServices.Notifications.Hints);
         _hintTimer = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(40),
@@ -103,10 +105,10 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
         _shell.PropertyChanged += OnShellPropertyChanged;
 
         // 自定义主页卡片里的快捷动作 → 跳到对应页面（声明式主页的落点）。
-        Services.AppServices.Homepage.NavigationRequested += NavigateFromHomepage;
+        UMango.Shell.Services.AppServices.Homepage.NavigationRequested += NavigateFromHomepage;
 
         // 公告按钮里的快捷动作 → 同样跳到对应页面（白名单已限制在五个页面内）。
-        Services.AppServices.Announcements.NavigationRequested += NavigateFromHomepage;
+        UMango.Shell.Services.AppServices.Announcements.NavigationRequested += NavigateFromHomepage;
 
         // 导航副标题栏：跟着导航宿主的状态刷新。
         _nav.PropertyChanged += (_, e) =>
@@ -152,17 +154,17 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
         // 动态背景（对应 PCL-CE 的 ImgBack / VideoBack 两层）：
         // 判定逻辑在 Core，窗口这里只负责把结论落到控件上。
         _background = new Media.Background.BackgroundPresenter(BgImage, BgVideo);
-        _backgroundVm = new ViewModels.BackgroundViewModel(Services.AppSettings.Settings);
-        Services.AppSettings.BackgroundChanged += ApplyBackgroundSettings;
+        _backgroundVm = new UMango.Shell.ViewModels.BackgroundViewModel(UMango.Shell.Services.AppSettings.Settings);
+        UMango.Shell.Services.AppSettings.BackgroundChanged += ApplyBackgroundSettings;
         StateChanged += (_, _) => ApplyBackgroundPlayback();
         Loaded += (_, _) => ApplyBackgroundSettings();
 
         // 功能隐藏：PCL 的「隐藏功能」机制（见 Core 的 HidePolicy）。
-        Services.AppSettings.HiddenEntriesChanged += ApplyHiddenEntries;
+        UMango.Shell.Services.AppSettings.HiddenEntriesChanged += ApplyHiddenEntries;
         ApplyHiddenEntries();
 
         // 高级材质（界面模糊）：PCL 的 UiBlur / UiBlurValue / UiBlurSamplingRate / UiBlurType。
-        Services.AppSettings.BlurChanged += ApplyBlurSettings;
+        UMango.Shell.Services.AppSettings.BlurChanged += ApplyBlurSettings;
         ApplyBlurSettings();
     }
 
@@ -177,10 +179,10 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
     /// </summary>
     private void ApplyBlurSettings()
     {
-        var enabled = Services.AppSettings.Settings.Get<bool>(UMango.Core.Configuration.UiSettings.BlurEnabledKey);
-        var radius = Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BlurRadiusKey);
-        var sampling = Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BlurSamplingRateKey);
-        var kernel = Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BlurKernelTypeKey);
+        var enabled = UMango.Shell.Services.AppSettings.Settings.Get<bool>(UMango.Core.Configuration.UiSettings.BlurEnabledKey);
+        var radius = UMango.Shell.Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BlurRadiusKey);
+        var sampling = UMango.Shell.Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BlurSamplingRateKey);
+        var kernel = UMango.Shell.Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BlurKernelTypeKey);
 
         if (!enabled || radius <= 0)
         {
@@ -208,7 +210,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
     /// </summary>
     private void ApplyHiddenEntries()
     {
-        var policy = Services.AppSettings.ReadHidePolicy();
+        var policy = UMango.Shell.Services.AppSettings.ReadHidePolicy();
         var resolution = Core.UI.Customization.HidePolicy.Resolve(policy);
 
         // 工具页左栏：被藏起来的入口从菜单里去掉（ShellViewModel 是菜单的唯一真相来源）。
@@ -264,7 +266,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
     private Media.Background.BackgroundPresenter? _background;
 
     /// <summary>动态背景的判定与状态。</summary>
-    private ViewModels.BackgroundViewModel? _backgroundVm;
+    private UMango.Shell.ViewModels.BackgroundViewModel? _backgroundVm;
 
     /// <summary>
     /// 重新铺背景：扫目录 → 挑一个 → 交给显示端。
@@ -283,8 +285,8 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
         }
 
         _background.ApplyAppearance(
-            Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BackgroundOpacityKey),
-            Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BackgroundBlurKey));
+            UMango.Shell.Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BackgroundOpacityKey),
+            UMango.Shell.Services.AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.BackgroundBlurKey));
 
         var picked = _backgroundVm.Refresh();
         if (picked is null)
@@ -293,7 +295,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
             return;
         }
 
-        var suit = Services.AppSettings.Settings
+        var suit = UMango.Shell.Services.AppSettings.Settings
             .Get<UMango.Core.Media.Background.BackgroundSuitMode>(
                 UMango.Core.Configuration.UiSettings.BackgroundSuitKey);
 
@@ -437,7 +439,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
     {
         // PCL 主题 + 动画开启时：先播 PCL 原版退场（70ms 上收），到位后再切可见性并播入场。
         // 退场调用形状逐字对照 PCL-CE MyPageRight.cs:618-623。
-        if (ThemeManager.CurrentKind == ThemeKind.PclClassic && Services.AppSettings.Animation.Enabled)
+        if (ThemeManager.CurrentKind == ThemeKind.PclClassic && UMango.Shell.Services.AppSettings.Animation.Enabled)
         {
             var leaving = CurrentVisibleView();
             if (leaving is not null)
@@ -535,7 +537,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
         // PCL 主题 + 动画开启：走 **PCL-CE 原版动画 API**（ModAnimation 是逐字采用的
         // PCL 代码本体，见 Pcl/ModAnimation.cs 文件头）。调用形状逐字对照
         // PCL-CE MyPageRight.cs:578-587 —— 这就是"动效在 PCL 主题中完整保留"的字面实现。
-        if (ThemeManager.CurrentKind == ThemeKind.PclClassic && Services.AppSettings.Animation.Enabled)
+        if (ThemeManager.CurrentKind == ThemeKind.PclClassic && UMango.Shell.Services.AppSettings.Animation.Enabled)
         {
             // PCL 的 MyPageRight 是**整页 + 子项级联**两层叠加：
             //   · 整页：Opacity 0→1、TranslateY -16→+5→+11（逐字调用 ModAnimation）
@@ -827,7 +829,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
             _toasts.Remove(item);
             // 通知 Core：该条已经不在屏幕上了 → 从"已显示"列表移除，
             // 否则同样文案再来一次会被查重挡掉（而用户已经看不到它了）。
-            Services.AppServices.Notifications.Hints.NotifyDismissed(message);
+            UMango.Shell.Services.AppServices.Notifications.Hints.NotifyDismissed(message);
         };
         timer.Start();
     }
@@ -888,9 +890,9 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
     {
         _setupObserver?.Dispose();
         _setupObserver = new Services.SetupObserver(
-            Services.AppSettings.Settings,
+            UMango.Shell.Services.AppSettings.Settings,
             this,
-            Services.AppServices.ProxyManager,
+            UMango.Shell.Services.AppServices.ProxyManager,
             message => UMango.Core.Logging.Log.Warn("Setup", message));
         _setupObserver.Subscribe();
         _setupObserver.ApplyAll();

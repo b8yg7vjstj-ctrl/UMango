@@ -3,6 +3,7 @@ using UMango.Core.Announcements;
 using UMango.Core.Configuration;
 using UMango.Core.Network;
 using Xunit;
+using UMango.Shell.Services;
 
 namespace UMango.App.Tests;
 

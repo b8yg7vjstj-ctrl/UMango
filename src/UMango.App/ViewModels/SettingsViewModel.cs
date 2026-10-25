@@ -12,6 +12,8 @@ using UMango.Core.Network;
 using UMango.Core.Media.Background;
 
 using UMango.App.Localization;
+using UMango.Shell.Services;
+using UMango.Shell.ViewModels;
 
 namespace UMango.App.ViewModels;
 

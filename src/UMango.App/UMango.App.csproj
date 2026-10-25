@@ -28,6 +28,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\UMango.Core\UMango.Core.csproj" />
+    <!-- UMango.Shell：两个界面壳共用的那一层（界面文案目录、ViewModel、可移植服务）。
+         刻意是 net10.0（不设 UseWPF）—— 这样 macOS/Linux 上的 Avalonia 壳能引用同一份代码，
+         不必复制一份（复制必然发散）。 -->
+    <ProjectReference Include="..\UMango.Shell\UMango.Shell.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- 像素着色器：自适应模糊效果用的 AdaptiveBlur.ps（自 PCL-CE 的 Apache-2.0 层采用）。

@@ -18,5 +18,8 @@
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
     <!-- 多目标库默认解析到 net10.0-windows；这里强制取平台中立的 net10.0 -->
     <ProjectReference Include="..\UMango.Core\UMango.Core.csproj" SetTargetFramework="TargetFramework=net10.0" />
+    <!-- Shell 是跨框架那一层（组合根 + 可移植 ViewModel + PCL UI 契约桥）。
+         WPF 壳与 Avalonia 壳共用同一份，避免两边必然发散。 -->
+    <ProjectReference Include="..\UMango.Shell\UMango.Shell.csproj" />
   </ItemGroup>
 </Project>

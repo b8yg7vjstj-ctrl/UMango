@@ -626,7 +626,7 @@ public static class Config
     public static ConfigSystem System { get; } = new();
     public sealed class ConfigSystem
     {
-        public int AnimationFpsLimit => UMango.App.Services.AppSettings.Animation.FpsLimit;
+        public int AnimationFpsLimit => UMango.Shell.Services.AppSettings.Animation.FpsLimit;
     }
 }
 

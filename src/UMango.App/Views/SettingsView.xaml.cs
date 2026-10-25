@@ -10,6 +10,7 @@ using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Localization;
 using UMango.App.Localization;
+using UMango.Shell.Services;
 
 namespace UMango.App.Views;
 

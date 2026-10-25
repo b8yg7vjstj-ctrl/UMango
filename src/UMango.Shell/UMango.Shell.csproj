@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    **UMango.Shell —— 两个界面壳（WPF / Avalonia）共用的那一层。**
+
+    为什么需要这个工程：
+      · UMango 的界面逻辑（ViewModel、组合根、可移植的服务、界面文案）本来都长在
+        `UMango.App`（WPF 工程）里，于是 macOS/Linux 那一侧要么**复制一份**（重复代码，
+        两边必然发散），要么**什么都做不了**（现在 Avalonia 壳只有 804 行、只有主页）。
+      · 本工程把「与 UI 框架无关」的那部分抽出来，WPF 壳与 Avalonia 壳都消费它，
+        于是两个平台的观感与行为天然一致，PCL-CE 的功能只要在 Core/Shell 里实现一次。
+
+    刻意**不设 UseWPF**：这是本工程能存在的全部意义。
+    一旦引入 PresentationFramework，它就只能编到 net10.0-windows，
+    macOS/Linux 上的 Avalonia 壳将无法引用 —— 那等于没抽。
+
+    目标框架是 `net10.0`（覆盖 src/Directory.Build.props 里的 net10.0-windows）。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>UMango.Shell</AssemblyName>
+    <RootNamespace>UMango.Shell</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 与 Core / App 同版本，不引入新依赖。
+         显式引用的原因同 UMango.App：NuGet 的 PackageReference 默认把 analyzers
+         设成 PrivateAssets，传递过来时**不带源生成器**，而本工程的 ViewModel
+         全靠 [ObservableProperty] / [RelayCommand] 生成成员。 -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Core 是多目标（net10.0;net10.0-windows）。本工程只编 net10.0，
+         所以必须显式指定引用哪一档 —— 否则 MSBuild 会拿 net10.0-windows 那档，
+         报「不能被指向 .NETCoreApp,Version=v10.0 的项目引用」。
+         这与 UMango.Avalonia 里的做法一致。 -->
+    <ProjectReference Include="..\UMango.Core\UMango.Core.csproj"
+                      SetTargetFramework="TargetFramework=net10.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 界面文案的**唯一真相源**（纯文本，跨框架可读）。
+         WPF 侧的 .xaml 资源字典由 scripts/sync-language-xaml.py 从这里生成，
+         并且有测试守着两边一致（漂移会被测试抓住）。 -->
+    <EmbeddedResource Include="Localization\Languages\*.txt" />
+  </ItemGroup>
+
+</Project>

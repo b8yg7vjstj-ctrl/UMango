@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    UMango.Shell 的测试工程。
+
+    · 目标框架是 **net10.0**（不是 Directory.Build.props 里默认的 net10.0-windows）：
+      Shell 是跨框架那一层，测试也不该只在 Windows 上能跑。
+    · 不设 UseWPF —— 被测对象不引用任何 UI 框架类型。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <DisableTransitiveFrameworkReferences>true</DisableTransitiveFrameworkReferences>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shell 是 net10.0；它引用的 Core 是多目标。显式指定引用 net10.0 那档，
+         否则 MSBuild 会拿 net10.0-windows 那档，报「不能被指向 .NETCoreApp,Version=v10.0」。
+         这里**直接**引 Core（而不是只靠 Shell 传递），因为传递引用的 TFM 解析
+         不会继承 SetTargetFramework。 -->
+    <ProjectReference Include="..\UMango.Core\UMango.Core.csproj"
+                      SetTargetFramework="TargetFramework=net10.0" />
+    <ProjectReference Include="..\UMango.Shell\UMango.Shell.csproj" />
+  </ItemGroup>
+
+</Project>

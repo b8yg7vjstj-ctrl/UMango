@@ -1,5 +1,6 @@
 using UMango.App.ViewModels;
 using UMango.Core.UI.Navigation;
+using UMango.Shell.ViewModels;
 
 namespace UMango.App.Services;
 

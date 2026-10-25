@@ -8,6 +8,7 @@ using UMango.Core.App.Essentials;
 using UMango.Core.Cli;
 using UMango.Core.Configuration;
 using UMango.Core.Logging;
+using UMango.Shell.Services;
 
 namespace UMango.App;
 
@@ -74,6 +75,13 @@ public partial class App : Application
         SeedServices();
         HookGlobalExceptionHandlers();
         Services.CrashReporter.Initialize();
+
+        // PCL UI 契约接线：HintWrapper（提示）与 MsgBoxWrapper（对话框）的宿主。
+        // 对话框的显示由界面壳提供（IDialogHost）—— WPF 用 Dispatcher，Avalonia 用它自己的
+        // UI 线程；桥本身与 UI 框架无关，因此两个壳共用同一份实现。
+        UMango.Shell.Services.PclUiBridge.Wire(UMango.Shell.Services.AppServices.Notifications);
+        UMango.Shell.Services.PclUiBridge.DialogHost = new Services.WpfDialogHost();
+
         ApplySavedTheme();
         ApplySavedLanguage();
 
@@ -109,8 +117,8 @@ public partial class App : Application
             priority: 0));
         _lifecycle.Register(new Core.App.Essentials.LifecycleServiceRegistration(
             "RpcHost",
-            () => { Services.AppServices.Rpc.InstallDefaultEndpoints(); Services.AppServices.Rpc.PublishPipeName(); },
-            () => Services.RpcHost.RemovePipeNameFile(),
+            () => { UMango.Shell.Services.AppServices.Rpc.InstallDefaultEndpoints(); UMango.Shell.Services.AppServices.Rpc.PublishPipeName(); },
+            () => UMango.Shell.Services.RpcHost.RemovePipeNameFile(),
             priority: 10));
         _lifecycle.Start();
 

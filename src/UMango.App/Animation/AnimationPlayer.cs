@@ -28,7 +28,7 @@ public static class AnimationPlayer
     /// <summary>播放入场动画（位移 + 淡入）—— 直接用 WPF DoubleAnimation。</summary>
     public static void PlayEntrance(FrameworkElement element, ElementMotion motion, AnimationSettings? settings = null)
     {
-        var spec = AnimationPlanner.Plan(motion, settings ?? Services.AppSettings.Animation);
+        var spec = AnimationPlanner.Plan(motion, settings ?? UMango.Shell.Services.AppSettings.Animation);
         if (spec.IsInstant) { Reset(element); return; }
 
         var transform = EnsureTransform(element);
@@ -74,7 +74,7 @@ public static class AnimationPlayer
         FrameworkElement element, ElementMotion motion,
         AnimationSettings? settings = null, CancellationToken ct = default)
     {
-        var eff = settings ?? Services.AppSettings.Animation;
+        var eff = settings ?? UMango.Shell.Services.AppSettings.Animation;
         var (x, y, o) = WpfAnimatable.FromElement(element);
 
         if (TryBuildBinding(motion, eff, x, y, o, out var binding))
@@ -103,7 +103,7 @@ public static class AnimationPlayer
     public static void PlayWithEngineFireAndForget(
         FrameworkElement element, ElementMotion motion, AnimationSettings? settings = null)
     {
-        var eff = settings ?? Services.AppSettings.Animation;
+        var eff = settings ?? UMango.Shell.Services.AppSettings.Animation;
         var (x, y, o) = WpfAnimatable.FromElement(element);
 
         if (TryBuildBinding(motion, eff, x, y, o, out var binding))
@@ -166,7 +166,7 @@ public static class AnimationPlayer
 
     public static void PrimeStartState(FrameworkElement element, ElementMotion motion, AnimationSettings? settings = null)
     {
-        var spec = AnimationPlanner.Plan(motion, settings ?? Services.AppSettings.Animation);
+        var spec = AnimationPlanner.Plan(motion, settings ?? UMango.Shell.Services.AppSettings.Animation);
         if (spec.IsInstant) { Reset(element); return; }
         var transform = EnsureTransform(element);
         transform.X = spec.FromOffsetX;

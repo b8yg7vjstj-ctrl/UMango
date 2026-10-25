@@ -12,6 +12,8 @@ using UMango.App.ViewModels;
 using UMango.Core.PackageManagers;
 using UMango.Core.Localization;
 using UMango.App.Localization;
+using UMango.Shell.Services;
+using UMango.Shell.ViewModels;
 namespace UMango.App.Views;
 
 

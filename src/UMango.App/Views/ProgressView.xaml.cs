@@ -13,6 +13,8 @@ using UMango.Core.App.Tasks;
 using UMango.Core.Terminal;
 using UMango.Core.Localization;
 using UMango.App.Localization;
+using UMango.Shell.Services;
+using UMango.Shell.ViewModels;
 
 namespace UMango.App.Views;
 

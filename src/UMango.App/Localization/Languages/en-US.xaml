@@ -4,6 +4,11 @@
   Only keys that DIFFER from the zh-CN fallback are listed here; the rest are
   inherited. See zh-CN.xaml header for the layering model (from PCL-CE's
   LocalizationService, Apache-2.0).
+
+  ⚠ **AUTO-GENERATED — do not edit by hand.**
+  Source of truth: src/UMango.Shell/Localization/Languages/en-US.txt
+  (cross-framework plain text read by both shells).
+  Edit the .txt, then run: python3 scripts/sync-language-xaml.py
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -80,7 +85,6 @@
     <sys:String x:Key="Download.Error.OtherOsOnly">This source only supports other operating systems.</sys:String>
     <sys:String x:Key="Download.Error.NoCliDetail">No usable CLI tool was found</sys:String>
     <sys:String x:Key="Download.Error.CategoryUnavailable">{0} is unavailable ({1}).</sys:String>
-
     <sys:String x:Key="Download.Title">Download</sys:String>
     <sys:String x:Key="Download.NewDownload">New download</sys:String>
     <sys:String x:Key="Download.SearchPlaceholder">Search packages…</sys:String>
@@ -203,6 +207,7 @@
     <sys:String x:Key="Log.OpenFolder">Open log folder</sys:String>
     <sys:String x:Key="Log.Export">Export diagnostics</sys:String>
     <sys:String x:Key="Log.StorageHint">Logs are also written to files (one per day, kept for 7 days). The list above is the last 3000 entries in memory, cleared on restart; files are kept.</sys:String>
+
     <!-- ============ Downloader ============ -->
     <sys:String x:Key="Downloader.Title">New download</sys:String>
     <sys:String x:Key="Downloader.SaveTo">Save to</sys:String>
@@ -246,7 +251,6 @@
     <sys:String x:Key="Download.Installing">Installing {0}… step progress and terminal output are on the Progress page.</sys:String>
     <sys:String x:Key="Download.InstallDone">Installed: {0} ({1:0.0}s).</sys:String>
     <sys:String x:Key="Download.InstallFailed">Failed to install {0}.</sys:String>
-    <sys:String x:Key="Download.CanceledHint">You can start again; already-downloaded content is managed by the package manager.</sys:String>
     <sys:String x:Key="Download.Unexpected">Unexpected error; retry. If it keeps happening, check diagnostics on the Tools page.</sys:String>
     <sys:String x:Key="Download.ExportedTo">Exported to desktop: {0}</sys:String>
     <sys:String x:Key="Advice.CliMissing">No CLI tool found for this source. Install it, then click "Refresh sources" here.</sys:String>
@@ -288,7 +292,7 @@
     <sys:String x:Key="State.Unreachable">Unreachable</sys:String>
 
     <!-- ============ 阶段3 补：设置页选项 / 日志页诊断 / 进度页 ============ -->
-        <sys:String x:Key="Settings.Theme.PclName">PCL Classic</sys:String>
+    <sys:String x:Key="Settings.Theme.PclName">PCL Classic</sys:String>
     <sys:String x:Key="Settings.Theme.PclDesc">Keeps the existing PCL design values; matches the reference capture pixel for pixel</sys:String>
     <sys:String x:Key="Settings.Theme.Fluent10Name">Windows 10 Fluent</sys:String>
     <sys:String x:Key="Settings.Theme.Fluent10Desc">Restores the square, compact Windows 10 Settings look (solid title bar, small corners; not Win11/WinUI3)</sys:String>
@@ -378,7 +382,6 @@
     <sys:String x:Key="Tools.Report.HomeDir">Home directory: {0}</sys:String>
     <sys:String x:Key="Tools.Report.RecordPath">Record file: {0}</sys:String>
     <sys:String x:Key="Tools.Report.DebugOut">Debug output: {0}</sys:String>
-    <sys:String x:Key="Tools.Report.InitWarning">Startup warning: {0}</sys:String>
     <sys:String x:Key="Tools.Report.SourceDetail">Package source details:</sys:String>
     <sys:String x:Key="Tools.Report.NotProbed">(not probed yet; press Re-probe)</sys:String>
     <sys:String x:Key="Tools.Report.SourceRow">· {0} | {1} | supported here: {2}</sys:String>
@@ -431,7 +434,6 @@
     <sys:String x:Key="Window.Minimize">Minimize</sys:String>
     <sys:String x:Key="Window.Maximize">Maximize</sys:String>
     <sys:String x:Key="Window.Close">Close</sys:String>
-
     <sys:String x:Key="Settings.Update.Section">Check for updates</sys:String>
     <sys:String x:Key="Settings.Update.CurrentVersion">Current version: {0}</sys:String>
     <sys:String x:Key="Settings.Update.Checking">Checking for updates…</sys:String>
@@ -448,7 +450,9 @@
 
     <!-- ============ 灰度模式 ============ -->
     <sys:String x:Key="Settings.GrayMode">Gray mode</sys:String>
-    <sys:String x:Key="Settings.GrayMode.Hint">Strip all color and keep only the light/dark layers — commonly used on mourning days. Takes effect immediately; the matching tone is picked for the current light or dark theme.</sys:String><!-- ============ 校验器 ============ -->
+    <sys:String x:Key="Settings.GrayMode.Hint">Strip all color and keep only the light/dark layers — commonly used on mourning days. Takes effect immediately; the matching tone is picked for the current light or dark theme.</sys:String>
+
+    <!-- ============ 校验器 ============ -->
     <sys:String x:Key="Validation.Empty">Input must not be empty.</sys:String>
     <sys:String x:Key="Validation.Blank">Input must not be blank.</sys:String>
     <sys:String x:Key="Validation.LeadingSpace">Must not start with a space.</sys:String>
@@ -470,12 +474,14 @@
     <sys:String x:Key="Validation.MinLength">Length must be at least {0} characters.</sys:String>
     <sys:String x:Key="Validation.MaxLength">Length must be at most {0} characters.</sys:String>
     <sys:String x:Key="Validation.RegexMismatch">Does not match the required format: {0}</sys:String>
-    <sys:String x:Key="Validation.Blacklisted">Must not contain this term: {0}</sys:String>  <sys:String x:Key="Settings.FollowSystem">Follow the system appearance</sys:String>
-  <sys:String x:Key="Settings.FollowSystem.Hint">When checked, light/dark follows the operating system appearance; uncheck to use the manual switch above.</sys:String>
+    <sys:String x:Key="Validation.Blacklisted">Must not contain this term: {0}</sys:String>
+    <sys:String x:Key="Settings.FollowSystem">Follow the system appearance</sys:String>
+    <sys:String x:Key="Settings.FollowSystem.Hint">When checked, light/dark follows the operating system appearance; uncheck to use the manual switch above.</sys:String>
     <sys:String x:Key="SystemDialog.File.SelectTitle">Select file</sys:String>
     <sys:String x:Key="SystemDialog.File.AllFilesFilter">All files|*.*</sys:String>
     <sys:String x:Key="SystemDialog.Folder.SelectTitle">Select folder</sys:String>
     <sys:String x:Key="Downloader.Browse">Browse…</sys:String>
+
     <!-- ============ 代理设置 ============ -->
     <sys:String x:Key="Settings.Proxy.Section">Network proxy</sys:String>
     <sys:String x:Key="Settings.Proxy.Hint">Package manager downloads and update checks follow this setting. "Follow system" reads the operating system proxy automatically.</sys:String>
@@ -486,7 +492,6 @@
     <sys:String x:Key="Settings.Proxy.Status.Custom">Using the custom proxy: {0}</sys:String>
     <sys:String x:Key="Settings.Proxy.Status.SystemFound">System proxy detected: {0}</sys:String>
     <sys:String x:Key="Settings.Proxy.Status.SystemNone">No system proxy was found (the system has none enabled, or it could not be read); requests go out directly for now.</sys:String>
-
     <sys:String x:Key="Homepage.Section">Custom homepage</sys:String>
     <sys:String x:Key="Homepage.ManifestPath">Manifest file: {0}</sys:String>
     <sys:String x:Key="Homepage.NoManifest">No custom homepage configured. Drop a JSON manifest at the path above; edits apply automatically.</sys:String>
@@ -497,7 +502,6 @@
     <sys:String x:Key="Homepage.OpenLinkFailed">Failed to open link: {0}</sys:String>
     <sys:String x:Key="Homepage.UnknownAction">Unregistered action: {0}</sys:String>
     <sys:String x:Key="Homepage.Tag">Tag</sys:String>
-
     <sys:String x:Key="Announcement.Section">Announcements</sys:String>
     <sys:String x:Key="Announcement.MarkShown">Mark as read</sys:String>
     <sys:String x:Key="Announcement.NoSource">No announcement source is configured. Set a JSON URL returning {"content":[…]} in Settings.</sys:String>
@@ -526,7 +530,6 @@
     <sys:String x:Key="Settings.Background.Suit.TopRight">Top right</sys:String>
     <sys:String x:Key="Settings.Background.Suit.BottomLeft">Bottom left</sys:String>
     <sys:String x:Key="Settings.Background.Suit.BottomRight">Bottom right</sys:String>
-
     <sys:String x:Key="Settings.Hidden.Section">Hidden entries</sys:String>
     <sys:String x:Key="Settings.Hidden.Hint">Comma-separated names of the entries to hide, for example TabDownload,ToolLogs. Available names: TabDownload / TabProgress / TabSettings / TabTools / ToolDownloader / ToolLogs / ToolDiagnostics / ToolLicenses / ToolFeedback / ToolMusic / ToolAbout. Unknown names are ignored.</sys:String>
     <sys:String x:Key="Settings.Hidden.ForceShow">Temporarily show all entries (ignore the list above)</sys:String>
@@ -541,7 +544,6 @@
     <sys:String x:Key="Settings.Blur.Kernel.Radial">Radial</sys:String>
     <sys:String x:Key="Settings.Blur.Kernel.Diagonal">Diagonal Gaussian</sys:String>
     <sys:String x:Key="Settings.Blur.Failed">Failed to save the blur settings: {0}</sys:String>
-
     <sys:String x:Key="Window.Back">Back</sys:String>
     <sys:String x:Key="Nav.Feedback">Feedback</sys:String>
     <sys:String x:Key="Feedback.Refresh">Refresh</sys:String>
@@ -589,16 +591,14 @@
     <sys:String x:Key="Music.Error.FileNotFound">File not found: {0}</sys:String>
     <sys:String x:Key="Music.Error.PlaybackFailed">Playback failed: {0}</sys:String>
     <sys:String x:Key="Nav.Music">Music</sys:String>
-
     <!-- Window appearance / download limits (setup observers, mirroring PCL-CE ModSetup) -->
     <sys:String x:Key="Settings.Appearance.Section">Window appearance</sys:String>
-    <sys:String x:Key="Settings.Appearance.Hint">These options are applied to the running window by the setup observers.</sys:String>
+    <sys:String x:Key="Settings.Appearance.WindowHint">These options are applied to the running window by the setup observers.</sys:String>
     <sys:String x:Key="Settings.Appearance.Opacity">Window opacity (per mille)</sys:String>
     <sys:String x:Key="Settings.Appearance.LockSize">Lock window size</sys:String>
     <sys:String x:Key="Settings.Appearance.Font">Interface font (empty = theme default)</sys:String>
     <sys:String x:Key="Settings.Appearance.TitleBarText">Title bar text (empty = app name)</sys:String>
     <sys:String x:Key="Settings.Appearance.TitleBarLeftAlign">Left-align title bar tabs</sys:String>
-
     <sys:String x:Key="Settings.Limits.Section">Download limits</sys:String>
     <sys:String x:Key="Settings.Limits.Hint">Limit concurrent connections and total speed so the app does not saturate the network.</sys:String>
     <sys:String x:Key="Settings.Limits.Threads">Max connections</sys:String>

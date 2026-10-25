@@ -20,6 +20,7 @@ using UMango.App.Media.Music;
 using UMango.App.Services;
 using UMango.Core.Configuration;
 using UMango.Core.Media.Music;
+using UMango.Shell.Services;
 
 namespace UMango.App.ViewModels;
 

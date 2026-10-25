@@ -1,4 +1,5 @@
 using Xunit;
+using UMango.Shell.Services;
 
 namespace UMango.App.Tests;
 

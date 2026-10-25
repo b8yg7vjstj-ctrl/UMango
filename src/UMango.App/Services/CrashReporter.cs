@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.IO;
 using UMango.Core.Diagnostics;
 using UMango.Core.Logging;
+using UMango.Shell.Services;
 
 namespace UMango.App.Services;
 

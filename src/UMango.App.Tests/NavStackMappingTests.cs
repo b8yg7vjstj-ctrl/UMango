@@ -2,6 +2,7 @@ using UMango.App.Services;
 using UMango.App.ViewModels;
 using UMango.Core.UI.Navigation;
 using Xunit;
+using UMango.Shell.ViewModels;
 
 namespace UMango.App.Tests;
 
