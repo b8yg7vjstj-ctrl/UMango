@@ -28,8 +28,16 @@ namespace UMango.App.Themes;
 /// </summary>
 public sealed class GrayModeController : IDisposable
 {
-    /// <summary>设置项键（与 <see cref="UiSettings"/> 的 token 命名一致）。</summary>
-    public const string GrayModeKey = "ui.appearance.grayMode";
+    /// <summary>
+    /// 设置项键（与 <see cref="UiSettings"/> 的 token 命名一致）。
+    ///
+    /// **刻意转发到 <see cref="UiSettings.GrayModeKey"/>**：这个键必须在 Core 的
+    /// <see cref="UiSettings.All"/> 里注册 —— <c>SettingsService.Get</c> 对未注册的键
+    /// 抛 <c>KeyNotFoundException</c>，而读它的地方在启动路径上
+    /// （<c>App.OnStartup → ApplyFromSettings</c>）。本类自己再抄一份字面量，
+    /// 就多了一个可能与 Core 悄悄分叉的副本。
+    /// </summary>
+    public const string GrayModeKey = UiSettings.GrayModeKey;
 
     private readonly GrayColorPlanner<SolidColorBrush> _planner = new();
 
@@ -142,7 +150,22 @@ public sealed class GrayModeController : IDisposable
     /// <param name="resources">目标资源字典，通常是 <c>Application.Current.Resources</c>。</param>
     public void ApplyFromSettings(ResourceDictionary? resources)
     {
-        Config = Config with { IsEnabled = UMango.Shell.Services.AppSettings.Settings.Get<bool>(GrayModeKey) };
+        // 读设置项有可能失败（键没注册、配置文件损坏、值类型对不上）。
+        // 这里是**启动路径**：一次读取失败不该让整个应用起不来 ——
+        // 灰度模式只是个装饰性开关，读不到就当作关闭，继续启动。
+        // 失败必须留下痕迹（否则「灰度模式怎么不生效」会变成查不到原因的问题）。
+        bool enabled;
+        try
+        {
+            enabled = UMango.Shell.Services.AppSettings.Settings.Get<bool>(GrayModeKey);
+        }
+        catch (Exception ex)
+        {
+            UMango.Core.Logging.Log.Warn("GrayMode", $"读取灰度模式设置失败，按关闭处理：{ex.Message}");
+            enabled = false;
+        }
+
+        Config = Config with { IsEnabled = enabled };
         Apply(resources);
     }
 
@@ -152,7 +175,15 @@ public sealed class GrayModeController : IDisposable
     public void SetEnabled(bool enabled, ResourceDictionary? resources)
     {
         Config = Config with { IsEnabled = enabled };
-        UMango.Shell.Services.AppSettings.Settings.Set(GrayModeKey, enabled);
+        try
+        {
+            UMango.Shell.Services.AppSettings.Settings.Set(GrayModeKey, enabled);
+        }
+        catch (Exception ex)
+        {
+            // 写不进去也不能让界面崩 —— 内存里的状态已经是新值了，界面照样立刻生效。
+            UMango.Core.Logging.Log.Warn("GrayMode", $"写入灰度模式设置失败：{ex.Message}");
+        }
         Apply(resources);
     }
 

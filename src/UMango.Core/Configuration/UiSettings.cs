@@ -145,6 +145,18 @@ public static class UiSettings
     /// <summary>标题栏左对齐（选项卡靠左而不是居中）。</summary>
     public const string TitleBarLeftAlignKey = "ui.appearance.titleBarLeftAlign";
 
+    /// <summary>
+    /// 灰度（哀悼日）模式开关。
+    ///
+    /// <para>
+    /// **这个键必须在 <see cref="All"/> 里注册**：<c>SettingsService.Get</c> 会先取描述符，
+    /// 描述符不存在就抛 <c>KeyNotFoundException</c>。而读它的地方在
+    /// <c>App.OnStartup → GrayModeController.ApplyFromSettings</c> —— <b>启动路径</b>。
+    /// 忘了注册 = 每次启动都炸，且编译期与单元测试都显形不出来。
+    /// </para>
+    /// </summary>
+    public const string GrayModeKey = "ui.appearance.grayMode";
+
     // ---------------- 下载限额 ----------------
 
     /// <summary>下载任务并发数。</summary>
@@ -592,6 +604,17 @@ public static class UiSettings
             Kind = SettingKind.Int,
             DefaultValue = 1000,
             Order = 50
+        },
+
+        new SettingDescriptor
+        {
+            Key = GrayModeKey,
+            Section = SectionAppearance,
+            Title = "灰度模式",
+            Description = "哀悼日模式：界面画笔整体脱色（WPF 侧逐个改写资源字典里的画笔）。",
+            Kind = SettingKind.Bool,
+            DefaultValue = false,
+            Order = 49
         },
 
         new SettingDescriptor
