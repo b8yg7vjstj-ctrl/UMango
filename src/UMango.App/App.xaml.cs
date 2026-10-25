@@ -35,6 +35,18 @@ public partial class App : Application
     private static bool _isFirstInstance = true;
 
     /// <summary>
+    /// 应用生命周期宿主。
+    ///
+    /// 采用 PCL-CE 的 <c>ApplicationService</c> + <c>MainWindowService</c>
+    /// （PCL.Core/App/Essentials/，Apache-2.0）的**编排语义**，
+    /// 但把 WPF 依赖全部推到 App 层：Core 的
+    /// <see cref="Core.App.Essentials.ApplicationLifecycleHost"/> 里
+    /// 应用的类型是 <see cref="object"/>，不泄漏 PresentationFramework。
+    /// 这样一个纯 .NET 的 Core 也能在 macOS/Linux 上编译并单测。
+    /// </summary>
+    private readonly Core.App.Essentials.ApplicationLifecycleHost _lifecycle = new();
+
+    /// <summary>
     /// 当前生效的灰度控制器。设置页改开关时用它立即施加，
     /// 否则光写设置项要等到下次启动或换主题才看得见效果。
     /// 为 <c>null</c> 表示在测试宿主里没有窗口与资源字典。
@@ -83,10 +95,23 @@ public partial class App : Application
             return;
         }
 
-        // RPC 宿主：让「已经在跑的 UMango」能被命令行/脚本调用
-        // （例如 `umango rpc REQ ping`）。默认不开放任何能力。
-        Services.AppServices.Rpc.InstallDefaultEndpoints();
-        Services.AppServices.Rpc.PublishPipeName();
+        // RPC 宿主与单实例的启动/停止交给下面的生命周期宿主统一编排。
+
+        // 生命周期宿主：登记「单实例」「RPC 宿主」两个服务，
+        // 让它们的启动/停止顺序由一张表决定，而不是散落在 OnStartup/OnExit 两处。
+        // 语义取自 PCL-CE 的 ApplicationService（Apache-2.0）。
+        _lifecycle.RegisterScope(new Core.App.Essentials.LifecycleScope("application", "应用程序"));
+        _lifecycle.Register(new Core.App.Essentials.LifecycleServiceRegistration(
+            "SingleInstance",
+            () => Log.Info("Lifecycle", "单实例服务已就绪"),
+            () => Services.SingleInstanceService.DisposeAsync().AsTask().GetAwaiter().GetResult(),
+            priority: 0));
+        _lifecycle.Register(new Core.App.Essentials.LifecycleServiceRegistration(
+            "RpcHost",
+            () => { Services.AppServices.Rpc.InstallDefaultEndpoints(); Services.AppServices.Rpc.PublishPipeName(); },
+            () => Services.RpcHost.RemovePipeNameFile(),
+            priority: 10));
+        _lifecycle.Start();
 
         // 放在最后：基类负责触发 Startup 事件，StartupUri 指向的主窗口在其之后创建，
         // 因此上面两步都先于首帧完成（主题不会"先用默认色画一帧再变"）。
@@ -193,13 +218,13 @@ public partial class App : Application
             Log.Flush();
             AppServices.LogFile?.Close();
 
+            // 生命周期宿主按**启动的逆序**停止已登记的服务
+            // （单实例锁 → RPC 管道名文件）。
             // 释放单例锁：删掉锁文件，避免进程被强杀后残留的锁让后续启动
             // 永远误判为"已有实例"（那时用户将永远打不开第二个窗口）。
-            Services.SingleInstanceService.DisposeAsync().AsTask().GetAwaiter().GetResult();
-
             // 删掉 RPC 管道名文件：否则命令行会一直以为「有个实例在跑」，
             // 然后连一个已经不存在的管道并等超时。
-            Services.RpcHost.RemovePipeNameFile();
+            _lifecycle.Stop();
 
             // 还原灰度改写的画笔：进程虽然在退出，但画刷可能被静态引用持有，
             // 留着脱色值会在设计器/复用场景下造成"颜色莫名其妙一直是灰的"。
