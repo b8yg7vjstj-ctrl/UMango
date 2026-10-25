@@ -80,9 +80,7 @@ public static class AppServices
     /// <summary>
     /// 日志目录（连同设置与记录文件一起放在用户配置目录下，便于一次性收集）。
     /// </summary>
-    public static string LogDirectory { get; } = Path.Combine(
-        Path.GetDirectoryName(InstallRecordStore.DefaultStorePath) ?? ".",
-        "logs");
+    public static string LogDirectory { get; } = AppPaths.Current.LogsDirectory;
 
     /// <summary>
     /// 下载引擎注册表（aria2 / eD2k / 内置 HttpClient）。
@@ -391,9 +389,7 @@ public static class AppSettings
     private static bool _initialized;
 
     /// <summary>设置文件路径（与 install-records.json 同目录，便于一起备份/清理）。</summary>
-    public static string SettingsPath { get; } = Path.Combine(
-        Path.GetDirectoryName(InstallRecordStore.DefaultStorePath) ?? ".",
-        "settings.json");
+    public static string SettingsPath { get; } = AppPaths.Current.SettingsFile;
 
     /// <summary>设置服务（描述符已注册）。</summary>
     public static SettingsService Settings { get; } = CreateService();

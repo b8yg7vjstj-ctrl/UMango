@@ -12,6 +12,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using UMango.Core.Ipc;
+using UMango.Core.Platform;
 using UMango.Core.Ipc.Rpc;
 
 namespace UMango.Core.App;
@@ -50,14 +51,7 @@ public static class RpcCli
         /// 拿它发 RPC 会得到一句莫名其妙的话。
         /// 所以 RPC 单独用一个 <c>rpc.pipe</c> 文件。
         /// </summary>
-        public static string PipeNameFilePath
-        {
-            get
-            {
-                var root = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                return Path.Combine(root, "UMango", "rpc.pipe");
-            }
-        }
+        public static string PipeNameFilePath => AppPaths.Current.RpcPipeNameFile;
 
         /// <summary>
         /// 读出运行中实例的管道名。

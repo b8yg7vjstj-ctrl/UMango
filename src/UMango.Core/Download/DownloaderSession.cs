@@ -1,4 +1,5 @@
 using UMango.Core.Terminal;
+using UMango.Core.Platform;
 
 namespace UMango.Core.Download;
 
@@ -141,11 +142,7 @@ public sealed class DownloaderSession
     /// <summary>平台默认下载目录</summary>
     public static string DefaultOutputDirectory()
     {
-        var downloads = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-        return Directory.Exists(downloads)
-            ? Path.Combine(downloads, "UMango")
-            : Path.Combine(Path.GetTempPath(), "UMango");
+        return AppPaths.Current.DefaultDownloadDirectory;
     }
 
     // ---------- 执行 ----------

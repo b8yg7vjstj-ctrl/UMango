@@ -6,6 +6,7 @@ using UMango.Core.Execution;
 using UMango.Core.Install;
 using UMango.Core.Localization;
 using UMango.Core.PackageManagers;
+using UMango.Core.Platform;
 
 namespace UMango.App.ViewModels;
 
@@ -546,7 +547,7 @@ public partial class DownloadViewModel : ObservableObject
     {
         try
         {
-            var dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var dir = AppPaths.Current.DesktopDirectory;
             var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
             var path = Path.Combine(dir, $"umango-installed-{stamp}.json");
             var list = Installed.Select(i => new { Name = i.Name, Version = i.Version, InstallPath = i.InstallPath, OtherVersions = i.OtherVersions }).ToList();

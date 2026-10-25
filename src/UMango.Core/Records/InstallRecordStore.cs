@@ -37,16 +37,7 @@ public sealed class InstallRecordStore
     public InstallRecordStore(string? storePath = null) => _overridePath = storePath;
 
     /// <summary>记录文件路径（平台默认）</summary>
-    public static string DefaultStorePath
-    {
-        get
-        {
-            var dir = SystemInfo.IsWindows
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "UMango")
-                : Path.Combine(SystemInfo.HomeDirectory, ".config", "umango");
-            return Path.Combine(dir, "install-records.json");
-        }
-    }
+    public static string DefaultStorePath => AppPaths.Current.InstallRecordsFile;
 
     /// <summary>本实例实际使用的记录文件路径。</summary>
     public string StorePath => _overridePath ?? DefaultStorePath;

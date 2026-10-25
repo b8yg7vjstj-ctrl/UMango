@@ -149,9 +149,9 @@ public partial class LogViewModel : ObservableObject
             var desktop = outputDirectory;
             if (string.IsNullOrWhiteSpace(desktop))
             {
-                desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                if (string.IsNullOrWhiteSpace(desktop) || !Directory.Exists(desktop))
-                    desktop = Path.GetTempPath();
+                desktop = AppPaths.Current.DesktopDirectory;
+                if (!Directory.Exists(desktop))
+                    desktop = AppPaths.Current.TempDirectory;
             }
             Directory.CreateDirectory(desktop);
 

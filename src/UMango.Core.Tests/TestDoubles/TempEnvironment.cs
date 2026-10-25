@@ -1,3 +1,6 @@
+using UMango.Core.Platform;
+using UMango.Core.Records;
+
 namespace UMango.Core.Tests.TestDoubles;
 
 /// <summary>
@@ -55,6 +58,12 @@ public sealed class TempHomeScope : IDisposable
         Environment.SetEnvironmentVariable("HOME", root);
         Environment.SetEnvironmentVariable("USERPROFILE", root);
         Environment.SetEnvironmentVariable("APPDATA", root);
+
+        // 关键：<see cref="AppPaths.Current"/> 是**缓存的不可变快照**，
+        // 它在第一次被访问时就把「用户数据目录」算好了。
+        // 改了 HOME 之后必须让它重新计算，否则重定向不生效，
+        // 用例会以为自己在临时目录里、实际却在写真实用户目录。
+        AppPaths.Reset();
         return scope;
     }
 

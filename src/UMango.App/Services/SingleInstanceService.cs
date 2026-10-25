@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using UMango.Core.App.SingleInstance;
+using UMango.Core.Platform;
 using UMango.Core.Logging;
 
 namespace UMango.App.Services;
@@ -15,7 +16,6 @@ namespace UMango.App.Services;
 /// </summary>
 public static class SingleInstanceService
 {
-    private const string LockFileName = "instance.lock";
 
     private static SingleInstanceGuard? _guard;
 
@@ -24,10 +24,9 @@ public static class SingleInstanceService
     {
         get
         {
-            var root = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var dir = Path.Combine(root, "UMango");
-            Directory.CreateDirectory(dir);
-            return Path.Combine(dir, LockFileName);
+            var path = AppPaths.Current.SingleInstanceLockFile;
+            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
+            return path;
         }
     }
 

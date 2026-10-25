@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using UMango.Core.Ipc;
+using UMango.Core.Platform;
 using UMango.Core.Ipc.Rpc;
 
 namespace UMango.App.Services;
@@ -57,14 +58,7 @@ public sealed class RpcHost : IAsyncDisposable
     /// 混在一处的话，第二个实例读到的名字可能是激活管道，
     /// 拿它去发 RPC 请求会得到一个格式不对的响应。
     /// </summary>
-    public static string PipeNameFilePath
-    {
-        get
-        {
-            var root = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            return Path.Combine(root, "UMango", "rpc.pipe");
-        }
-    }
+    public static string PipeNameFilePath => AppPaths.Current.RpcPipeNameFile;
 
     /// <summary>把管道名写到发现文件里（供命令行找过来）。</summary>
     public void PublishPipeName()
