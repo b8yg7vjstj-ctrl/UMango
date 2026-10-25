@@ -1,8 +1,7 @@
-using UMango.App.ViewModels;
 using UMango.Core.UI.Navigation;
 using UMango.Shell.ViewModels;
 
-namespace UMango.App.Services;
+namespace UMango.Shell.Services;
 
 /// <summary>
 /// 左栏菜单 ↔ 导航栈 的**映射规则**（纯逻辑，可测）。

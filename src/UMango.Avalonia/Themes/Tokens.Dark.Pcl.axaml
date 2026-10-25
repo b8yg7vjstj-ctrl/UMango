@@ -1,0 +1,89 @@
+<!--
+  主题 token：Pcl · 深色（Avalonia）
+  ============================================================================
+  ⚠ 本文件是**生成产物**，请勿手工编辑。
+    源头：src/UMango.App/Themes/Tokens.Dark.Pcl.xaml
+    重新生成：python3 scripts/sync-theme-tokens.py
+    校验（CI）：python3 scripts/sync-theme-tokens.py --check
+  ============================================================================
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+  <Color x:Key="C1">#E8EAED</Color>
+  <Color x:Key="C2">#2E7BD6</Color>
+  <Color x:Key="C3">#1370F3</Color>
+  <Color x:Key="C4">#4890F5</Color>
+  <Color x:Key="C5">#7FB2F6</Color>
+  <Color x:Key="C6">#1D3A5C</Color>
+  <Color x:Key="C7">#22384F</Color>
+  <Color x:Key="C8">#182634</Color>
+  <Color x:Key="G1">#D0D3D8</Color>
+  <Color x:Key="G2">#9AA0A6</Color>
+  <Color x:Key="G3">#919499</Color>
+  <Color x:Key="G4">#8A8F95</Color>
+  <Color x:Key="G5">#55585C</Color>
+  <Color x:Key="G6">#3A3D42</Color>
+  <Color x:Key="G7">#303338</Color>
+  <Color x:Key="G8">#26282C</Color>
+  <Color x:Key="RedLight">#FF6B6B</Color>
+  <Color x:Key="RedBack">#4A2224</Color>
+  <Color x:Key="Bg">#1E1F22</Color>
+  <SolidColorBrush x:Key="BrC1" Color="#E8EAED" />
+  <SolidColorBrush x:Key="BrC2" Color="#2E7BD6" />
+  <SolidColorBrush x:Key="BrC3" Color="#1370F3" />
+  <SolidColorBrush x:Key="BrC5" Color="#7FB2F6" />
+  <SolidColorBrush x:Key="BrC6" Color="#1D3A5C" />
+  <SolidColorBrush x:Key="BrC8" Color="#182634" />
+  <SolidColorBrush x:Key="BrG1" Color="#D0D3D8" />
+  <SolidColorBrush x:Key="BrG2" Color="#9AA0A6" />
+  <SolidColorBrush x:Key="BrG3" Color="#919499" />
+  <SolidColorBrush x:Key="BrG4" Color="#8A8F95" />
+  <SolidColorBrush x:Key="BrG5" Color="#55585C" />
+  <SolidColorBrush x:Key="BrG6" Color="#3A3D42" />
+  <SolidColorBrush x:Key="BrG7" Color="#303338" />
+  <SolidColorBrush x:Key="BrG8" Color="#26282C" />
+  <SolidColorBrush x:Key="BrBg" Color="#1E1F22" />
+  <SolidColorBrush x:Key="BrRed" Color="#FF6B6B" />
+  <SolidColorBrush x:Key="BrRedBack" Color="#4A2224" />
+  <SolidColorBrush x:Key="BrWarnAmber" Color="#FFAD33" />
+  <SolidColorBrush x:Key="BrWarnAmberFore" Color="#1E1F22" />
+  <SolidColorBrush x:Key="BrProgressSuccess" Color="#61D180" />
+  <SolidColorBrush x:Key="BrTitleBar" Color="#1370F3" />
+  <SolidColorBrush x:Key="BrCard" Color="#2B2C31" />
+  <SolidColorBrush x:Key="BrTitleBarFore" Color="#B3FFFFFF" />
+  <SolidColorBrush x:Key="BrTitleBarForeHot" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="BrTitleBarHover" Color="#26FFFFFF" />
+  <SolidColorBrush x:Key="BrTitleBarBar" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="BrCaptionFore" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="BrCaptionHover" Color="#33FFFFFF" />
+  <SolidColorBrush x:Key="BrCaptionPressed" Color="#55FFFFFF" />
+  <SolidColorBrush x:Key="BrCaptionCloseHover" Color="#C42B1C" />
+  <SolidColorBrush x:Key="BrCaptionClosePressed" Color="#A02316" />
+  <SolidColorBrush x:Key="BrC7" Color="#1E3A5F" />
+  <SolidColorBrush x:Key="BrC4" Color="#6BA8F7" />
+  <SolidColorBrush x:Key="BrRedDark" Color="#FF7A6B" />
+  <SolidColorBrush x:Key="BrHalfWhite" Color="#33FFFFFF" />
+  <SolidColorBrush x:Key="BrSemiWhite" Color="#44FFFFFF" />
+  <SolidColorBrush x:Key="BrWhite" Color="#1E1F22" />
+  <SolidColorBrush x:Key="BrTransparent" Color="#00FFFFFF" />
+  <SolidColorBrush x:Key="BrSemiTransparent" Color="#01EAF2FE" />
+  <SolidColorBrush x:Key="BrTransparentBackground" Color="#D21E1F22" />
+  <SolidColorBrush x:Key="BrToolTip" Color="#E52B2C31" />
+  <SolidColorBrush x:Key="BrFatal" Color="#FF6B5A" />
+  <SolidColorBrush x:Key="BrError" Color="#FF6B5B" />
+  <SolidColorBrush x:Key="BrWarn" Color="#FFB84D" />
+  <SolidColorBrush x:Key="BrInfoDark" Color="#1E1F22" />
+  <SolidColorBrush x:Key="BrInfo" Color="#E8EAED" />
+  <SolidColorBrush x:Key="BrDebug" Color="#8A8F94" />
+  <SolidColorBrush x:Key="BrMsgBoxShadow" Color="#000000" />
+  <x:Double x:Key="TitleBarHeight">48</x:Double>
+  <x:Double x:Key="LeftRailWidth">168</x:Double>
+  <x:Double x:Key="WindowButtonWidth">46</x:Double>
+  <x:Double x:Key="WindowButtonHeight">32</x:Double>
+  <x:Double x:Key="TabHeight">27</x:Double>
+  <x:Double x:Key="ListItemHeight">36</x:Double>
+  <FontFamily x:Key="UiFont">Microsoft YaHei UI, Segoe UI, PingFang SC, Helvetica Neue</FontFamily>
+  <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+</ResourceDictionary>

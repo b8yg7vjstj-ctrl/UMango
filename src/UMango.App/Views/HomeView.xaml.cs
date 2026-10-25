@@ -31,8 +31,8 @@ public partial class HomeView : UserControl
         DataContext = ViewModel;
 
         // 语言切换 → 重建代码侧拼的本地化句子（XAML 的 DynamicResource 会自动更新，不用管）
-        Unloaded += (_, _) => Localization.AppLocalization.LocalizedTextRefreshRequested -= ViewModel.RefreshLocalizedText;
-        Localization.AppLocalization.LocalizedTextRefreshRequested += ViewModel.RefreshLocalizedText;
+        Unloaded += (_, _) => Localization.WpfLocalizationBridge.LocalizedTextRefreshRequested -= ViewModel.RefreshLocalizedText;
+        Localization.WpfLocalizationBridge.LocalizedTextRefreshRequested += ViewModel.RefreshLocalizedText;
 
         // 用 Loaded 而不是构造函数：构造函数里 await 不了（会阻塞 UI 线程），
         // 而 .Result/.Wait() 在 UI 线程上等 CLI 探测会直接死锁。
@@ -126,8 +126,8 @@ public partial class HomeViewModel : ObservableObject
     /// 语言切换时由 <see cref="RefreshLocalizedText"/> 重建本属性。
     /// </summary>
     public string RunningOnText =>
-        string.Format(Localization.AppLocalization.Text("Home.RunningOn"),
-            Localization.AppLocalization.Text("Home.Platform.Windows"));
+        string.Format(Localization.WpfLocalizationBridge.Text("Home.RunningOn"),
+            Localization.WpfLocalizationBridge.Text("Home.Platform.Windows"));
 
     /// <summary>语言切换后重建本地化文本属性。</summary>
     public void RefreshLocalizedText()

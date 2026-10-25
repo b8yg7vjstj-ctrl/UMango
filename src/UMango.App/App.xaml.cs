@@ -294,7 +294,7 @@ public partial class App : Application
     {
         try
         {
-            Localization.AppLocalization.ApplySavedLanguage();
+            Localization.WpfLocalizationBridge.ApplySavedLanguage();
         }
         catch (Exception ex)
         {

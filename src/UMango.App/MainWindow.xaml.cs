@@ -61,7 +61,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
     /// </summary>
     private readonly Services.NavigationHost _nav = new(
         new Core.UI.Navigation.NavigationService(
-            Services.NavStackMapping.PageId(AppTab.Home, "overview"), "概览"));
+            Shell.Services.NavStackMapping.PageId(AppTab.Home, "overview"), "概览"));
 
     /// <summary>
     /// 正在把导航栈的变化写回左栏（避免左栏的回调又去改导航栈，形成回环）。
@@ -654,7 +654,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
         var item = _shell.LeftMenu.FirstOrDefault(i => i.Key == key);
 
         // 规则本身在 NavStackMapping（纯逻辑，可测）；这里只负责执行。
-        var entry = Services.NavStackMapping.Resolve(item, _shell.CurrentTab, _nav.Navigation.Current.Page.Value);
+        var entry = Shell.Services.NavStackMapping.Resolve(item, _shell.CurrentTab, _nav.Navigation.Current.Page.Value);
         if (entry is null) return;
 
         if (entry.IsSecondary)
@@ -675,7 +675,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
 
         if (snapshot.Current.Parameter is not string navKey) return;
 
-        if (!Services.NavStackMapping.TryParse(snapshot.Current.Page.Value, out var tab, out var parsedKey))
+        if (!Shell.Services.NavStackMapping.TryParse(snapshot.Current.Page.Value, out var tab, out var parsedKey))
             return;
 
         navKey = parsedKey;

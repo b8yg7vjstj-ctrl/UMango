@@ -9,6 +9,7 @@ using UMango.App.ViewModels;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Localization;
+using UMango.Shell.Localization;
 using UMango.App.Localization;
 using UMango.Shell.Services;
 
@@ -169,13 +170,13 @@ public partial class SettingsView : UserControl
     /// 语言被选中：选中即应用。
     ///
     /// 与主题的差别：**不判断"是否真的变化"**就应用 —— 语言切换需要重建资源字典，
-    /// 而 <see cref="Localization.AppLocalization.SetLanguage"/> 内部由
+    /// 而 <see cref="Localization.WpfLocalizationBridge.SetLanguage"/> 内部由
     /// <see cref="Core.Localization.LocalizationService.Apply"/> 负责判断变化与否
     /// （返回 false 时重建字典是无害的等幂操作，代价是几毫秒）。
     /// </summary>
     private void LanguageBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (LanguageBox.SelectedItem is Localization.AppLocalization.LanguageOption option)
+        if (LanguageBox.SelectedItem is ShellLocalization.LanguageOption option)
         {
             ViewModel.SelectedLanguage = option;
             ViewModel.ApplyLanguageCommand.Execute(null);

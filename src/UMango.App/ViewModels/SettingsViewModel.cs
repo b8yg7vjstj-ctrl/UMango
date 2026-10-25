@@ -5,6 +5,7 @@ using UMango.App.Services;
 using UMango.App.Themes;
 using UMango.Core.Animation;
 using UMango.Core.Configuration;
+using UMango.Shell.Localization;
 using UMango.Core.PackageManagers;
 using UMango.Core.Records;
 using UMango.Core.Terminal;
@@ -841,11 +842,11 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     /// <summary>语言选项（首项 = 跟随系统）。</summary>
-    public IReadOnlyList<AppLocalization.LanguageOption> Languages { get; } =
-        AppLocalization.BuildOptions();
+    public IReadOnlyList<ShellLocalization.LanguageOption> Languages { get; } =
+        WpfLocalizationBridge.BuildOptions();
 
     [ObservableProperty]
-    private AppLocalization.LanguageOption? _selectedLanguage;
+    private ShellLocalization.LanguageOption? _selectedLanguage;
 
     public SettingsViewModel()
     {
@@ -875,7 +876,7 @@ public partial class SettingsViewModel : ObservableObject
         _blurKernelType = AppSettings.Settings.Get<int>(UiSettings.BlurKernelTypeKey);
 
         // 回显当前生效的语言（保存值 → 解析成选项；解析不到时回落"跟随系统"）
-        var savedCode = AppLocalization.ReadSavedLanguageCode();
+        var savedCode = WpfLocalizationBridge.ReadSavedLanguageCode();
         _selectedLanguage = Languages.FirstOrDefault(o => o.Code == savedCode) ?? Languages[0];
 
         // 主题可能被别处（快捷键/其它页面）切换：跟着走，
@@ -992,7 +993,7 @@ public partial class SettingsViewModel : ObservableObject
     private void ApplyLanguage()
     {
         var option = SelectedLanguage ?? Languages[0];
-        AppLocalization.SetLanguage(option.Code);
+        WpfLocalizationBridge.SetLanguage(option.Code);
         StatusMessage = L("Settings.Language.Switched", option.DisplayName);
     }
 

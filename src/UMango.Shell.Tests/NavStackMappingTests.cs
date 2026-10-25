@@ -1,10 +1,9 @@
-using UMango.App.Services;
-using UMango.App.ViewModels;
 using UMango.Core.UI.Navigation;
-using Xunit;
+using UMango.Shell.Services;
 using UMango.Shell.ViewModels;
+using Xunit;
 
-namespace UMango.App.Tests;
+namespace UMango.Shell.Tests;
 
 /// <summary>
 /// 左栏 ↔ 导航栈的映射规则测试。

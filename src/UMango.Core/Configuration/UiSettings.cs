@@ -18,10 +18,23 @@ public static class UiSettings
     public const string SectionAnimation = "动画";
     public const string SectionDebug = "调试";
     public const string SectionBehavior = "行为";
+    public const string SectionLanguage = "语言";
 
     // ---------------- 键名 ----------------
     public const string ThemeKindKey = "ui.appearance.theme";
     public const string DarkModeKey = "ui.appearance.darkMode";
+
+    /// <summary>
+    /// UI 语言。<c>auto</c> 表示跟随系统，其余为
+    /// <c>LocalizationModels.SupportedLanguages</c> 里的代码。
+    /// </summary>
+    public const string LanguageKey = "ui.language";
+
+    /// <summary>
+    /// 展示格式区域性（数字/日期/时间的显示格式）。
+    /// <c>ui-language</c> 表示跟随 UI 语言，<c>auto</c> 表示跟随系统。
+    /// </summary>
+    public const string FormatCultureKey = "ui.formatCulture";
 
     /// <summary>
     /// 深浅色跟随策略：<c>system</c> / <c>light</c> / <c>dark</c>。
@@ -184,7 +197,7 @@ public static class UiSettings
 
     /// <summary>全部分组（按设置页展示顺序）</summary>
     public static readonly string[] SectionOrder =
-        [SectionAppearance, SectionAnimation, SectionDebug, SectionBehavior];
+        [SectionAppearance, SectionAnimation, SectionDebug, SectionBehavior, SectionLanguage];
 
     /// <summary>
     /// 全部设置描述符。
@@ -212,6 +225,28 @@ public static class UiSettings
             Description = "与主题族正交：两套主题族各有浅色与深色版本，共四套 token 字典。",
             Kind = SettingKind.Bool,
             DefaultValue = false,
+            Order = 20
+        },
+
+        new SettingDescriptor
+        {
+            Key = LanguageKey,
+            Section = SectionLanguage,
+            Title = "界面语言",
+            Description = "auto 表示跟随系统。切换后界面文案与设置页标题一并刷新。",
+            Kind = SettingKind.String,
+            DefaultValue = "auto",
+            Order = 10
+        },
+
+        new SettingDescriptor
+        {
+            Key = FormatCultureKey,
+            Section = SectionLanguage,
+            Title = "展示格式",
+            Description = "数字、日期、时间的显示格式。可跟随界面语言、跟随系统，或指定某个区域。",
+            Kind = SettingKind.String,
+            DefaultValue = "ui-language",
             Order = 20
         },
 

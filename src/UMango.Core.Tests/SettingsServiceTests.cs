@@ -340,7 +340,8 @@ public class SettingsServiceTests
         // 同一分组内按 Order 升序
         var orders = inAnimation.Select(d => d.Order).ToList();
         Assert.Equal(orders.OrderBy(x => x), orders);
-        Assert.Equal(4, s.Sections.Count());
+        // 分组数 = SectionOrder 的长度（新增「语言」分组后为 5）
+        Assert.Equal(UiSettings.SectionOrder.Length, s.Sections.Count());
     }
 
     private sealed class ThrowingStore : ISettingsStore
