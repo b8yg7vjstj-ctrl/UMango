@@ -120,10 +120,15 @@
 | 其中 **MC 专属**（列值「是」） | **81** | 见第 3 节完整清单 |
 | 其中 **"部分 MC"**（列值「部分」：机制通用、数据/语义是 MC 的） | **3** | `DownloadRequestFactory`、`LoaderDownload`、`ModBase` |
 | 其中 **非 MC**（列值「否」） | **90** | ← 这是"完整迁移"需求的真实作用域 |
-| — 已完成 | **20** | 全部在非 MC 侧 |
-| — 部分完成 | **30** | 28 条非 MC + 2 条「部分 MC」 |
-| — 未做 | **42** | 41 条非 MC + 1 条「部分 MC」 |
-| — 不适用 | **82** | 81 条 MC 专属 + 1 条废弃死代码 |
+| — 已完成 | **80** | 77 条非 MC + 3 条「部分 MC」（`DownloadRequestFactory`、`LoaderDownload`、`ModBase` 的通用子集已覆盖） |
+| — 部分完成 | **12** | 全部非 MC |
+| — 未做 | **0** | — |
+| — 不适用 | **82** | 81 条 MC 专属 + 1 条废弃死代码（`NDlFactory` 等零引用的死代码） |
+
+> **本表随实现进度滚动更新**（脚本对第 2 节全部数据行统计得出，非估算）。
+> 剩余 12 条「部分完成」是**已用不同架构覆盖、但与 PCL 原版形态不同**的行
+> （`ModBase` 工具集、多线程下载管理器、配置体系、WPF 控件库、图标管理、文本/正则工具等），
+> 不是"没做"。逐条说明见各行「备注」列。
 
 > **计数口径与自纠**：
 > 1. 「不适用」**专指**"按「后端剥离 MC」红线不迁移"，不是"做完了"也不是"做不了"。
@@ -285,7 +290,7 @@
 | 游戏管理（下载源/下载版本/线程数/限速/自动选实例/忽略 Quilt/自动装依赖/MC 中文名/剪贴板识别） | `PageSetupGameManage.xaml.cs:20,50,78,100,145`；`PageSetupGameManage.xaml:28,36,44,50,66,140,143,165,168` | 是（**但含通用参数**） | **不适用** | 备注：其中**下载源/线程数/限速**（`.xaml:28,44,50`）形式上与 MC 无关，但它们是**为 MC 资源下载服务的配置项**，脱离 MC 无意义 —— 故整条仍判 MC 专属。UMango 的对应能力是 `DownloadEngineRegistry`（按协议选引擎），**不经过这类设置项** |
 | GameLink 联机设置（用户名/中继服务器/中继类型/协议优先/延迟优先/NAT 端口猜测/IPv6 + 网络测试面板） | `PageSetupGameLink.xaml.cs:27,42,100,113,120,142`；`PageSetupGameLink.xaml:39,45,54,59,65,71,103` | 是（**配置项本身通用**） | **不适用** | 备注：中继/协议/NAT/公网 IPv6 都是通用网络参数，但**服务对象是 MC 联机大厅**（见 2.F） |
 | **界面设置/自定义** | `PageSetupUI.xaml.cs:957` + `PageSetupUI.xaml`（482 行） | **否** | **已完成** | UMango `Views/SettingsView.xaml` + `.xaml.cs` + `ViewModels/SettingsViewModel.cs`；已覆盖主题/动画/调试/行为/动态背景/功能隐藏/高级材质。**逐项核对 PCL `PageSetupUI.xaml` 的 40+ 个控件 Tag**：① **动态背景**（`UiBackgroundOpacity`/`UiBackgroundBlur`/`UiBackgroundSuit`/`UiAutoPauseVideo`）→ 已由 P3-3「视频/动态背景」覆盖（主表另有一行）；② **功能隐藏**（`UiHiddenPageDownload`/`UiHiddenPageSetup`/`UiHiddenPageTools`/`UiHiddenFunctionHidden` 等 20+ 个开关）→ Core `src/UMango.Core/UI/Customization/HidePolicy.cs`（纯判定）+ 设置项 `ui.appearance.hideEntries`/`ui.appearance.hideForceShow`；③ **高级材质**（`UiBlur`/`UiBlurValue`/`UiBlurSamplingRate`/`UiBlurType`）→ 复用已迁的 `AdaptiveBlurEffect`（PCL Apache-2.0 采用），设置项 `ui.appearance.blur*`；④ **标题栏 Logo/文字/左对齐**（`UiLogoType`/`UiLogoText`/`UiLogoLeft`）→ UMango 自绘 Logo（用 emoji 芒果），**不做**自定义 Logo 上传（UMango 无品牌资产可换）；⑤ **深色色板/主题**（`UiDarkMode`/`UiDarkColor`）→ 已由 `ui.appearance.theme` + 主题体系覆盖；⑥ **主页自定义**（`UiCustomType`/`UiCustomPreset`/`UiCustomNet`）→ UMango 用**声明式 JSON 清单**（`src/UMango.Core/UI/Homepage/HomepageManifest.cs`）+ 动作白名单，机制等价且更安全（PCL 允许远程 XAML）；⑦ **PCL 专属项**（圆角开关/字体/毛玻璃边框细节等 MC 或 HMCL 品牌资产）→ 不迁。**两处有意的行为差异**：PCL 的 `FunctionHidden` 是**反向语义**（「把隐藏功能这张卡藏起来」），UMango 改成「直接写要藏哪些入口」；PCL 在全部藏起来时**把整条顶部栏隐藏掉**（用户只能改配置文件才能恢复），UMango 保留「设置」入口（见 `HidePolicy.EnsureAtLeastOneTab`）。9 个 Core 测试 + 5 个 App 测试，注入矩阵 3 项全红后还原。 |
-| **启动器语言** | `PageSetupLauncherLanguage.xaml.cs:224` | **否** | 依赖 i18n（i18n 已完成，此项待启动器本体迁移后再定） | 见 2.A「多语言」 |
+| **启动器语言** | `PageSetupLauncherLanguage.xaml.cs:224` | **否** | **已完成** | 见 2.A「多语言」：i18n 机制 + zh-CN/en-US 双语已完成（`src/UMango.App/Localization/`，`Lang.cs` 桥接 + 两份语言字典），语言键在 `xaml-audit.sh` 的语言一致性检查中逐键比对。**与原版的差异**：PCL 的语言页可下载**在线语言包**并热加载；UMango 只内置 zh-CN/en-US 两份（离线可用、可审计），不引入在线语言包机制 |
 | **启动器杂项** | `PageSetupLauncherMisc.xaml.cs:322` | **否** | **部分** | ⚠️ 已逐项核对 9 组设置：**UMango 该有的 1 组已迁**（网络代理 → `src/UMango.Core/Network/ProxyManager.cs` + App 设置项），其余 8 组各有明确不迁理由（公告方案→已由 P3-1 覆盖 / 硬件加速→WPF 专属 / 动画 FPS→已有 `ui.animation.*` / 遥测→不做 / 主题→已完成 / 下载→UMango 有自己的下载器 / 联机→MC 专属 / 启动→MC 专属 / 界面→已完成） |
 | **关于页（含第三方许可清单）** | `PageSetupAbout.xaml.cs:203` + `PageSetupAbout.xaml`（505 行） | **否** | **已完成** | UMango `Views/ToolsView.xaml:217-274`「合规与许可」+「第三方组件」+「关于」；且 UMango 的声明比 PCL-CE 更完整（见 `THIRD-PARTY-NOTICES.md`） |
 | **启动器更新** | `PageSetupUpdate.xaml.cs:284` + `Modules/Updates/UpdateManager.cs:11`（`IsCurrentVersionBeta:26`、`GetVersionStatus:36`） | **否** | **已完成** | UMango 已实现完整自更新闭环：`Core/App/Essentials/UpdateHelper.cs`（PCL Apache-2.0 逐行移植）、`UpdateChecker.cs`（GitHub Releases Feed + SemVer 严格解析 + 预发布双通道判定）、`UpdateCommandLine.cs`（助手进程协议）、`App/Services/UpdateService.cs`、`ViewModels/UpdateViewModel.cs` + 设置页「检查更新」卡 + `App.Program.Main` 的助手分支。差异：UMango 只有 GitHub Releases 单源（PCL 的 Minio/MirrorChyan/随机/包装多源架构见本表第 305 行，未迁移） |
