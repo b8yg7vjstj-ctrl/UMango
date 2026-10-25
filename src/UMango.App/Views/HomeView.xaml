@@ -1,6 +1,7 @@
 <UserControl x:Class="UMango.App.Views.HomeView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:UMango.App.Controls"
              Background="Transparent">
   <!--
     ============================================================================
@@ -256,11 +257,21 @@
                      Text="{Binding Homepage.Hint}"
                      Visibility="{Binding Homepage.Hint, Converter={StaticResource NotEmptyToVis}}"/>
 
+          <!--
+            卡片用瀑布流排布（PCL 的 WaterfallPanel 语义：每张卡放进当前最矮的列）。
+            纯计算在 UMango.Core.UI.Layout.WaterfallLayoutCalculator，App 侧只是 WPF 适配层。
+          -->
           <ItemsControl ItemsSource="{Binding Homepage.Cards}" Margin="0,10,0,0">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <controls:WaterfallPanel LayoutMode="AutoFit" MaxItemWidth="380"
+                                          ColumnSpacing="14" RowSpacing="14"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Border BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
-                        CornerRadius="4" Padding="12,10" Margin="0,0,0,8">
+                        CornerRadius="4" Padding="12,10">
                   <StackPanel>
                     <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource BrC1}" TextWrapping="Wrap"/>
