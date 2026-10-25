@@ -73,6 +73,7 @@ public partial class App : Application
     {
         SeedServices();
         HookGlobalExceptionHandlers();
+        Services.CrashReporter.Initialize();
         ApplySavedTheme();
         ApplySavedLanguage();
 
@@ -188,15 +189,22 @@ public partial class App : Application
         DispatcherUnhandledException += (_, args) =>
         {
             Log.ErrorAt("App", args.Exception, member: "DispatcherUnhandledException");
+            // 额外生成一份崩溃报告（纯本机，不外发）。
+            Services.CrashReporter.Report(args.Exception, Core.Diagnostics.CrashSeverity.Fatal);
             Log.Flush();   // 崩溃前必须刷盘，否则最后几行（最关键）会丢
         };
 
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
         {
             if (args.ExceptionObject is Exception ex)
+            {
                 Log.ErrorAt("App", ex, member: "AppDomainUnhandled");
+                Services.CrashReporter.Report(ex, Core.Diagnostics.CrashSeverity.Fatal);
+            }
             else
+            {
                 Log.Error("App", $"未处理的非异常错误：{args.ExceptionObject}");
+            }
 
             Log.Flush();
         };
@@ -206,6 +214,7 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
             Log.ErrorAt("App", args.Exception, member: "UnobservedTask");
+            Services.CrashReporter.Report(args.Exception, Core.Diagnostics.CrashSeverity.Error);
             args.SetObserved();   // 这条只记录不上报（已记录，且无其它处理者）
         };
     }
