@@ -604,4 +604,20 @@
     <sys:String x:Key="Settings.Limits.Threads">Max connections</sys:String>
     <sys:String x:Key="Settings.Limits.PerHost">Connections per host</sys:String>
     <sys:String x:Key="Settings.Limits.Speed">Global speed limit (KB/s, 0 = unlimited)</sys:String>
+    <sys:String x:Key="Tools.Actions">Tools</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Title">Cleanup</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Summary">{0} files, {1} in total</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Nothing">Nothing to clean up</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Refresh">Recount</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Run">Clean up</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Done">Cleaned {0} files, freed {1}</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Failed">Cleanup failed: {0}</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Title">Custom download</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.UrlHint">http / https / ftp / file links are supported</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.NameHint">Left: file name (blank = infer from link). Right: target folder (blank = default download folder)</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Start">Start</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Cancel">Cancel</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Done">Download finished: {0}</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Failed">Download failed: {0}</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Canceled">Download canceled</sys:String>
 </ResourceDictionary>

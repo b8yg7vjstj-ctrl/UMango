@@ -13,6 +13,7 @@ using UMango.Core.Platform;
 using UMango.Core.Terminal;
 using UMango.Core.Localization;
 using UMango.App.Localization;
+using UMango.App.ViewModels;
 
 namespace UMango.App.Views;
 
@@ -30,6 +31,7 @@ public partial class ToolsView : UserControl
     {
         InitializeComponent();
         ViewModel = new ToolsDiagnosticsViewModel();
+        Actions = new ToolsActionsViewModel(AppServices.DownloadEngines);
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         DataContext = ViewModel;
 
@@ -41,6 +43,15 @@ public partial class ToolsView : UserControl
 
     /// <summary>本页的 ViewModel（同一命名空间内定义，见文件末尾）。</summary>
     public ToolsDiagnosticsViewModel ViewModel { get; }
+
+    /// <summary>
+    /// 工具动作（垃圾清理 / 自定义下载）的 ViewModel。
+    ///
+    /// 单独一个对象而不是塞进 <see cref="ToolsDiagnosticsViewModel"/>：诊断部分是"只读地看"，
+    /// 动作部分会**改磁盘、会发网络请求**，两者的状态与生命周期不同；
+    /// 混在一起会让"页面 Loaded 时到底跑了什么"难以推断。
+    /// </summary>
+    public ToolsActionsViewModel Actions { get; }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {

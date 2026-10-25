@@ -211,7 +211,79 @@
         </StackPanel>
       </Border>
 
-      <!-- ===================== 2) 合规与许可卡 ===================== -->
+      <!-- ===================== 2) 工具动作卡（垃圾清理 / 自定义下载） ===================== -->
+      <Border x:Name="ActionsCard" Style="{DynamicResource PclCard}" Padding="16,14" Margin="0,12,0,0"
+              DataContext="{Binding Actions, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}">
+        <StackPanel>
+          <TextBlock Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Tools.Actions}"/>
+
+          <!-- 垃圾清理 -->
+          <TextBlock Text="{DynamicResource Tools.Cleanup.Title}" FontSize="12" FontWeight="SemiBold"
+                     Margin="0,12,0,4" Foreground="{DynamicResource BrC1}"/>
+          <TextBlock Text="{Binding CleanupSummary}" FontSize="11" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG2}"/>
+          <ItemsControl ItemsSource="{Binding CleanupItems}" Margin="0,6,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,2,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="0" FontSize="11" TextWrapping="Wrap"
+                             Foreground="{DynamicResource BrG3}" Text="{Binding Target}"/>
+                  <TextBlock Grid.Column="1" FontSize="11" Margin="10,0,0,0"
+                             Foreground="{DynamicResource BrG4}"
+                             Text="{Binding FileCount, StringFormat='{}{0} 个文件'}"/>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <Button Content="{DynamicResource Tools.Cleanup.Refresh}" Command="{Binding RefreshCleanupSummaryCommand}"
+                    Padding="12,5" Margin="0,0,8,0"/>
+            <Button Content="{DynamicResource Tools.Cleanup.Run}" Command="{Binding CleanupCommand}"
+                    Padding="12,5" IsEnabled="{Binding IsCleaning, Converter={StaticResource InverseBool}}"/>
+          </StackPanel>
+
+          <!-- 自定义下载 -->
+          <TextBlock Text="{DynamicResource Tools.CustomDownload.Title}" FontSize="12" FontWeight="SemiBold"
+                     Margin="0,16,0,4" Foreground="{DynamicResource BrC1}"/>
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" Text="{Binding CustomDownloadUrl, UpdateSourceTrigger=PropertyChanged}"
+                     Height="26"/>
+          </Grid>
+          <TextBlock Text="{DynamicResource Tools.CustomDownload.UrlHint}" FontSize="11" Margin="0,3,0,0"
+                     TextWrapping="Wrap" Foreground="{DynamicResource BrG3}"/>
+          <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="12"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" Text="{Binding CustomDownloadFileName, UpdateSourceTrigger=PropertyChanged}"
+                     Height="26"/>
+            <TextBox Grid.Column="2" Text="{Binding CustomDownloadDirectory, UpdateSourceTrigger=PropertyChanged}"
+                     Height="26"/>
+          </Grid>
+          <TextBlock Text="{DynamicResource Tools.CustomDownload.NameHint}" FontSize="11" Margin="0,3,0,0"
+                     TextWrapping="Wrap" Foreground="{DynamicResource BrG3}"/>
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <Button Content="{DynamicResource Tools.CustomDownload.Start}" Command="{Binding CustomDownloadCommand}"
+                    Padding="12,5" Margin="0,0,8,0"/>
+            <Button Content="{DynamicResource Tools.CustomDownload.Cancel}" Command="{Binding CancelCustomDownloadCommand}"
+                    Padding="12,5" IsEnabled="{Binding IsDownloading}"/>
+          </StackPanel>
+          <ProgressBar Height="4" Margin="0,10,0,0" Minimum="0" Maximum="1"
+                       Value="{Binding DownloadProgress, Mode=OneWay}"
+                       Visibility="{Binding DownloadProgress, Converter={StaticResource NotEmptyToVis}}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ===================== 3) 合规与许可卡 ===================== -->
       <Border Style="{DynamicResource PclCard}" Padding="16,14" Margin="0,12,0,0">
         <StackPanel>
           <TextBlock Style="{DynamicResource PclSectionTitle}" Text="{DynamicResource Tools.Compliance}"/>

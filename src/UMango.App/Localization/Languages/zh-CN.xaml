@@ -618,4 +618,20 @@
     <sys:String x:Key="Settings.Limits.Threads">最大连接数</sys:String>
     <sys:String x:Key="Settings.Limits.PerHost">单主机连接数</sys:String>
     <sys:String x:Key="Settings.Limits.Speed">全局限速（KB/秒，0 = 不限速）</sys:String>
+    <sys:String x:Key="Tools.Actions">工具</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Title">垃圾清理</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Summary">共 {0} 个文件，{1}</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Nothing">没有可清理的内容</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Refresh">重新统计</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Run">清理</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Done">已清理 {0} 个文件，释放 {1}</sys:String>
+    <sys:String x:Key="Tools.Cleanup.Failed">清理失败：{0}</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Title">自定义下载</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.UrlHint">支持 http / https / ftp / file 链接</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.NameHint">左：文件名（留空则从链接推断）　右：保存目录（留空则用默认下载目录）</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Start">开始下载</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Cancel">取消</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Done">下载完成：{0}</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Failed">下载失败：{0}</sys:String>
+    <sys:String x:Key="Tools.CustomDownload.Canceled">下载已取消</sys:String>
 </ResourceDictionary>
