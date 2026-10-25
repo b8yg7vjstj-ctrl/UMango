@@ -42,6 +42,29 @@
     -->
     <DataTemplate x:Key="NavItemTemplate">
       <StackPanel>
+        <!--
+          分组标题行：PCL-CE 的分组标题是独立 TextBlock（字号 12、透明度 0.6、
+          Margin="13,5,5,3"）。UMango 把标题挂在「该分组第一项」的模板里
+          （GroupTitle 只有分组首项非空），这样不用嵌套两个容器就能渲染出
+          「标题 + 项」交替的左栏。
+          Margin 用负值把左内边距抵消回 13（ContentPresenter 自带 16 的左内边距）。
+        -->
+        <TextBlock Text="{Binding GroupTitle}" FontSize="12" Opacity="0.6"
+                   Margin="-16,6,0,2" Padding="13,0,0,0"
+                   Foreground="{DynamicResource BrG3}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding GroupTitle}" Value="{x:Null}">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding GroupTitle}" Value="">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
         <TextBlock Text="{Binding Title}" FontSize="13"
                    Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis"/>
         <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="0,2,0,0"

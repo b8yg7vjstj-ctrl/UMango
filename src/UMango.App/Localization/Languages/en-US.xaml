@@ -223,6 +223,11 @@
     <sys:String x:Key="Progress.Error.NeedTask">Pick a task in the task list first.</sys:String>
     <sys:String x:Key="Progress.Cleared">Terminal output cleared for this task.</sys:String>
     <sys:String x:Key="Progress.Error.NeedCancelTask">Pick a task to cancel first.</sys:String>
+    <sys:String x:Key="Nav.Group.Home">Home</sys:String>
+    <sys:String x:Key="Nav.Group.Download">Download</sys:String>
+    <sys:String x:Key="Nav.Group.Progress">Progress</sys:String>
+    <sys:String x:Key="Nav.Group.Settings">Settings</sys:String>
+    <sys:String x:Key="Nav.Group.Tools">Tools</sys:String>
     <sys:String x:Key="Nav.Overview">Overview</sys:String>
     <sys:String x:Key="Nav.Records">Records</sys:String>
     <sys:String x:Key="Nav.Sources">Sources</sys:String>

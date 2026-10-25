@@ -230,6 +230,11 @@
     <sys:String x:Key="Progress.Error.NeedTask">请先在任务列表里选择一个任务。</sys:String>
     <sys:String x:Key="Progress.Cleared">已清空该任务的终端输出。</sys:String>
     <sys:String x:Key="Progress.Error.NeedCancelTask">请先选择要取消的任务。</sys:String>
+    <sys:String x:Key="Nav.Group.Home">主页</sys:String>
+    <sys:String x:Key="Nav.Group.Download">下载</sys:String>
+    <sys:String x:Key="Nav.Group.Progress">进度</sys:String>
+    <sys:String x:Key="Nav.Group.Settings">设置</sys:String>
+    <sys:String x:Key="Nav.Group.Tools">工具</sys:String>
     <sys:String x:Key="Nav.Overview">概览</sys:String>
     <sys:String x:Key="Nav.Records">管理记录</sys:String>
     <sys:String x:Key="Nav.Sources">包源</sys:String>
