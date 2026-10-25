@@ -120,14 +120,14 @@
 | 其中 **MC 专属**（列值「是」） | **81** | 见第 3 节完整清单 |
 | 其中 **"部分 MC"**（列值「部分」：机制通用、数据/语义是 MC 的） | **3** | `DownloadRequestFactory`、`LoaderDownload`、`ModBase` |
 | 其中 **非 MC**（列值「否」） | **90** | ← 这是"完整迁移"需求的真实作用域 |
-| — 已完成 | **80** | 77 条非 MC + 3 条「部分 MC」（`DownloadRequestFactory`、`LoaderDownload`、`ModBase` 的通用子集已覆盖） |
-| — 部分完成 | **12** | 全部非 MC |
+| — 已完成 | **81** | 78 条非 MC + 3 条「部分 MC」（`DownloadRequestFactory`、`LoaderDownload`、`ModBase` 的通用子集已覆盖） |
+| — 部分完成 | **11** | 全部非 MC |
 | — 未做 | **0** | — |
 | — 不适用 | **82** | 81 条 MC 专属 + 1 条废弃死代码（`NDlFactory` 等零引用的死代码） |
 
 > **本表随实现进度滚动更新**（脚本对第 2 节全部数据行统计得出，非估算）。
-> 剩余 12 条「部分完成」是**已用不同架构覆盖、但与 PCL 原版形态不同**的行
-> （`ModBase` 工具集、多线程下载管理器、配置体系、WPF 控件库、图标管理、文本/正则工具等），
+> 剩余 11 条「部分完成」是**已用不同架构覆盖、但与 PCL 原版形态不同**的行
+> （`ModBase` 工具集、多线程下载管理器、配置体系、WPF 控件库、文本/正则工具等），
 > 不是"没做"。逐条说明见各行「备注」列。
 
 > **计数口径与自纠**：
@@ -414,7 +414,7 @@
 | 图像加载与转换 | `UI/ImageLoaderHelper.cs`、`UI/Media/ImageConverter.cs`、`Utils/IconHelper.cs` | 否 | **已完成**（等价实现） | `src/UMango.Core/UI/Media/ImageProbe.cs` 字节级探测层（commit 406bee2）；⚠️ **未迁 WPF/WIC 专属的解码与 WebP 转换** |
 | 灰度/无障碍 | `UI/GrayProfile.cs`、`GrayProfileConfig.cs` | 否 | **已完成** | 哀悼日灰度模式：Core `UI/GrayProfile.cs` 迁语义（PCL 原版零消费方）+ `GrayColorPlanner<TKey>` 记账；App `Themes/GrayModeController.cs` 改写资源字典里的画笔；设置项 `ui.appearance.grayMode`。**注意 WPF 没有 ColorMatrixEffect**（只在 GDI+/WinForms 里），所以只能换画笔而非挂 Effect |
 | 后台展示器 | `UI/BackgroundPresenter.cs` | 否 | **已完成** | 与视频背景配套：App 层 `src/UMango.App/Media/Background/BackgroundPresenter.cs`（`Border`+`ImageBrush` 图片层 / `MediaElement` 视频层 / 铺放方式 / 不透明度 / 模糊） |
-| 图标管理 | `UI/IconManager.cs`、`IconModel.cs` | 否 | **部分** | UMango 用 lucide + simple-icons（见 `THIRD-PARTY-NOTICES.md` §2） |
+| 图标管理 | `UI/IconManager.cs`、`IconModel.cs` | 否 | **已完成** | ✅ `src/UMango.Core/UI/Icons/IconRegistry.cs`（PCL 原版 `IconManager.cs` 84 行 + `IconModel.cs` 5 行，Apache-2.0）：图标登记表（按名登记 / 取出 / 按名选中 / 移除 / 清空 + `INotifyPropertyChanged` 选中变更通知）。**与原版的实质差异**：① 原版 `IconModel` 装的是 WPF `UIElement`（`XamlReader.Parse` 的产物），把 Core 绑死在 WPF 上 → UMango 改为**平台中立的矢量描述** `IconSource`（宽高 + `SvgShape` 图元列表，可由 `IconSource.FromSvg` 从 SVG 源码构造），XAML 装载留在 App 层；② 原版 `RemoveIconByName` 只从字典删、**不管当前选中是不是它** → 选中会一直指着一个已移除的图标；UMango 移除时一并清掉选中（**已修的真实缺陷**）；③ 原版的名字比较用默认 `Dictionary` 的大小写敏感口径，而 UMango 的 SVG 图标缓存用 `OrdinalIgnoreCase` → 统一为大小写不敏感（可构造时切回敏感模式）；④ 原版用静态 `XamlReader` 装载要求 UI 线程，UMango 的核心层完全无线程要求。图标资源本身用 lucide + simple-icons（见 `THIRD-PARTY-NOTICES.md` §2），由 App 层 `SvgIconLoader` 读包并渲染 |
 | 联机基础设施（P2P / 协议） | `Link/Scaffolding/`、`Link/EasyTier/`、`Link/Lobby/`、`Link/BroadcastLocal.cs`（59 文件 5,018 行） | 是 | **不适用** | 语义是 MC 联机（见 2.F） |
 | Natayark 账号 | `Link/Natayark/NatayarkProfileManager.cs` | 是 | **不适用** | 第三方 MC 联机平台 |
 | **下载引擎（UMango 独有）** | —（PCL-CE 无对应） | **否** | **已完成** | UMango `Download/` 10 文件 1,638 行；`Aria2Engine.cs:24`（覆盖 HTTP/HTTPS/FTP/SFTP/BitTorrent/Metalink）、`Ed2kEngine.cs:22`、`BuiltinHttpEngine.cs:14`；协议推断 `DownloadModels.cs:9`（`Detect`）；自适应分段下载 `RangeDownloader.cs`（570 行，独立实现，PCL 原版在受限许可目录内） |
