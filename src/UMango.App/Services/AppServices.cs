@@ -258,6 +258,17 @@ public static class AppServices
             Logs = memory;
             LogFile = file;
 
+            // 设置里指定了容量就以设置为准（设置服务在 InitializeLogging 之前已就绪）。
+            try
+            {
+                var configured = AppSettings.Settings.Get<int>(UiSettings.LogBufferCapacityKey);
+                memory.Capacity = configured;
+            }
+            catch
+            {
+                // 设置还没加载 / 键缺失 → 用上面的默认值，不让日志系统因为设置而起不来
+            }
+
             Log.Info("App", $"UMango 启动；日志目录 {LogDirectory}");
             Log.Info("App", SystemInfo.Describe());
         }
@@ -412,6 +423,13 @@ public static class AppSettings
             if (key is UiSettings.DohUpstreamsKey or UiSettings.DohCacheTtlKey or UiSettings.DohTimeoutKey)
             {
                 AppServices.ApplyDnsSettings(AppServices.Dns);
+            }
+
+            // 日志保留条数变了 → 立刻把内存缓冲裁到新容量（超出的旧条目当场丢弃）。
+            if (key == UiSettings.LogBufferCapacityKey)
+            {
+                var capacity = service.Get<int>(UiSettings.LogBufferCapacityKey);
+                if (AppServices.Logs is not null) AppServices.Logs.Capacity = capacity;
             }
         };
         return service;

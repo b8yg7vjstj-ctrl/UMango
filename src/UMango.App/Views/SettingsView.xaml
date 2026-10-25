@@ -739,6 +739,20 @@
                          Text="{DynamicResource Settings.DebugMode.Hint}"/>
             </StackPanel>
           </Border>
+          <!-- 日志保留条数（对应 PCL-CE 的「最大日志行数」滑块） -->
+          <Border Margin="0,8,0,0" Padding="10,9" CornerRadius="4"
+                  Background="{DynamicResource BrCard}"
+                  BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
+                  SnapsToDevicePixels="True">
+            <StackPanel>
+              <TextBlock FontSize="13" Text="{DynamicResource Settings.LogBufferCapacity}"/>
+              <Slider Minimum="200" Maximum="50000" TickFrequency="100" IsSnapToTickEnabled="False"
+                      Margin="0,6,0,0" Value="{Binding LogBufferCapacity, Mode=TwoWay}"/>
+              <TextBlock FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrG3}"
+                         Text="{DynamicResource Settings.LogBufferCapacity.Hint}"/>
+            </StackPanel>
+          </Border>
         </StackPanel>
       </Border>
 

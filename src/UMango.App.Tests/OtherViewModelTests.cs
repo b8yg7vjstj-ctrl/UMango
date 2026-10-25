@@ -188,6 +188,30 @@ public class OtherViewModelTests
     }
 
     [Fact]
+    public void 设置页的日志保留条数读写走设置服务且被夹在合法范围()
+    {
+        var vm = new SettingsViewModel();
+        var original = vm.LogBufferCapacity;
+
+        try
+        {
+            vm.LogBufferCapacity = 12345;
+            Assert.Equal(12345, vm.LogBufferCapacity);
+
+            // 越界值被夹住（描述符 Min=200 / Max=50000）
+            vm.LogBufferCapacity = 1;
+            Assert.Equal(200, vm.LogBufferCapacity);
+
+            vm.LogBufferCapacity = 999999;
+            Assert.Equal(50000, vm.LogBufferCapacity);
+        }
+        finally
+        {
+            vm.LogBufferCapacity = original;   // 还原，避免污染真实设置文件
+        }
+    }
+
+    [Fact]
     public void 设置页能读到记录统计()
     {
         var vm = new SettingsViewModel();

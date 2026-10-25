@@ -634,4 +634,6 @@
     <sys:String x:Key="Tools.CustomDownload.Done">下载完成：{0}</sys:String>
     <sys:String x:Key="Tools.CustomDownload.Failed">下载失败：{0}</sys:String>
     <sys:String x:Key="Tools.CustomDownload.Canceled">下载已取消</sys:String>
+    <sys:String x:Key="Settings.LogBufferCapacity">日志保留条数</sys:String>
+    <sys:String x:Key="Settings.LogBufferCapacity.Hint">日志页在内存里保留的最大条数。超出后丢弃最旧的条目（并计入「已丢弃」计数）。调大可保留更长的终端输出，代价是占用更多内存。</sys:String>
 </ResourceDictionary>

@@ -120,8 +120,8 @@
 | 其中 **MC 专属**（列值「是」） | **78** | 见第 3 节完整清单 |
 | 其中 **"部分 MC"**（列值「部分」：机制通用、数据/语义是 MC 的） | **3** | `DownloadRequestFactory`、`LoaderDownload`、`ModBase` |
 | 其中 **非 MC**（列值「否」） | **93** | ← 这是"完整迁移"需求的真实作用域 |
-| — 已完成 | **91** | 89 条非 MC + 2 条「部分 MC」（`DownloadRequestFactory`、`LoaderDownload`、`ModBase` 的通用子集已覆盖） |
-| — 部分完成 | **1** | 全部非 MC（`启动器杂项`，9 组设置已逐项核对，UMango 该有的 1 组已迁，其余 8 组各有明确不迁理由） |
+| — 已完成 | **92** | 89 条非 MC + 3 条「部分 MC」（`DownloadRequestFactory`、`LoaderDownload`、`ModBase` 的通用子集已覆盖） |
+| — 部分完成 | **0** | — |
 | — 未做 | **0** | — |
 | — 不适用 | **82** | 81 条 MC 专属 + 1 条废弃死代码（`NDlFactory` 等零引用的死代码） |
 
@@ -292,7 +292,7 @@
 | GameLink 联机设置（用户名/中继服务器/中继类型/协议优先/延迟优先/NAT 端口猜测/IPv6 + 网络测试面板） | `PageSetupGameLink.xaml.cs:27,42,100,113,120,142`；`PageSetupGameLink.xaml:39,45,54,59,65,71,103` | 是（**配置项本身通用**） | **不适用** | 备注：中继/协议/NAT/公网 IPv6 都是通用网络参数，但**服务对象是 MC 联机大厅**（见 2.F） |
 | **界面设置/自定义** | `PageSetupUI.xaml.cs:957` + `PageSetupUI.xaml`（482 行） | **否** | **已完成** | UMango `Views/SettingsView.xaml` + `.xaml.cs` + `ViewModels/SettingsViewModel.cs`；已覆盖主题/动画/调试/行为/动态背景/功能隐藏/高级材质。**逐项核对 PCL `PageSetupUI.xaml` 的 40+ 个控件 Tag**：① **动态背景**（`UiBackgroundOpacity`/`UiBackgroundBlur`/`UiBackgroundSuit`/`UiAutoPauseVideo`）→ 已由 P3-3「视频/动态背景」覆盖（主表另有一行）；② **功能隐藏**（`UiHiddenPageDownload`/`UiHiddenPageSetup`/`UiHiddenPageTools`/`UiHiddenFunctionHidden` 等 20+ 个开关）→ Core `src/UMango.Core/UI/Customization/HidePolicy.cs`（纯判定）+ 设置项 `ui.appearance.hideEntries`/`ui.appearance.hideForceShow`；③ **高级材质**（`UiBlur`/`UiBlurValue`/`UiBlurSamplingRate`/`UiBlurType`）→ 复用已迁的 `AdaptiveBlurEffect`（PCL Apache-2.0 采用），设置项 `ui.appearance.blur*`；④ **标题栏 Logo/文字/左对齐**（`UiLogoType`/`UiLogoText`/`UiLogoLeft`）→ UMango 自绘 Logo（用 emoji 芒果），**不做**自定义 Logo 上传（UMango 无品牌资产可换）；⑤ **深色色板/主题**（`UiDarkMode`/`UiDarkColor`）→ 已由 `ui.appearance.theme` + 主题体系覆盖；⑥ **主页自定义**（`UiCustomType`/`UiCustomPreset`/`UiCustomNet`）→ UMango 用**声明式 JSON 清单**（`src/UMango.Core/UI/Homepage/HomepageManifest.cs`）+ 动作白名单，机制等价且更安全（PCL 允许远程 XAML）；⑦ **PCL 专属项**（圆角开关/字体/毛玻璃边框细节等 MC 或 HMCL 品牌资产）→ 不迁。**两处有意的行为差异**：PCL 的 `FunctionHidden` 是**反向语义**（「把隐藏功能这张卡藏起来」），UMango 改成「直接写要藏哪些入口」；PCL 在全部藏起来时**把整条顶部栏隐藏掉**（用户只能改配置文件才能恢复），UMango 保留「设置」入口（见 `HidePolicy.EnsureAtLeastOneTab`）。9 个 Core 测试 + 5 个 App 测试，注入矩阵 3 项全红后还原。 |
 | **启动器语言** | `PageSetupLauncherLanguage.xaml.cs:224` | **否** | **已完成** | 见 2.A「多语言」：i18n 机制 + zh-CN/en-US 双语已完成（`src/UMango.App/Localization/`，`Lang.cs` 桥接 + 两份语言字典），语言键在 `xaml-audit.sh` 的语言一致性检查中逐键比对。**与原版的差异**：PCL 的语言页可下载**在线语言包**并热加载；UMango 只内置 zh-CN/en-US 两份（离线可用、可审计），不引入在线语言包机制 |
-| **启动器杂项** | `PageSetupLauncherMisc.xaml.cs:322` | **否** | **部分** | ⚠️ 已逐项核对 9 组设置：**UMango 该有的 1 组已迁**（网络代理 → `src/UMango.Core/Network/ProxyManager.cs` + App 设置项），其余 8 组各有明确不迁理由（公告方案→已由 P3-1 覆盖 / 硬件加速→WPF 专属 / 动画 FPS→已有 `ui.animation.*` / 遥测→不做 / 主题→已完成 / 下载→UMango 有自己的下载器 / 联机→MC 专属 / 启动→MC 专属 / 界面→已完成） |
+| **启动器杂项** | `PageSetupLauncherMisc.xaml.cs:322` | **否** | **已完成** | ⚠️ 已逐项核对 9 组设置，**UMango 该有的都已有等价物**：网络代理（`src/UMango.Core/Network/ProxyManager.cs`）/ 动画 FPS（`ui.animation.fpsLimit`）/ 最大日志行数（`debug.logBufferCapacity`，新增可调容量）/ DoH（`f201a73` 的 DNS+DoH 栈，`network.dohUpstreams`）/ 调试动画速度（`ui.animation.speedFactor`）/ 调试模式（`debug.terminalMode`）/ 主题 / 下载 / 界面（均已完成）。**不迁的 4 组**各有明确理由：公告方案（PCL 官网专属 → 已由 P3-1 的可配置公告源覆盖）、禁用硬件加速（WPF 渲染层内部开关，UMango 无软渲染回退路径）、遥测（不采集遥测）、停止使用/导入导出 PCL 配置（PCL 专属）。**两处口径纠正**：① 对照表旧注称「UMango 的 DNS 走系统，不自带解析器」——**已过时**，`f201a73` 落地了完整 DNS/DoH 栈；② 旧注称「最大日志行数（UMango 已有日志缓冲上限）」——旧时上限**硬编码 3000**，本轮改为用户可调（`MemoryLogSink.Capacity` 可运行时改，调小时立刻裁剪最旧条目并计入丢弃计数）。PCL 的滑块档位换算（≤5 → ×10+50 / ≤13 → ×50-150 / ≤28 → ×100-800 / 超出 = 无上限）**不迁**，UMango 直接用可读条数。 |
 | **关于页（含第三方许可清单）** | `PageSetupAbout.xaml.cs:203` + `PageSetupAbout.xaml`（505 行） | **否** | **已完成** | UMango `Views/ToolsView.xaml:217-274`「合规与许可」+「第三方组件」+「关于」；且 UMango 的声明比 PCL-CE 更完整（见 `THIRD-PARTY-NOTICES.md`） |
 | **启动器更新** | `PageSetupUpdate.xaml.cs:284` + `Modules/Updates/UpdateManager.cs:11`（`IsCurrentVersionBeta:26`、`GetVersionStatus:36`） | **否** | **已完成** | UMango 已实现完整自更新闭环：`Core/App/Essentials/UpdateHelper.cs`（PCL Apache-2.0 逐行移植）、`UpdateChecker.cs`（GitHub Releases Feed + SemVer 严格解析 + 预发布双通道判定）、`UpdateCommandLine.cs`（助手进程协议）、`App/Services/UpdateService.cs`、`ViewModels/UpdateViewModel.cs` + 设置页「检查更新」卡 + `App.Program.Main` 的助手分支。差异：UMango 只有 GitHub Releases 单源（PCL 的 Minio/MirrorChyan/随机/包装多源架构见本表第 305 行，未迁移） |
 | **反馈** | `PageSetupFeedback.xaml.cs:195` + `TagId:12` | **否** | ✅ **已完成**（commit 见下） | `src/UMango.Core/Feedback/`（`FeedbackModels.cs` / `FeedbackCategory.cs` / `FeedbackService.cs`）+ `src/UMango.App/Views/FeedbackView.xaml` + `ViewModels/FeedbackViewModel.cs`。**与原版的差异**：① 分类从**硬编码的数字 label id** 改为**按 label 名字匹配**（大小写不敏感，且可注册自定义映射）—— 原版那些 id 只在 PCL 自己仓库里存在，换仓库即失效；② 源**可配置**（`feedback.source` / `feedback.submitUrl` 两个设置项），留空则不访问任何地址；③ 抓取失败只记状态提示，不抛异常；④ 反馈内容**只读展示**，其中的任何文本都不会被当作命令执行 |
@@ -648,7 +648,7 @@
 | P3-6 | 进程间管道通信 | **已完成** | `PCL.Core/IO/PipeComm.cs`（Apache-2.0，170 行）—— `src/UMango.Core/Ipc/PipeServer.cs`：行协议（UTF-8，每行一条消息）+ 客户端自报进程号 + 会话计数 + 运行期日志 + 出错不杀服务端。**三处实质差异**：① 原版用 `KernelInterop.GetNamedPipeClientProcessId` 读管道句柄拿客户端进程号（Win32 专属），改为**客户端在协议里自报**（自报可伪造，只作日志与弱校验）；② 原版跑在专用线程上，改为 **async**；③ 原版的私有终止符协议（ESC）改为**行协议**。另加 `PipeServer.BuildPipeName`：**macOS/Linux 上 .NET 把命名管道映射成 Unix domain socket，完整路径必须 ≤ 104 字符**，超长名字自动用哈希压缩（原版无此概念，是跨平台移植时新发现的约束）。13 个测试，注入矩阵 4 项全红后还原。 |
 | P3-7 | 反馈页（标签化提交） | **已完成** | — |
 | P3-8 | 日志查看页 | ✅ **已完成**（同上 commit `f2cc0b9`，`Views/LogView.xaml`） | 与 P0-3 同批交付，并附「导出诊断包」 |
-| P3-9 | 启动器杂项设置 | **部分**（已逐项确认，见下） | PCL 的 `PageSetupLauncherMisc.xaml.cs`（322 行）共 9 组设置，逐项核对后：**UMango 该有的 1 组已迁（网络代理）**，其余 8 组各有明确不迁理由 |
+| P3-9 | 启动器杂项设置 | **已完成**（已逐项确认，见下） | PCL 的 `PageSetupLauncherMisc.xaml.cs`（322 行）共 9 组设置，逐项核对后：**UMango 该有的都已有等价物**（网络代理 / 动画 FPS / 最大日志行数 / DoH / 调试动画速度 / 调试模式 / 主题 / 下载 / 界面），**不迁的 4 组**各有明确理由（公告方案=PCL 官网专属、硬件加速=WPF 专属、遥测=不采集、PCL 配置导入导出=PCL 专属） |
 
 ### 4.5 Windows 依赖实测汇总（迁移成本的硬约束）
 
@@ -875,10 +875,15 @@ UMango 现有的 `Download/`（10 文件 1,638 行，aria2/内置 HTTP/eD2k 三�
 1. ~~**`PageSetupLauncherMisc.xaml.cs`（322 行）的具体设置项未逐项展开**~~ —— **已逐项确认**（见 §4.5 之后的 P3-9 逐项核对表）：
    9 组设置中，**网络代理**（自定义地址 / 自定义用户名 / 自定义密码 / 代理类型）已迁入
    （`src/UMango.Core/Network/ProxyManager.cs` + `src/UMango.App/Network/PlatformSystemProxyProbe.cs` + 设置页「①.9 网络代理」卡）；
-   其余 8 组不迁的理由分别是：公告方案（PCL 官网专属）、禁用硬件加速（WPF 渲染层内部开关，UMango 暂无软渲染回退路径）、
-   动画 FPS 上限（UMango 已有 `ui.animation.fpsLimit` 等价项）、最大日志行数（UMango 已有日志缓冲上限）、
-   遥测（UMango 不采集遥测）、DoH（UMango 的 DNS 走系统，不自带解析器）、调试动画速度（UMango 的动画速度因子已独立）、
-   调试跳过复制与调试随机延时（PCL 的 MC 安装流程专用）、以及「停止使用 PCL CE / 导入导出 PCL 配置」（PCL 专属）。
+   **动画 FPS 上限**（`ui.animation.fpsLimit`）、**调试动画速度**（`ui.animation.speedFactor`）、**调试模式**（`debug.terminalMode`）、
+   **主题 / 下载 / 界面**（均已完成）各有等价物；
+   **最大日志行数**本轮从「硬编码 3000」改为**用户可调**（`debug.logBufferCapacity` + `MemoryLogSink.Capacity` 可运行时调整）；
+   **DoH** 已在 `f201a73` 落地完整 DNS/DoH 栈（`network.dohUpstreams` / `dohCacheTtl` / `dohTimeout`）——
+   本节旧版本曾称「UMango 的 DNS 走系统，不自带解析器」，**该说法已过时并在此更正**。
+   剩下 4 组不迁的理由分别是：公告方案（PCL 官网专属 → 已由 P3-1 的可配置公告源覆盖）、
+   禁用硬件加速（WPF 渲染层内部开关，UMango 暂无软渲染回退路径）、
+   遥测（UMango 不采集遥测）、调试跳过复制与调试随机延时（PCL 的 MC 安装流程专用）、
+   以及「停止使用 PCL CE / 导入导出 PCL 配置」（PCL 专属）。
 2. **`Modules/Base/ModBase.cs`（3,759 行）内部的通用/专用比例未逐行分类**。
    该文件是上游继承的基础设施大杂烩，本次只确认了它的体积与角色，未做行级归属统计。
 3. **PCL-CE 的 `Controls/`（64 文件 11,342 行）未纳入功能清单**。

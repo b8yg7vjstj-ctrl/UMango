@@ -620,4 +620,6 @@
     <sys:String x:Key="Tools.CustomDownload.Done">Download finished: {0}</sys:String>
     <sys:String x:Key="Tools.CustomDownload.Failed">Download failed: {0}</sys:String>
     <sys:String x:Key="Tools.CustomDownload.Canceled">Download canceled</sys:String>
+    <sys:String x:Key="Settings.LogBufferCapacity">Log buffer size</sys:String>
+    <sys:String x:Key="Settings.LogBufferCapacity.Hint">Maximum number of log entries kept in memory. Older entries are dropped once the limit is reached (and counted as dropped). A larger buffer keeps longer terminal output but uses more memory.</sys:String>
 </ResourceDictionary>

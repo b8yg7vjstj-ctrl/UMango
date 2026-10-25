@@ -283,6 +283,27 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 日志页在内存里保留的最大条数。
+    ///
+    /// 写穿到 Core 的设置服务；Core 侧的 <c>MemoryLogSink.Capacity</c> 会在设置变更时
+    /// 立刻裁剪到新容量（调小时丢弃最旧的条目，计入「已丢弃」计数）。
+    ///
+    /// 对应 PCL-CE 的「最大日志行数」滑块，但 PCL 的滑块值是要经公式换算的档位
+    /// （≤5 → ×10+50 …），UMango 直接用可读的条数。
+    /// </summary>
+    public int LogBufferCapacity
+    {
+        get => AppSettings.Settings.Get<int>(UiSettings.LogBufferCapacityKey);
+        set
+        {
+            var clamped = Math.Clamp(value, 200, 50000);
+            if (LogBufferCapacity == clamped) return;
+            AppSettings.Settings.Set(UiSettings.LogBufferCapacityKey, clamped);
+            OnPropertyChanged();
+        }
+    }
+
     private string _announcementSource = "";
     private string _announcementStatusMessage = "";
 

@@ -6,12 +6,42 @@ namespace UMango.Core.Logging;
 /// 有容量上限是刻意的：CLI 的输出可能有几万行，
 /// 无上限会让日志本身成为内存泄漏来源。
 /// </summary>
-public sealed class MemoryLogSink(int capacity = 2000) : ILogSink
+public sealed class MemoryLogSink : ILogSink
 {
     private readonly Queue<LogEntry> _entries = new();
     private readonly Lock _gate = new();
 
-    public int Capacity { get; } = Math.Max(50, capacity);
+    /// <summary>
+    /// 缓冲容量上限（条）。
+    ///
+    /// **可运行时调整**：上限是个用户可见的设置项（PCL-CE 把它做成滑块，
+    /// 见 `PageSetupLauncherMisc` 的「最大日志行数」）。调整后立刻裁剪到新容量，
+    /// 多余的旧条目直接丢弃（内存环形缓冲丢最旧的）。
+    /// </summary>
+    public int Capacity
+    {
+        get { lock (_gate) return _capacity; }
+        set
+        {
+            var newCapacity = Math.Max(50, value);
+            lock (_gate)
+            {
+                _capacity = newCapacity;
+                while (_entries.Count > _capacity)
+                {
+                    _entries.Dequeue();
+                    DroppedCount++;
+                }
+            }
+        }
+    }
+
+    private int _capacity;
+
+    public MemoryLogSink(int capacity = 2000)
+    {
+        _capacity = Math.Max(50, capacity);
+    }
 
     /// <summary>当前缓冲里的条数</summary>
     public int Count { get { lock (_gate) return _entries.Count; } }

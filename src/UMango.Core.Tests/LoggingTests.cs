@@ -259,4 +259,73 @@ public class LoggingTests : IDisposable
             try { Directory.Delete(dir, true); } catch { /* 忽略 */ }
         }
     }
+
+    // ================= 容量可调（对应 PCL-CE 的「最大日志行数」滑块） =================
+
+    [Fact]
+    public void 内存sink的容量可以在运行时调整()
+    {
+        var sink = new MemoryLogSink(capacity: 100);
+        Assert.Equal(100, sink.Capacity);
+
+        sink.Capacity = 500;
+        Assert.Equal(500, sink.Capacity);
+    }
+
+    [Fact]
+    public void 调小容量到不低于当前条数时不裁剪()
+    {
+        var sink = new MemoryLogSink(capacity: 100);
+        for (var i = 0; i < 10; i++)
+            sink.Write(new LogEntry(DateTimeOffset.Now, LogLevel.Info, "T", $"第 {i} 条", null));
+
+        Assert.Equal(10, sink.Count);
+        Assert.Equal(0, sink.DroppedCount);
+
+        sink.Capacity = 50;
+
+        Assert.Equal(10, sink.Count);              // 10 < 50，不该裁
+        Assert.Equal(0, sink.DroppedCount);
+    }
+
+    [Fact]
+    public void 调小容量到低于当前条数时裁剪最旧的()
+    {
+        var sink = new MemoryLogSink(capacity: 100);
+        for (var i = 0; i < 60; i++)
+            sink.Write(new LogEntry(DateTimeOffset.Now, LogLevel.Info, "T", $"第 {i} 条", null));
+
+        // 容量下限是 50，调到 50 → 60 条裁掉 10 条
+        sink.Capacity = 50;
+
+        Assert.Equal(50, sink.Count);
+        Assert.Equal(10, sink.DroppedCount);
+
+        // 留下的是**最新**的 50 条
+        var texts = sink.Snapshot().Select(e => e.Message).ToArray();
+        Assert.Equal("第 10 条", texts[0]);
+        Assert.Equal("第 59 条", texts[49]);
+    }
+
+    [Fact]
+    public void 容量有下限_低于下限按下限处理()
+    {
+        var sink = new MemoryLogSink(capacity: 100);
+        sink.Capacity = 1;
+        Assert.Equal(50, sink.Capacity);
+
+        sink.Capacity = -100;
+        Assert.Equal(50, sink.Capacity);
+    }
+
+    [Fact]
+    public void 调小容量后仍能继续写入并遵守新上限()
+    {
+        var sink = new MemoryLogSink(capacity: 100);
+        sink.Capacity = 50;
+        for (var i = 0; i < 60; i++)
+            sink.Write(new LogEntry(DateTimeOffset.Now, LogLevel.Info, "T", $"第 {i} 条", null));
+
+        Assert.Equal(50, sink.Count);
+    }
 }

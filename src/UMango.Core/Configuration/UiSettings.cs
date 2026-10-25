@@ -37,6 +37,16 @@ public static class UiSettings
 
     public const string DebugModeKey = "debug.terminalMode";
 
+    /// <summary>
+    /// 日志页保留的最大条数（内存环形缓冲容量）。
+    ///
+    /// PCL-CE 把这条做成「最大日志行数」滑块（`PageSetupLauncherMisc`），
+    /// 但 PCL 的滑块值经 `SystemMaxLog` 换算成行数（≤5 → ×10+50，
+    /// ≤13 → ×50-150，≤28 → ×100-800，超出 = 无上限）。
+    /// UMango 换算成**直接可读的条数**，避免用户面对一个「档位」数字。
+    /// </summary>
+    public const string LogBufferCapacityKey = "debug.logBufferCapacity";
+
     public const string ShowUnsupportedSourcesKey = "behavior.showUnsupportedSources";
     public const string ConfirmBeforeInstallKey = "behavior.confirmBeforeInstall";
 
@@ -262,6 +272,20 @@ public static class UiSettings
             Kind = SettingKind.Bool,
             DefaultValue = false,
             Order = 10
+        },
+
+        new SettingDescriptor
+        {
+            Key = LogBufferCapacityKey,
+            Section = SectionDebug,
+            Title = "日志保留条数",
+            Description = "日志页在内存里保留的最大条数。超出后丢弃最旧的条目（并计入「已丢弃」计数）。"
+                          + "调大可保留更长的终端输出，代价是占用更多内存。",
+            Kind = SettingKind.Int,
+            DefaultValue = 3000,
+            Min = 200,
+            Max = 50000,
+            Order = 20
         },
 
         new SettingDescriptor

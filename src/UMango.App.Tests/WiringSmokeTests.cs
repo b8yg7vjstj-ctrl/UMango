@@ -27,6 +27,30 @@ namespace UMango.App.Tests;
 public class WiringSmokeTests
 {
     [Fact]
+    public void 日志保留条数的设置变更会立刻作用到内存日志sink()
+    {
+        // 回归：容量上限原先硬编码 3000，用户改不动；
+        // 现在设置变更必须真正把 live sink 裁到新容量（否则设置页是个摆设）。
+        AppServices.Initialize();
+        var sink = AppServices.Logs;
+        Assert.NotNull(sink);
+
+        var original = AppSettings.Settings.Get<int>(UMango.Core.Configuration.UiSettings.LogBufferCapacityKey);
+        try
+        {
+            AppSettings.Settings.Set(UMango.Core.Configuration.UiSettings.LogBufferCapacityKey, 1234);
+            Assert.Equal(1234, sink!.Capacity);
+
+            AppSettings.Settings.Set(UMango.Core.Configuration.UiSettings.LogBufferCapacityKey, 4321);
+            Assert.Equal(4321, sink.Capacity);
+        }
+        finally
+        {
+            AppSettings.Settings.Set(UMango.Core.Configuration.UiSettings.LogBufferCapacityKey, original);
+        }
+    }
+
+    [Fact]
     public async Task 整个对象图能构造并驱动一遍主流程()
     {
         // ── 0) 干净起点 ──
