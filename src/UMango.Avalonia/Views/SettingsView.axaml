@@ -1,0 +1,671 @@
+<!--
+  ============================================================================
+  设置页（Views/SettingsView.axaml）—— 与 WPF 版 `src/UMango.App/Views/SettingsView.xaml`（854 行）同构
+  ============================================================================
+  卡片顺序与 WPF 版一一对应：主题与外观 → 功能隐藏 → 高级材质 → 动画 → 语言 → 检查更新 →
+  网络代理 → 公告源 → 动态背景 → 窗口外观 → 下载限额 → 调试 → 记录管理。
+
+  ★ 颜色一律 {DynamicResource Xxx}：本页的核心要求是「选中主题立刻看到效果」，
+    静态引用不会在换主题后重新求值（WPF 那边踩过，Avalonia 侧同理）。
+  ★ 与 WPF 的两处结构性差异（不是漏移植）：
+      1) `Style="{DynamicResource PclCard}"` → `Classes="pcl-card"`，
+         `PclSectionTitle` → `Classes="pcl-title"`，`PclButton` → `Classes="pcl-primary"`；
+         Avalonia 的主题里没有 pcl-slider / pcl-checkbox 类，本页用 `<UserControl.Styles>` 自绘，
+         因此视觉与 WPF 一致，但不污染全局主题。
+      2) 无触发器/无 MultiDataTrigger：选中态、显隐合成改由样式伪类（`:checked` / `:selected`）
+         与 code-behind 合成（见 SettingsView.axaml.cs）。
+  ★ 数据来源：SettingsViewModel（主题/语言/代理/背景/记录清空/更新检查）+
+     Core 的 InstallRecordStore（统计与明细，视图侧现取现填并格式化，见 code-behind）。
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:UMango.Avalonia.Converters"
+             x:Class="UMango.Avalonia.Views.SettingsView"
+             FontFamily="{DynamicResource UiFont}"
+             Background="Transparent">
+
+  <UserControl.Styles>
+
+    <!--
+      主题选项卡：自绘模板而不是用 Fluent 默认样式。
+      默认选中态是系统蓝底白字，与两套主题都对不上；需求要求「关闭默认高亮」，
+      改成「选中时强调色描边 + 实心圆点」的卡片式选中态。
+    -->
+    <Style Selector="ListBox.theme-list > ListBoxItem">
+      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Name="Bd" CornerRadius="4" Padding="10,9"
+                  Background="{DynamicResource BrCard}"
+                  BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
+            <Grid ColumnDefinitions="Auto,*">
+              <!-- 单选圆点：未选中只有细圈，选中时圈变强调色并出现实心点 -->
+              <Grid Width="16" Height="16" VerticalAlignment="Center">
+                <Ellipse Name="Ring" Stroke="{DynamicResource BrG4}" StrokeThickness="1.5"
+                         Fill="Transparent" />
+                <Ellipse Name="Dot" Width="6" Height="6" Fill="{DynamicResource BrC3}"
+                         IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Grid>
+              <ContentPresenter Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+            </Grid>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="ListBox.theme-list > ListBoxItem:pointerover /template/ Border#Bd">
+      <Setter Property="Background" Value="{DynamicResource BrG8}" />
+    </Style>
+    <Style Selector="ListBox.theme-list > ListBoxItem:selected /template/ Border#Bd">
+      <Setter Property="BorderBrush" Value="{DynamicResource BrC3}" />
+      <Setter Property="Background" Value="{DynamicResource BrC8}" />
+    </Style>
+    <Style Selector="ListBox.theme-list > ListBoxItem:selected /template/ Ellipse#Ring">
+      <Setter Property="Stroke" Value="{DynamicResource BrC3}" />
+    </Style>
+    <Style Selector="ListBox.theme-list > ListBoxItem:selected /template/ Ellipse#Dot">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+
+    <!--
+      自绘开关（对应 WPF 的 PclSwitch）：默认 CheckBox 的方框取系统色，
+      深色主题下会变成「浅色方块糊在深色卡片上」，且不跟随主题切换。
+    -->
+    <Style Selector="CheckBox">
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="{DynamicResource BrG1}" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <StackPanel Orientation="Horizontal" Background="Transparent">
+            <Border Name="Box" Width="16" Height="16" CornerRadius="3"
+                    Background="{DynamicResource BrCard}"
+                    BorderBrush="{DynamicResource BrG5}" BorderThickness="1"
+                    VerticalAlignment="Center">
+              <!-- 对勾用 U+2713，字体回退链里的系统字体都有，不依赖图片资源 -->
+              <TextBlock Name="Check" Text="✓" FontSize="11" FontWeight="Bold"
+                         Foreground="{DynamicResource BrC3}" IsVisible="False"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ContentPresenter Margin="9,0,0,0" VerticalAlignment="Center"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </StackPanel>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="CheckBox:checked /template/ TextBlock#Check">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Border#Box">
+      <Setter Property="BorderBrush" Value="{DynamicResource BrC3}" />
+      <Setter Property="Background" Value="{DynamicResource BrC8}" />
+    </Style>
+    <Style Selector="CheckBox:pointerover /template/ Border#Box">
+      <Setter Property="BorderBrush" Value="{DynamicResource BrC5}" />
+    </Style>
+    <Style Selector="CheckBox:disabled">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+    <!-- 危险操作（清空记录）：沿用 pcl-secondary 的观感，只把文字与边框换成语义红 -->
+    <Style Selector="Button.danger">
+      <Setter Property="Foreground" Value="{DynamicResource BrRed}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BrRed}" />
+    </Style>
+
+    <!-- 统计数字 / 说明 / 表头列名 -->
+    <Style Selector="TextBlock.stat-num">
+      <Setter Property="FontSize" Value="22" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{DynamicResource BrC1}" />
+    </Style>
+    <Style Selector="TextBlock.stat-cap">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Margin" Value="0,2,0,0" />
+      <Setter Property="Foreground" Value="{DynamicResource BrG3}" />
+    </Style>
+    <Style Selector="TextBlock.col-cap">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{DynamicResource BrG3}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- 卡片内的小标题（WPF 里是零散的 FontSize=12 + BrG2/BrG3 组合） -->
+    <Style Selector="TextBlock.field-label">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Margin" Value="0,10,0,0" />
+      <Setter Property="Foreground" Value="{DynamicResource BrG2}" />
+    </Style>
+    <Style Selector="TextBlock.card-hint">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Margin" Value="0,4,0,0" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="{DynamicResource BrG3}" />
+    </Style>
+    <!-- 滑块：Avalonia 的 Fluent Slider 用 Foreground 作轨道强调色，这里统一指向 BrC3 -->
+    <Style Selector="Slider">
+      <Setter Property="Foreground" Value="{DynamicResource BrC3}" />
+    </Style>
+
+  </UserControl.Styles>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="20,18,20,24">
+
+      <!-- 页面标题 + 操作反馈（应用主题/清空/重新加载的结果都显示在这一行） -->
+      <TextBlock Text="{DynamicResource Settings.Title}" FontSize="16" FontWeight="Bold"
+                 Foreground="{DynamicResource BrC1}" />
+      <TextBlock Text="{DynamicResource Settings.Subtitle}" FontSize="12" Margin="0,4,0,0"
+                 Foreground="{DynamicResource BrG3}" />
+      <!-- 初始收起（IsVisible 由 code-behind 按 StatusMessage 是否有值合成），避免占一条空行 -->
+      <TextBlock Name="StatusText" FontSize="12" Foreground="{DynamicResource BrC2}"
+                 TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="False" />
+
+      <!-- ==================== ① 主题与外观 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,14,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Section.Appearance}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Appearance.Hint}" />
+
+          <!-- 主题族：选中即应用（SelectedItem 双向绑定 + code-behind 调 ApplyTheme 命令） -->
+          <ListBox Name="ThemeList" Classes="theme-list" Margin="0,10,0,0"
+                   ItemsSource="{Binding Themes}"
+                   SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
+                   SelectionChanged="ThemeList_SelectionChanged"
+                   Background="Transparent" BorderThickness="0" Padding="0">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel>
+                  <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                             Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding Description}" FontSize="12" Margin="0,3,0,0"
+                             Foreground="{DynamicResource BrG3}" TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <!-- 深色模式：与主题族组合成「PCL 经典 / Win10 Fluent × 浅色 / 深色」四种组合 -->
+          <Border Margin="0,4,0,0" Padding="10,9" CornerRadius="4"
+                  Background="{DynamicResource BrCard}"
+                  BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
+            <StackPanel>
+              <CheckBox Content="{DynamicResource Settings.DarkMode}"
+                        IsChecked="{Binding IsDark, Mode=TwoWay}" />
+              <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrG3}"
+                         Text="{DynamicResource Settings.DarkMode.Hint}" />
+
+              <!-- 跟随系统：勾上后深浅色由操作系统决定，手动开关失效 -->
+              <CheckBox Content="{DynamicResource Settings.FollowSystem}" Margin="0,8,0,0"
+                        IsChecked="{Binding FollowSystem, Mode=TwoWay}" />
+              <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrG3}"
+                         Text="{DynamicResource Settings.FollowSystem.Hint}" />
+            </StackPanel>
+          </Border>
+
+          <!-- 灰度（哀悼日）模式：与深浅色正交；施加动作在 ViewModel 的 setter 里 -->
+          <Border Margin="0,4,0,0" Padding="10,9" CornerRadius="4"
+                  Background="{DynamicResource BrCard}"
+                  BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
+            <StackPanel>
+              <CheckBox Content="{DynamicResource Settings.GrayMode}"
+                        IsChecked="{Binding GrayMode, Mode=TwoWay}" />
+              <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrG3}"
+                         Text="{DynamicResource Settings.GrayMode.Hint}" />
+            </StackPanel>
+          </Border>
+
+          <!-- 回显当前真正生效的 token 字典：换主题时这里也会跟着变，是「确实生效了」的直接证据 -->
+          <TextBlock Name="CurrentThemeText" FontSize="11" Margin="0,8,0,0"
+                     Foreground="{DynamicResource BrG4}" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.5 功能隐藏 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Hidden.Section}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Hidden.Hint}" />
+          <TextBox Margin="0,10,0,0" Text="{Binding HiddenEntries}" />
+          <CheckBox Margin="0,10,0,0" Content="{DynamicResource Settings.Hidden.ForceShow}"
+                    IsChecked="{Binding HideForceShow, Mode=TwoWay}" />
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.6 高级材质（模糊） ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Blur.Section}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Blur.Hint}" />
+
+          <CheckBox Margin="0,10,0,0" Content="{DynamicResource Settings.Blur.Enable}"
+                    IsChecked="{Binding BlurEnabled, Mode=TwoWay}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Blur.Radius}" />
+          <Slider Margin="0,2,0,0" Minimum="0" Maximum="60"
+                  Value="{Binding BlurRadius, Mode=TwoWay}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Blur.SamplingRate}" />
+          <Slider Margin="0,2,0,0" Minimum="0" Maximum="100"
+                  Value="{Binding BlurSamplingRate, Mode=TwoWay}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Blur.KernelType}" />
+          <ComboBox Name="BlurKernelBox" Margin="0,4,0,0"
+                    ItemsSource="{Binding BlurKernelTypes}"
+                    SelectedItem="{Binding SelectedBlurKernelType, Mode=TwoWay}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding DisplayName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.7 动画 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Section.Animation}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Animation.Hint}" />
+
+          <CheckBox Margin="0,10,0,0" Content="{DynamicResource Settings.Animation.Enable}"
+                    IsChecked="{Binding AnimationEnabled, Mode=TwoWay}" />
+          <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}"
+                     Text="{DynamicResource Settings.Animation.DisableHint}" />
+
+          <TextBlock FontSize="12" Margin="0,12,0,4"
+                     Foreground="{DynamicResource BrG3}"
+                     Text="{DynamicResource Settings.Animation.Direction}" />
+          <ListBox BorderThickness="0" Background="Transparent"
+                   ItemsSource="{Binding AnimationDirections}"
+                   SelectedItem="{Binding SelectedAnimationDirection, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Padding="10,8" CornerRadius="4" Margin="0,0,0,6"
+                        Background="{DynamicResource BrG8}"
+                        BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
+                  <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrC1}" />
+                    <TextBlock Text="{Binding Description}" FontSize="11" Margin="0,3,0,0"
+                               TextWrapping="Wrap" Foreground="{DynamicResource BrG3}" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <!-- 速度倍数：文案里带数字，用 MultiBinding 把 DynamicResource 的格式串与值合起来 -->
+          <TextBlock FontSize="12" Margin="0,8,0,4" Foreground="{DynamicResource BrG3}">
+            <TextBlock.Text>
+              <MultiBinding Converter="{x:Static conv:FormatValueConverter.Instance}">
+                <Binding Source="{DynamicResource Fmt.SpeedFactor}" />
+                <Binding Path="AnimationSpeedFactor" />
+              </MultiBinding>
+            </TextBlock.Text>
+          </TextBlock>
+          <Slider Minimum="0.5" Maximum="2.0" TickFrequency="0.1" IsSnapToTickEnabled="True"
+                  Value="{Binding AnimationSpeedFactor, Mode=TwoWay}" />
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.8 语言 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Section.Language}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Language.Hint}" />
+          <!-- 语言下拉：选中即应用（与主题族一致的交互） -->
+          <ComboBox Name="LanguageBox" Margin="0,10,0,0" MinWidth="220" HorizontalAlignment="Left"
+                    ItemsSource="{Binding Languages}"
+                    SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                    SelectionChanged="LanguageBox_SelectionChanged">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding DisplayName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.9 检查更新 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Update.Section}" />
+          <TextBlock FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}">
+            <TextBlock.Text>
+              <MultiBinding Converter="{x:Static conv:FormatValueConverter.Instance}">
+                <Binding Source="{DynamicResource Settings.Update.CurrentVersion}" />
+                <Binding Path="Update.CurrentVersionText" />
+              </MultiBinding>
+            </TextBlock.Text>
+          </TextBlock>
+
+          <!-- 状态行 + 两个按钮同一行：检查更新是低频操作，没必要让按钮占一整行 -->
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <Button Classes="pcl-primary" Content="{DynamicResource Settings.Update.Check}"
+                    Command="{Binding Update.CheckCommand}"
+                    IsEnabled="{Binding Update.IsBusy, Converter={x:Static conv:InverseBoolConverter.Instance}}" />
+            <Button Classes="pcl-primary" Margin="8,0,0,0"
+                    Content="{DynamicResource Settings.Update.Apply}"
+                    Command="{Binding Update.ApplyCommand}"
+                    IsEnabled="{Binding Update.HasUpdate}" />
+            <TextBlock FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"
+                       Foreground="{DynamicResource BrG2}"
+                       Text="{Binding Update.StatusMessage}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.10 网络代理 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Proxy.Section}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Proxy.Hint}" />
+
+          <!-- 代理模式：直连 / 跟随系统 / 自定义 -->
+          <ComboBox Name="ProxyModeBox" Margin="0,10,0,0"
+                    ItemsSource="{Binding ProxyModes}"
+                    SelectedItem="{Binding SelectedProxyMode, Mode=TwoWay}"
+                    SelectionChanged="ProxyModeBox_SelectionChanged">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding DisplayName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+
+          <!-- 自定义代理地址 + 用户名 + 密码：只在「自定义」模式下有意义 -->
+          <StackPanel Name="ProxyCustomPanel" Margin="0,8,0,0" IsVisible="False">
+            <TextBox Margin="0,0,0,6" Text="{Binding ProxyAddress}" />
+            <Grid ColumnDefinitions="*,8,*" Margin="0,0,0,6">
+              <TextBox Grid.Column="0" Text="{Binding ProxyUsername}" />
+              <!-- WPF 的 PasswordBox → Avalonia 的 TextBox + PasswordChar -->
+              <TextBox Grid.Column="2" Name="ProxyPasswordBox" PasswordChar="●"
+                       TextChanged="ProxyPasswordBox_TextChanged" />
+            </Grid>
+          </StackPanel>
+
+          <!-- 系统代理探测状态：让「跟随系统」不是一句空话 -->
+          <TextBlock FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}"
+                     Text="{Binding ProxyStatusMessage}" />
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.11 公告源 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Announcement.Section}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Announcement.Hint}" />
+          <TextBox Margin="0,10,0,0" Text="{Binding AnnouncementSource}" />
+          <TextBlock FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}"
+                     Text="{Binding AnnouncementStatusMessage}" />
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.12 动态背景 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Background.Section}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Background.Hint}" />
+
+          <CheckBox Margin="0,10,0,0" Content="{DynamicResource Settings.Background.Enabled}"
+                    IsChecked="{Binding BackgroundEnabled, Mode=TwoWay}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Background.Directory}" />
+          <TextBox Margin="0,4,0,0" Text="{Binding BackgroundDirectory}" />
+
+          <CheckBox Margin="0,10,0,0" Content="{DynamicResource Settings.Background.VideoEnabled}"
+                    IsChecked="{Binding BackgroundVideoEnabled, Mode=TwoWay}" />
+          <CheckBox Margin="0,6,0,0" Content="{DynamicResource Settings.Background.ForcePlay}"
+                    IsChecked="{Binding BackgroundForcePlay, Mode=TwoWay}" />
+
+          <!-- 不透明度：PCL 用千分比（0~1000），这里沿用同一刻度 -->
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Background.Opacity}" />
+          <Slider Margin="0,2,0,0" Minimum="0" Maximum="1000"
+                  Value="{Binding BackgroundOpacity, Mode=TwoWay}" />
+
+          <!-- 模糊半径：0 表示不模糊（PCL 同样是 0 = 不模糊） -->
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Background.Blur}" />
+          <Slider Margin="0,2,0,0" Minimum="0" Maximum="20"
+                  Value="{Binding BackgroundBlur, Mode=TwoWay}" />
+
+          <!-- 铺放方式：9 种，顺序与 PCL 的下拉框一致 -->
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Background.Suit}" />
+          <ComboBox Name="BackgroundSuitBox" Margin="0,4,0,0"
+                    ItemsSource="{Binding BackgroundSuits}"
+                    SelectedItem="{Binding BackgroundSuit, Mode=TwoWay}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding DisplayName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+
+          <TextBlock FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}"
+                     Text="{Binding BackgroundStatusMessage}" />
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.13 窗口外观 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Appearance.Section}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Appearance.WindowHint}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Appearance.Opacity}" />
+          <Slider Margin="0,2,0,0" Minimum="200" Maximum="1000"
+                  Value="{Binding WindowOpacity, Mode=TwoWay}" />
+
+          <CheckBox Margin="0,10,0,0" Content="{DynamicResource Settings.Appearance.LockSize}"
+                    IsChecked="{Binding LockWindowSize, Mode=TwoWay}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Appearance.Font}" />
+          <TextBox Margin="0,4,0,0" Text="{Binding UiFont}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Appearance.TitleBarText}" />
+          <TextBox Margin="0,4,0,0" Text="{Binding TitleBarText}" />
+
+          <CheckBox Margin="0,10,0,0" Content="{DynamicResource Settings.Appearance.TitleBarLeftAlign}"
+                    IsChecked="{Binding TitleBarLeftAlign, Mode=TwoWay}" />
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ①.14 下载限额 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Limits.Section}" />
+          <TextBlock Classes="card-hint" Text="{DynamicResource Settings.Limits.Hint}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Limits.Threads}" />
+          <TextBox Margin="0,4,0,0" Text="{Binding DownloadThreadLimit}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Limits.PerHost}" />
+          <TextBox Margin="0,4,0,0" Text="{Binding DownloadFileConnectionLimit}" />
+
+          <TextBlock Classes="field-label" Text="{DynamicResource Settings.Limits.Speed}" />
+          <TextBox Margin="0,4,0,0" Text="{Binding DownloadSpeedLimit}" />
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ② 调试 ==================== -->
+      <Border Classes="pcl-card" Padding="14" Margin="0,0,0,12">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Section.Debug}" />
+
+          <Border Margin="0,8,0,0" Padding="10,9" CornerRadius="4"
+                  Background="{DynamicResource BrCard}"
+                  BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
+            <StackPanel>
+              <!-- 绑定写到 SettingsViewModel.DebugMode，它写穿到 Core 的静态开关 TerminalBridge.DebugMode -->
+              <CheckBox Content="{DynamicResource Settings.DebugMode}"
+                        IsChecked="{Binding DebugMode, Mode=TwoWay}" />
+              <TextBlock FontSize="12" Margin="25,4,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrG3}"
+                         Text="{DynamicResource Settings.DebugMode.Hint}" />
+            </StackPanel>
+          </Border>
+
+          <!-- 日志保留条数（对应 PCL-CE 的「最大日志行数」滑块） -->
+          <Border Margin="0,8,0,0" Padding="10,9" CornerRadius="4"
+                  Background="{DynamicResource BrCard}"
+                  BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
+            <StackPanel>
+              <TextBlock FontSize="13" Text="{DynamicResource Settings.LogBufferCapacity}" />
+              <Slider Minimum="200" Maximum="50000" TickFrequency="100"
+                      Margin="0,6,0,0" Value="{Binding LogBufferCapacity, Mode=TwoWay}" />
+              <TextBlock FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                         Foreground="{DynamicResource BrG3}"
+                         Text="{DynamicResource Settings.LogBufferCapacity.Hint}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- ==================== ③ 记录管理 ==================== -->
+      <Border Classes="pcl-card" Padding="14">
+        <StackPanel>
+          <TextBlock Classes="pcl-title" Text="{DynamicResource Settings.Section.Records}" />
+
+          <!--
+            统计：总次数 / 成功 / 失败。
+            这三个数字与下面的明细列表都由视图侧从 Core 的 InstallRecordStore 现取现填
+            （见 RefreshRecordViews）：本页有「重新加载」按钮，若统计绑定 ViewModel 的内存快照，
+            重新加载后明细会更新而数字不会，出现自相矛盾的界面。
+          -->
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <StackPanel>
+              <TextBlock Name="StatTotalText" Text="0" Classes="stat-num" />
+              <TextBlock Text="{DynamicResource Settings.Records.Total}" Classes="stat-cap" />
+            </StackPanel>
+            <Border Width="1" Margin="20,2" Background="{DynamicResource BrG6}" />
+            <StackPanel>
+              <TextBlock Name="StatSuccessText" Text="0" Classes="stat-num"
+                         Foreground="{DynamicResource BrC3}" />
+              <TextBlock Text="{DynamicResource Settings.Records.Success}" Classes="stat-cap" />
+            </StackPanel>
+            <Border Width="1" Margin="20,2" Background="{DynamicResource BrG6}" />
+            <StackPanel>
+              <TextBlock Name="StatFailureText" Text="0" Classes="stat-num"
+                         Foreground="{DynamicResource BrRed}" />
+              <TextBlock Text="{DynamicResource Settings.Records.Failed}" Classes="stat-cap" />
+            </StackPanel>
+          </StackPanel>
+
+          <!-- 按包源的次数（降序，条形按最大次数等比缩放；数据由视图侧整理后赋给 ItemsSource） -->
+          <TextBlock Text="{DynamicResource Settings.Records.BySource}" FontSize="12" FontWeight="SemiBold"
+                     Margin="0,16,0,0" Foreground="{DynamicResource BrC1}" />
+          <ItemsControl Name="SourceCountList" Margin="0,6,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,3" ColumnDefinitions="96,*,70">
+                  <TextBlock Grid.Column="0" Text="{Binding Source}" FontSize="12"
+                             Foreground="{DynamicResource BrG1}" VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis" />
+                  <Border Grid.Column="1" Height="6" CornerRadius="3" HorizontalAlignment="Left"
+                          Background="{DynamicResource BrC5}" Width="{Binding BarWidth}"
+                          VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Text="{Binding CountText}" FontSize="12"
+                             Foreground="{DynamicResource BrG2}"
+                             HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Name="SourceCountEmpty" Text="{DynamicResource Settings.Records.EmptyCounts}"
+                     FontSize="12" Margin="0,2,0,0" Foreground="{DynamicResource BrG4}" IsVisible="False" />
+
+          <Border Height="1" Margin="0,16,0,0" Background="{DynamicResource BrG6}" />
+
+          <!-- 最近记录（时间倒序，最多 50 条） -->
+          <TextBlock Text="{DynamicResource Settings.Records.Recent}" FontSize="12" FontWeight="SemiBold"
+                     Margin="0,14,0,0" Foreground="{DynamicResource BrC1}" />
+          <TextBlock Text="{DynamicResource Settings.Records.RecentHint}" FontSize="11" Margin="0,2,0,0"
+                     Foreground="{DynamicResource BrG3}" />
+
+          <!-- 表头：列宽与下面 RecordRowTemplate 保持一致，改动时两处要一起改 -->
+          <Grid Margin="0,10,0,0" ColumnDefinitions="100,80,*,60,130,70">
+            <TextBlock Grid.Column="0" Classes="col-cap" Text="{DynamicResource Settings.Records.Column.Time}" />
+            <TextBlock Grid.Column="1" Classes="col-cap" Text="{DynamicResource Settings.Records.Column.Source}" />
+            <TextBlock Grid.Column="2" Classes="col-cap" Text="{DynamicResource Settings.Records.Column.Package}" />
+            <TextBlock Grid.Column="3" Classes="col-cap" Text="{DynamicResource Settings.Records.Column.Action}" />
+            <TextBlock Grid.Column="4" Classes="col-cap" Text="{DynamicResource Settings.Records.Column.Result}" />
+            <TextBlock Grid.Column="5" Classes="col-cap" Text="{DynamicResource Settings.Records.Column.Duration}"
+                       HorizontalAlignment="Right" />
+          </Grid>
+          <Border Height="1" Margin="0,6,0,0" Background="{DynamicResource BrG6}" />
+
+          <!-- 记录行：时间 / 包源 / 包名(+版本) / 操作 / 结果(+错误码) / 耗时 -->
+          <ItemsControl Name="RecordList">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Padding="0,6" BorderBrush="{DynamicResource BrG7}" BorderThickness="0,0,0,1">
+                  <Grid ColumnDefinitions="100,80,*,60,130,70">
+                    <TextBlock Grid.Column="0" Text="{Binding Time}" FontSize="12"
+                               Foreground="{DynamicResource BrG2}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Source}" FontSize="12"
+                               Foreground="{DynamicResource BrG1}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Column="2" Margin="6,0,10,0" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Package}" FontSize="12" Foreground="{DynamicResource BrC1}"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Version}" FontSize="11" Foreground="{DynamicResource BrG4}"
+                                 TextTrimming="CharacterEllipsis" IsVisible="{Binding HasVersion}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="3" Text="{Binding Action}" FontSize="12"
+                               Foreground="{DynamicResource BrG2}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="4" VerticalAlignment="Center">
+                      <!-- 失败用语义红、成功用强调色：两个互斥 TextBlock，颜色都走 token（随主题变） -->
+                      <TextBlock Text="{Binding ResultText}" FontSize="12" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource BrRed}" IsVisible="{Binding !Success}" />
+                      <TextBlock Text="{Binding ResultText}" FontSize="12" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource BrC3}" IsVisible="{Binding Success}" />
+                      <!-- 失败记录必须把 ErrorCode 显示出来（只有真的取到错误码时才占位） -->
+                      <TextBlock Text="{Binding ErrorText}" FontSize="11" Margin="0,1,0,0"
+                                 Foreground="{DynamicResource BrRed}" TextTrimming="CharacterEllipsis"
+                                 IsVisible="{Binding HasError}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="5" Text="{Binding Duration}" FontSize="12"
+                               Foreground="{DynamicResource BrG2}"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Name="RecordEmpty" Text="{DynamicResource Settings.Records.Empty}"
+                     FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG4}" IsVisible="False" />
+
+          <!-- 记录文件位置：排查「记录去哪了」时最常需要的信息 -->
+          <TextBlock Name="RecordStorePathText" FontSize="11" Margin="0,10,0,0"
+                     Foreground="{DynamicResource BrG4}" TextTrimming="CharacterEllipsis" />
+
+          <!-- 操作按钮：「重新加载」重读磁盘；「清空记录」不可撤销，点击后弹二次确认 -->
+          <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+            <Button Name="BtnReload" Classes="pcl-secondary"
+                    Content="{DynamicResource Settings.Records.Reload}"
+                    Click="Reload_Click" />
+            <Button Name="BtnClearRecords" Classes="pcl-secondary danger" Margin="10,0,0,0"
+                    Content="{DynamicResource Settings.Records.Clear}"
+                    Click="ClearRecords_Click"
+                    ToolTip.Tip="{DynamicResource Tip.ClearRecords}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

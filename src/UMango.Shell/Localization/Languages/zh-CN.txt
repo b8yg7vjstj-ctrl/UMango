@@ -600,6 +600,7 @@ Settings.Limits.Speed=全局限速（KB/秒，0 = 不限速）
 Tools.Actions=工具
 Tools.Cleanup.Title=垃圾清理
 Tools.Cleanup.Summary=共 {0} 个文件，{1}
+Tools.Cleanup.FileCount={0} 个文件
 Tools.Cleanup.Nothing=没有可清理的内容
 Tools.Cleanup.Refresh=重新统计
 Tools.Cleanup.Run=清理

@@ -35,6 +35,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using UMango.Core.Animation;
 using UMango.Core.Configuration;
 using UMango.Shell.Services;
@@ -148,17 +149,20 @@ public static class AvaloniaThemeManager
 
         var merged = app.Resources.MergedDictionaries;
 
-        // 倒序移除旧的 token 字典（按标记识别），避免边遍历边删导致索引错位。
-        for (var i = merged.Count - 1; i >= 0; i--)
+        // 移除上一次挂上去的 token 字典。
+        // 用**引用相等**而不是类型标记：IResourceDictionary 在 Avalonia 11.3 里
+        // 是一组会随版本增删成员的接口，自己包一层实现它就等于把自己钉死在
+        // 某个版本的接口集合上（升级即编译失败）。引用比较同样精确，
+        // 而且不会误删别人的字典。
+        if (_currentTokenDictionary is not null)
         {
-            if (merged[i] is AvaloniaTokenDictionary)
-            {
-                merged.RemoveAt(i);
-            }
+            merged.Remove(_currentTokenDictionary);
+            _currentTokenDictionary = null;
         }
 
         // 追加到末尾：Avalonia 的资源查找同样是后加入者优先。
         merged.Add(dictionary);
+        _currentTokenDictionary = dictionary;
 
         ThemeChanged?.Invoke();
     }
@@ -178,6 +182,11 @@ public static class AvaloniaThemeManager
     }
 
     /// <summary>
+    /// 当前挂在应用资源里的 token 字典（用于下次切换时精确移除）。
+    /// </summary>
+    private static IResourceDictionary? _currentTokenDictionary;
+
+    /// <summary>
     /// 构造 token 字典。
     ///
     /// 用 <see cref="AvaloniaXamlLoader"/> 加载 avares URI 里的 .axaml，
@@ -191,43 +200,12 @@ public static class AvaloniaThemeManager
 
         if (loaded is IResourceDictionary dictionary)
         {
-            return new AvaloniaTokenDictionary(dictionary);
+            return dictionary;
         }
 
         throw new InvalidOperationException($"主题 token 字典不是资源字典：{uri}");
     }
 
-    /// <summary>
-    /// 包一层，用来标记「这是 token 字典」。
-    ///
-    /// 不能靠文件名识别（那是 WPF 的做法，因为那边是 pack URI 延迟加载的）；
-    /// Avalonia 侧我们直接 new 出来的实例，标记更可靠。
-    /// </summary>
-    private sealed class AvaloniaTokenDictionary : IResourceDictionary
-    {
-        private readonly IResourceDictionary _inner;
-
-        public AvaloniaTokenDictionary(IResourceDictionary inner) => _inner = inner;
-
-        public bool TryGetResource(object key, ThemeVariant? theme, out object? value)
-            => _inner.TryGetResource(key, theme, out value);
-
-        public IResourceProvider? Owner => _inner.Owner;
-
-        public void AddResource(object key, object? value) => _inner.AddResource(key, value);
-
-        public void RemoveResource(object key) => _inner.RemoveResource(key);
-
-        public void Clear() => _inner.Clear();
-
-        public void Changed() => _inner.Changed();
-
-        public void Add(IResourceProvider provider) => _inner.Add(provider);
-
-        public void Remove(IResourceProvider provider) => _inner.Remove(provider);
-
-        public IEnumerable<IResourceProvider> Providers => _inner.Providers;
-    }
 }
 
 /// <summary>
@@ -257,24 +235,41 @@ internal static class SystemThemeProbe
         }
     }
 
+    /// <summary>
+    /// 取当前窗口的平台配色值（拿不到返回 null）。
+    ///
+    /// <para>
+    /// 路径：Application → 桌面生命周期 → MainWindow →（IInputRoot）PlatformSettings。
+    /// 窗口还没建好时这三层都可能拿不到 → 返回 null（调用方按"探测不到"处理）。
+    /// </para>
+    /// </summary>
+    private static global::Avalonia.Platform.PlatformColorValues? ResolvePlatformColorValues()
+    {
+        var app = global::Avalonia.Application.Current;
+        if (app?.ApplicationLifetime is not global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            return null;
+        }
+
+        var window = desktop.MainWindow;
+        if (window is not global::Avalonia.Input.IInputRoot inputRoot) return null;
+
+        return inputRoot.PlatformSettings?.GetColorValues();
+    }
+
     /// <summary>探测系统是否为深色；探测不到返回 null。</summary>
     public static bool? DetectNullable()
     {
         try
         {
-            var settings = AvaloniaLocator.Current.GetService<PlatformSettings>();
-            var variant = settings?.GetColorValues();
-            if (variant is null)
-            {
-                return null;
-            }
+            // Avalonia 11.3 的平台设置挂在**输入根**（窗口）上，不是全局 locator ——
+            // `AvaloniaLocator.Current.GetService<PlatformSettings>()` 那个 API 不存在。
+            var values = ResolvePlatformColorValues();
+            if (values is null) return null;
 
-            // Avalonia 没有直接给「深色」标志，用窗口底色亮度判断：
-            // 主题底色明显暗于 0.5 → 深色。
-            var luminance = variant.ThemeBackgroundColor.R / 255.0 * 0.2126
-                            + variant.ThemeBackgroundColor.G / 255.0 * 0.7152
-                            + variant.ThemeBackgroundColor.B / 255.0 * 0.0722;
-            return luminance < 0.5;
+            // ThemeVariant 直接给出 Light/Dark，比「按底色亮度猜」可靠。
+            // 枚举类型是 Avalonia.Platform.PlatformThemeVariant（不是 Styling.ThemeVariant）。
+            return values.ThemeVariant == global::Avalonia.Platform.PlatformThemeVariant.Dark;
         }
         catch
         {

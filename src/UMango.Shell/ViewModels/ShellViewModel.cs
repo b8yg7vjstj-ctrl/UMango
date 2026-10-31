@@ -34,7 +34,18 @@ public sealed record NavItem(
     string Title,
     string? Subtitle = null,
     bool IsSecondary = false,
-    string? GroupTitle = null);
+    string? GroupTitle = null)
+{
+    /// <summary>
+    /// 这一项是否要显示分组标题行。
+    /// WPF 侧用 DataTrigger 判 <c>GroupTitle != null</c>；Avalonia 没有 DataTrigger，
+    /// 所以两边都绑这个布尔属性，避免两套判断逻辑（曾经因此漏画过标题行）。
+    /// </summary>
+    public bool HasGroupTitle => !string.IsNullOrEmpty(GroupTitle);
+
+    /// <summary>是否要显示副标题行（同上，跨壳共用的判定）。</summary>
+    public bool HasSubtitle => !string.IsNullOrEmpty(Subtitle);
+}
 
 /// <summary>
 /// 外壳 ViewModel：选项卡状态 + 随选项卡变化的左栏菜单。

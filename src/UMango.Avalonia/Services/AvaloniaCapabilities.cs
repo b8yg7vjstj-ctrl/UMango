@@ -146,9 +146,12 @@ public sealed class AvaloniaMusicOutput : IMusicOutput
         // 同上。
     }
 
-    /// <summary>取当前播放进度（秒）。</summary>
-    public TimeSpan GetProgress() => TimeSpan.Zero;
-
-    /// <summary>取当前曲目总时长（秒）。</summary>
-    public double GetDuration() => 0;
+    /// <summary>
+    /// 取当前播放进度（0~1）。
+    ///
+    /// <para>
+    /// Avalonia 侧没有音频输出 → 恒为 0。
+    /// </para>
+    /// </summary>
+    public double GetProgress() => 0d;
 }

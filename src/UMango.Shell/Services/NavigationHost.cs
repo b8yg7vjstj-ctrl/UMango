@@ -2,10 +2,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UMango.Core.UI.Navigation;
 
-namespace UMango.App.Services;
+namespace UMango.Shell.Services;
 
 /// <summary>
-/// 导航宿主：把 Core 的 <see cref="NavigationService"/> 接到 WPF 外壳上。
+/// 导航宿主：把 Core 的 <see cref="NavigationService"/> 接到外壳上（两个壳共用）。
 ///
 /// 职责边界：
 ///   · <see cref="NavigationService"/>（Core，纯逻辑）负责「栈」本身；

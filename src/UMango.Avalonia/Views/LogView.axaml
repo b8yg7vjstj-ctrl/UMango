@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:UMango.Avalonia.Converters"
+             x:Class="UMango.Avalonia.Views.LogView">
+  <!--
+    ============================================================================
+    日志页（Avalonia 版）
+    ============================================================================
+    与 WPF 版 `src/UMango.App/Views/LogView.xaml` **同构**。
+
+    存在的实际理由：应用主要在 Windows 上运行、开发在 macOS ——
+    真机出问题时，开发侧唯一能拿到的材料就是用户发回来的一份日志。
+    因此「导出诊断包」不是锦上添花：它把日志/设置/记录/系统信息打成**一个 zip**，
+    用户点一下就能整份发出。
+
+    框架差异（都只是写法，观感一致）：
+    · WPF 的 `Style="{DynamicResource PclCard}"` → Avalonia 的 `Classes="pcl-card"`；
+    · WPF 的 `Visibility` + BoolToVis 转换器 → Avalonia 的 `IsVisible` + BoolToBool 转换器；
+    · WPF 的 `StringFormat={}{0:HH:mm:ss.fff}` → Avalonia 的 TimeToStringConverter；
+    · WPF 的 `DataTrigger` 换级别颜色 → Avalonia 的 LogLevelBrushConverter（绑画刷）。
+
+    约定：颜色一律 {DynamicResource}；整页放 ScrollViewer（小窗口必须能滚动）。
+  ============================================================================
+  -->
+  <ScrollViewer Background="Transparent" Padding="20,16,20,20"
+                HorizontalScrollBarVisibility="Disabled">
+    <StackPanel MaxWidth="980" HorizontalAlignment="Stretch">
+
+      <!-- ============ 操作条 ============ -->
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Column="0" Text="{DynamicResource Log.Column.Level}" FontSize="12"
+                   VerticalAlignment="Center" Foreground="{DynamicResource BrG3}" />
+
+        <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="120" Height="26"
+                  Classes="pcl"
+                  ItemsSource="{Binding Levels}"
+                  SelectedItem="{Binding SelectedLevel, Mode=TwoWay}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Title}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <TextBlock Grid.Column="2" Margin="12,0,0,0" FontSize="11" VerticalAlignment="Center"
+                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                   Foreground="{DynamicResource BrG3}"
+                   Text="{Binding StatusMessage}" />
+
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6">
+          <Button Content="{DynamicResource Log.Refresh}" Height="26" Padding="12,0" FontSize="12"
+                  Classes="pcl-secondary"
+                  Command="{Binding RefreshCommand}" />
+          <Button Content="{DynamicResource Log.Clear}" Height="26" Padding="12,0" FontSize="12"
+                  Classes="pcl-secondary"
+                  Command="{Binding ClearCommand}" />
+          <Button Content="{DynamicResource Log.OpenFolder}" Height="26" Padding="12,0" FontSize="12"
+                  Classes="pcl-secondary"
+                  Command="{Binding OpenFolderCommand}" />
+          <Button Content="{DynamicResource Log.Export}" Height="26" Padding="12,0" FontSize="12"
+                  Classes="pcl-primary"
+                  Command="{Binding ExportCommand}"
+                  ToolTip.Placement="Right"
+                  ToolTip.Tip="{DynamicResource Tip.ExportDiag}" />
+        </StackPanel>
+      </Grid>
+
+      <!-- ============ 提示与错误 ============ -->
+      <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource BrG4}"
+                 Margin="0,8,0,0"
+                 Text="{DynamicResource Log.StorageHint}" />
+
+      <Border Margin="0,8,0,0" Padding="10,8" CornerRadius="4"
+              Background="{DynamicResource BrRedBack}"
+              IsVisible="{Binding ErrorMessage, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}">
+        <TextBlock Text="{Binding ErrorMessage}" FontSize="12" TextWrapping="Wrap"
+                   Foreground="{DynamicResource BrRed}" />
+      </Border>
+
+      <!-- ============ 日志列表 ============ -->
+      <Border Margin="0,12,0,0" Classes="pcl-card" Padding="0">
+        <ListBox ItemsSource="{Binding Entries}"
+                 Classes="pcl"
+                 Background="Transparent" BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="10,3">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Classes="mono"
+                           Text="{Binding At, Converter={x:Static conv:TimeToStringConverter.Instance}}"
+                           Foreground="{DynamicResource BrG4}" />
+
+                <!-- 级别：错误用红色，警告用琥珀色（颜色帮助快速定位，但文字仍强调色相为蓝的合规要求） -->
+                <TextBlock Grid.Column="1" Margin="8,0,0,0" Classes="mono" MinWidth="30"
+                           Text="{Binding LevelText}"
+                           Foreground="{Binding Level, Converter={x:Static conv:LogLevelBrushConverter.Instance}}" />
+
+                <TextBlock Grid.Column="2" Margin="8,0,0,0" Classes="mono"
+                           Text="{Binding Category, Converter={x:Static conv:BracketConverter.Instance}}"
+                           Foreground="{DynamicResource BrC5}" />
+
+                <TextBlock Grid.Column="3" Margin="8,0,0,0" Classes="mono" TextWrapping="Wrap"
+                           Text="{Binding Message}"
+                           Foreground="{DynamicResource BrC1}" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

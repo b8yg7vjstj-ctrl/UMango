@@ -1,34 +1,110 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:UMango.Avalonia.ViewModels"
+        xmlns:views="using:UMango.Avalonia.Views"
         x:Class="UMango.Avalonia.MainWindow"
         Title="UMango"
         Width="980" Height="640"
         MinWidth="760" MinHeight="520"
-        Background="{DynamicResource PageBack}"
-        FontFamily="Inter, Microsoft YaHei UI, Segoe UI, PingFang SC">
+        Background="{DynamicResource BrBg}"
+        FontFamily="{DynamicResource UiFont}"
+        WindowStartupLocation="CenterScreen">
 
   <!--
-    macOS / Linux 版主窗口：PCL 布局骨架（顶部 banner 选项卡 + 内容区）。
-    与 WPF 版同构 —— 业务全部来自 UMango.Core，动效走同一套 Core 引擎
+    macOS / Linux 版主窗口：PCL 布局骨架（顶部 banner 选项卡 + 左栏菜单 + 内容区）。
+    与 WPF 版同构 —— 业务全部来自 UMango.Core / UMango.Shell，动效走同一套 Core 引擎
     （PCL 原版数值：淡入 100ms + 两段落体 250/350ms BackOut）。
-    平台差异按需求保留：macOS/Linux 用系统原生窗口风格（系统标题栏，
+
+    平台差异按需求保留：macOS/Linux 用**系统原生窗口风格**（系统标题栏，
     不自绘三大金刚键 —— 那是 Windows 版的专属需求）。
+
+    ⚠ 颜色/尺寸 token 一律 {DynamicResource}（不要退回 {StaticResource}）：
+      StaticResource 在 XAML 加载时只求值一次，运行时换掉 MergedDictionaries
+      里的 token 字典后不会重新求值，界面就"切不动主题"。
   -->
-  <Grid RowDefinitions="Auto,*">
+  <Grid RowDefinitions="Auto,Auto,*">
 
     <!-- 顶部 banner 选项卡（PCL 骨架：一行大标签） -->
-    <Border Background="{DynamicResource TitleBarBack}" Padding="10,8">
+    <Border Grid.Row="0" Background="{DynamicResource BrTitleBar}" Padding="10,6">
       <StackPanel Orientation="Horizontal" Spacing="4">
-        <Button x:Name="TabHome"     Classes="banner" Content="主页" Click="OnNavClick" />
-        <Button x:Name="TabDownload" Classes="banner" Click="OnNavClick" Content="下载" />
-        <Button x:Name="TabProgress" Classes="banner" Click="OnNavClick" Content="进度" />
-        <Button x:Name="TabSettings" Classes="banner" Click="OnNavClick" Content="设置" />
-        <Button x:Name="TabTools"    Classes="banner" Content="工具" />
+        <Button x:Name="TabHome"     Classes="banner" Content="主页" Click="OnNavClick" Tag="home" />
+        <Button x:Name="TabDownload" Classes="banner" Content="下载" Click="OnNavClick" Tag="download" />
+        <Button x:Name="TabProgress" Classes="banner" Content="进度" Click="OnNavClick" Tag="progress" />
+        <Button x:Name="TabSettings" Classes="banner" Content="设置" Click="OnNavClick" Tag="settings" />
+        <Button x:Name="TabTools"    Classes="banner" Content="工具"  Click="OnNavClick" Tag="tools" />
       </StackPanel>
     </Border>
 
-    <!-- 内容区：切页时由后台代码用 PCL 动效入场 -->
-    <ContentControl x:Name="PageHost" Grid.Row="1" />
+    <!--
+      副标题栏（次级页面时才出现）
+      对应 PCL-CE 的「副页面标题」机制：进入次级页面时显示一行「← 返回  页面标题」。
+      默认 Visibility=Collapsed —— 主页面不显示这行。
+    -->
+    <Border x:Name="SubTitleBar" Grid.Row="1" Height="34"
+            IsVisible="False"
+            Background="{DynamicResource BrTitleBar}"
+            BorderBrush="{DynamicResource BrG6}" BorderThickness="0,0,0,1">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+        <Button x:Name="BtnBack" Classes="caption" Content="&#xE72B;" Click="OnBackClick" />
+        <TextBlock x:Name="SubTitleText" Text="" FontSize="13"
+                   Foreground="{DynamicResource BrC1}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+      </StackPanel>
+    </Border>
+
+    <!-- 主体：左栏 + 内容区 -->
+    <Grid Grid.Row="2">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!--
+        左栏：内容由 ShellViewModel.LeftMenu 驱动（每个选项卡一组菜单项）。
+        渲染成两行（标题 + 可选副标题），与 WPF 版同构。
+      -->
+      <Border Grid.Column="0" Width="{DynamicResource LeftRailWidth}"
+              Background="{DynamicResource BrC8}"
+              BorderBrush="{DynamicResource BrG6}" BorderThickness="0,0,1,0">
+        <ListBox x:Name="LeftMenuList" Margin="0,8,0,0"
+                 Background="Transparent" BorderThickness="0"
+                 SelectionChanged="OnLeftSelectionChanged">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel>
+                <!--
+                  分组标题行：PCL-CE 的分组标题是独立 TextBlock（字号 12、透明度 0.6）。
+                  UMango 把标题挂在「该分组第一项」的模板里（GroupTitle 只有分组首项非空）。
+                -->
+                <TextBlock Text="{Binding GroupTitle}" FontSize="12" Opacity="0.6"
+                           Margin="-16,6,0,2" Padding="13,0,0,0"
+                           Foreground="{DynamicResource BrG3}"
+                           IsVisible="{Binding HasGroupTitle}" />
+                <TextBlock Text="{Binding Title}" FontSize="13"
+                           Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="0,2,0,0"
+                           Foreground="{DynamicResource BrG3}" TextTrimming="CharacterEllipsis"
+                           IsVisible="{Binding HasSubtitle}" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Border>
+
+      <!--
+        内容区：五个页面 UserControl **叠放在同一个 Grid 里，按可见性切换**。
+        与 WPF 版一致：切页只改 IsVisible，页面自己的滚动位置与展开状态不会丢。
+      -->
+      <Grid Grid.Column="1" Background="{DynamicResource BrBg}">
+        <views:HomeView x:Name="ViewHome" />
+        <views:DownloadView x:Name="ViewDownload" IsVisible="False" />
+        <views:ProgressView x:Name="ViewProgress" IsVisible="False" />
+        <views:SettingsView x:Name="ViewSettings" IsVisible="False" />
+        <views:ToolsView x:Name="ViewTools" IsVisible="False" />
+        <!-- 工具页下的独立子页（PCL-CE 「百宝箱」位置） -->
+        <views:DownloaderView x:Name="ViewDownloader" IsVisible="False" />
+        <views:LogView x:Name="ViewLog" IsVisible="False" />
+        <views:FeedbackView x:Name="ViewFeedback" IsVisible="False" />
+        <views:MusicView x:Name="ViewMusic" IsVisible="False" />
+      </Grid>
+    </Grid>
   </Grid>
 </Window>

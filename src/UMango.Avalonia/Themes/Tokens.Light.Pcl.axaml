@@ -4,7 +4,7 @@
   ⚠ 本文件是**生成产物**，请勿手工编辑。
     源头：src/UMango.App/Themes/Tokens.Light.Pcl.xaml
     重新生成：python3 scripts/sync-theme-tokens.py
-    校验（CI）：python3 scripts/sync-theme-tokens.py --check
+    校验（CI）：python3 scripts/sync-theme-tokens.py 的 check 模式
   ============================================================================
 -->
 <ResourceDictionary xmlns="https://github.com/avaloniaui"

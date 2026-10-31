@@ -1,0 +1,471 @@
+<!--
+  ============================================================================
+  下载页（Views/DownloadView.axaml）—— Avalonia 侧
+  ============================================================================
+  契约与 WPF 版一致（docs/DESIGN_UI_DOTNET.md §3）：
+    · 左栏 = 包源分类（第一行=包管理器名 Title，第二行=安装目录 Subtitle，两行都必须显示）
+    · 右栏 = 搜索区 + 忙碌进度 + 错误条 + 结果卡片列表（卡片右侧「安装」）
+
+  四条硬性约定（与 WPF 版同源，改动前请先读）：
+  1) **颜色/尺寸一律 {DynamicResource}，不写死颜色。** Avalonia 侧同理：StaticResource 只用在
+     **转换器实例**上（转换器与主题无关），画刷/尺寸/样式全部走 DynamicResource。
+  2) **不复制 PCL-CE 的 XAML/图片资源。** 卡片左侧 40x40 方块是自绘文字缩写。
+  3) **所有耗时动作都走 ViewModel 的 async 命令**，页面里没有同步等待。
+  4) **页面底色用 BrBg**（外壳内容区同色），卡片用 BrCard，否则"白卡片糊在白底上"。
+
+  与 WPF 版的三处**机制差异**（有意为之，不是漏移植）：
+  · 左栏用 **ListBox + SelectedItem 双向绑定**，而不是 WPF 的 ItemsControl + MultiBinding 比较引用。
+    WPF 那边绕是因为 ItemsControl 没有 SelectedItem；Avalonia 的 ListBox 有，
+    用 `:selected` 伪类表达选中态，比"转换器比较两个引用"少一层出错点（见本文件末尾注释）。
+  · WPF 的 DataTrigger / MultiDataTrigger → 本壳统一改成**转换器**（Avalonia 无触发器）。
+  · 「已安装为空」那行提示的多条件组合 → 交给 code-behind 的 UpdateHintVisibility 统一合成
+    （与"空态/初始提示"同一处判定，避免三处各判一半）。
+  ============================================================================
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:UMango.Avalonia.Converters"
+             x:Class="UMango.Avalonia.Views.DownloadView"
+             FontFamily="{DynamicResource UiFont}"
+             Background="Transparent">
+
+  <UserControl.Styles>
+
+    <!-- ===== 按钮：复用主题里的 pcl-primary / pcl-secondary =====
+         为什么不在这里自绘模板：本壳的主题字典（Themes/Pcl.Controls.axaml）已经按 PCL 语义定义了
+         这两套按钮（主操作=BrC3 蓝底反白、次操作=BrCard 白底深字，含 hover/pressed 态）。
+         页内再定义一份同名样式，只会让"改主题要改两处" —— WPF 那边自绘是因为 WPF 主题字典
+         不提供 Button 级样式，Avalonia 侧没有这个约束。 -->
+
+    <!-- ===== 搜索框：只改配色，不换模板 =====
+         WPF 侧自绘模板是为了把 PART_ContentHost 塞进自己的圆角 Border；
+         Avalonia 的默认 TextBox 模板本来就暴露 Background/BorderBrush/BorderThickness/
+         CornerRadius 可样式化属性，自绘反而必须自己实现 PART_TextPresenter
+         （缺了它输入框不可编辑，XAML 编译器直接报 AVLN2205），故这里只给属性。 -->
+    <Style Selector="TextBox.download-search">
+      <Setter Property="Height" Value="30"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrC1}"/>
+      <Setter Property="CaretBrush" Value="{DynamicResource BrC3}"/>
+      <Setter Property="Background" Value="{DynamicResource BrCard}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrG5}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Padding" Value="8,0"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBox.download-search:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource BrC3}"/>
+    </Style>
+
+    <!-- ===== 左栏底部开关：默认模板的方框是系统配色，深色主题下会突兀，故自绘 ===== -->
+    <Style Selector="CheckBox.download-toggle">
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Foreground" Value="{DynamicResource BrG2}"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <!-- Background=Transparent：整行（含文字）都可点，否则只有 14x14 的方框能点 -->
+          <Grid Background="Transparent" ColumnDefinitions="Auto,*">
+            <Border Name="Box" Width="14" Height="14" CornerRadius="2"
+                    VerticalAlignment="Top" Margin="0,1,0,0"
+                    Background="{DynamicResource BrCard}"
+                    BorderBrush="{DynamicResource BrG5}" BorderThickness="1">
+              <TextBlock Name="Check" Text="✓" FontSize="10" IsVisible="False"
+                         Foreground="{DynamicResource BrTitleBarForeHot}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ContentPresenter Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"/>
+          </Grid>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="CheckBox.download-toggle:checked /template/ Border#Box">
+      <Setter Property="Background" Value="{DynamicResource BrC3}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrC3}"/>
+    </Style>
+    <Style Selector="CheckBox.download-toggle:checked /template/ TextBlock#Check">
+      <Setter Property="IsVisible" Value="True"/>
+    </Style>
+    <Style Selector="CheckBox.download-toggle:pointerover /template/ Border#Box">
+      <Setter Property="BorderBrush" Value="{DynamicResource BrC3}"/>
+    </Style>
+
+    <!-- ===== 左栏：包源分类项 =====
+         需求硬要求：**第一行包管理器名、第二行安装目录**，两行都在。
+         选中态 = BrC6 底 + 左侧 3px BrC3 竖条（用 BorderThickness 左边 3px 实现：
+         一个选择器就能同时改底色与竖条，且不写死颜色）。
+         为什么用 ListBoxItem 而不是自绘 Border：ListBox 自带 SelectedItem 与
+         `:selected` 伪类，省掉 WPF 那边"MultiBinding 比较两个引用"的一层。
+         注意顺序：`:pointerover` 在前、`:selected` 在后 —— Avalonia 同优先级下后者胜，
+         所以悬停不会盖掉选中态（与 WPF 的触发器顺序等价）。 -->
+    <Style Selector="ListBox.download-sources">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.download-sources > ListBoxItem">
+      <Setter Property="MinHeight" Value="{DynamicResource ListItemHeight}"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="3,0,0,0"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"/>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="ListBox.download-sources > ListBoxItem:pointerover">
+      <Setter Property="Background" Value="{DynamicResource BrG8}"/>
+    </Style>
+    <Style Selector="ListBox.download-sources > ListBoxItem:selected">
+      <Setter Property="Background" Value="{DynamicResource BrC6}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource BrC3}"/>
+    </Style>
+
+  </UserControl.Styles>
+
+  <!-- ===== 页面骨架：左栏（包源分类） + 右栏（搜索与结果） ===== -->
+  <Grid ColumnDefinitions="Auto,*">
+
+    <!-- 左栏宽走 LeftRailWidth token（PCL 经典=168，Win10 Fluent=200） -->
+    <Border Grid.Column="0" Width="{DynamicResource LeftRailWidth}"
+            Background="{DynamicResource BrC8}"
+            BorderBrush="{DynamicResource BrG6}" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- 小节标题（PclSectionTitle 是 14 号，窄栏里压到 12 号更好排） -->
+        <TextBlock Grid.Row="0" Text="{DynamicResource Download.Column.Source}" Margin="12,12,12,6"
+                   Classes="pcl-title" FontSize="12"/>
+
+        <Grid Grid.Row="1">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <!-- 已过滤掉当前平台不支持的包源（ShowUnsupported 打开时才显示全部） -->
+            <ListBox x:Name="SourceList" Classes="download-sources"
+                     ItemsSource="{Binding VisibleCategories}"
+                     SelectedItem="{Binding SelectedCategory, Mode=TwoWay}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <!-- ToolTip：把 InstallHint 与 VerificationNote 原样给用户看 ——
+                       "未验证的包源"必须能被看到（行内还有一枚"未验证"角标，见下方 Grid）。 -->
+                  <Border MinHeight="{DynamicResource ListItemHeight}">
+                    <ToolTip.Tip>
+                      <StackPanel MaxWidth="320">
+                        <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource BrC1}"/>
+                        <TextBlock Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"
+                                   Foreground="{DynamicResource BrG3}"
+                                   IsVisible="{Binding Detail, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+                        <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{DynamicResource BrG2}">
+                          <Run Text="{DynamicResource Download.InstallDirectory}"/><Run Text="{Binding Subtitle, Mode=OneWay}"/>
+                        </TextBlock>
+                        <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{DynamicResource BrG2}"
+                                   IsVisible="{Binding InstallHint, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}">
+                          <Run Text="{DynamicResource Download.MissingCli}"/><Run Text="{Binding InstallHint, Mode=OneWay}"/>
+                        </TextBlock>
+                        <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Foreground="{DynamicResource BrWarnAmber}"
+                                   IsVisible="{Binding VerificationNote, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}">
+                          <Run Text="{DynamicResource Download.VerificationNote}"/><Run Text="{Binding VerificationNote, Mode=OneWay}"/>
+                        </TextBlock>
+                      </StackPanel>
+                    </ToolTip.Tip>
+
+                    <Grid Margin="9,6,8,6" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+
+                      <!-- 可用性状态点：Available=BrC3 / Degraded=琥珀 / NotInstalled·Unreachable=红 / 其它=BrG4
+                           （不单独挂 ToolTip：整行的 ToolTip 里已经含 Detail，免得出现"空提示框"） -->
+                      <Ellipse Grid.Row="0" Grid.Column="0" Width="7" Height="7" Margin="0,0,6,0"
+                               VerticalAlignment="Center"
+                               Fill="{Binding AvailabilityState, Converter={x:Static conv:AvailabilityStateToBrushConverter.Instance}}"/>
+
+                      <!-- 第一行：包管理器名（Title） + 未验证角标 -->
+                      <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="13"
+                                   Foreground="{DynamicResource BrC1}"
+                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        <Border Grid.Column="1" Margin="5,0,0,0" Padding="4,0" CornerRadius="2"
+                                Background="{DynamicResource BrWarnAmber}"
+                                VerticalAlignment="Center"
+                                ToolTip.Tip="{Binding VerificationNote}"
+                                IsVisible="{Binding VerificationNote, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}">
+                          <TextBlock Text="{DynamicResource Download.NotVerified}" FontSize="10"
+                                     Foreground="{DynamicResource BrWarnAmberFore}"/>
+                        </Border>
+                      </Grid>
+
+                      <!-- 第二行：安装目录（Subtitle）—— 比标题小一号、弱化、长路径省略 -->
+                      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Subtitle}"
+                                 FontSize="11" Margin="0,2,0,0"
+                                 Foreground="{DynamicResource BrG3}"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{Binding Subtitle}"/>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </ScrollViewer>
+
+          <!-- 一个包源都没探测到时的提示（否则左栏会是一片空白，看起来像坏了） -->
+          <TextBlock Text="{DynamicResource Download.NoSources}" Margin="12,4" FontSize="11" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}"
+                     IsVisible="{Binding VisibleCategories, Converter={x:Static conv:EmptyCollectionToBoolConverter.Instance}}"/>
+        </Grid>
+
+        <CheckBox Grid.Row="2" Margin="10,8,8,10"
+                  IsChecked="{Binding ShowUnsupported, Mode=TwoWay}"
+                  Classes="download-toggle"
+                  ToolTip.Tip="{DynamicResource Tip.ShowUnsupported}">
+          <TextBlock Text="{DynamicResource Download.ShowUnsupported}" FontSize="11" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG2}"/>
+        </CheckBox>
+      </Grid>
+    </Border>
+
+    <!-- 右栏 -->
+    <Grid Grid.Column="1" Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+      <!-- 搜索区：输入框 + 搜索 + 刷新包源 -->
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
+
+        <TextBox x:Name="QueryBox" Grid.Column="0"
+                 Classes="download-search"
+                 Text="{Binding Query, Mode=TwoWay}"
+                 KeyDown="QueryBox_KeyDown"
+                 ToolTip.Tip="{DynamicResource Tip.SearchInput}"/>
+
+        <Button Grid.Column="1" Content="{DynamicResource Download.Search}" Margin="8,0,0,0"
+                Classes="pcl-primary" Height="30" FontSize="12" Padding="14,0"
+                Command="{Binding SearchCommand}"
+                Click="SearchButton_Click"
+                ToolTip.Tip="{DynamicResource Tip.SearchHere}"/>
+
+        <Button Grid.Column="2" Content="{DynamicResource Download.RefreshSources}" Margin="8,0,0,0"
+                Classes="pcl-secondary" Height="30" FontSize="12" Padding="14,0"
+                Command="{Binding RefreshCommand}"
+                ToolTip.Tip="{DynamicResource Tip.Reprobe}"/>
+      </Grid>
+
+      <!-- 忙碌：探测/搜索进行中（安装不置 Busy，进度在「进度」页看） -->
+      <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0"
+                  IsVisible="{Binding IsBusy}">
+        <ProgressBar Width="160" Height="3" IsIndeterminate="True" BorderThickness="0"
+                     Foreground="{DynamicResource BrC3}"
+                     Background="{DynamicResource BrG6}"
+                     VerticalAlignment="Center"/>
+        <TextBlock Text="{DynamicResource Download.Processing}" FontSize="11" Margin="8,0,0,0"
+                   Foreground="{DynamicResource BrG3}" VerticalAlignment="Center"/>
+      </StackPanel>
+
+      <!-- 错误条：醒目但不刺眼。
+           底色为什么用 BrG8 而不是"浅红底"：四套主题字典只把红色做成了 **BrRed 画刷**，
+           RedBack 只是 Color token（没有配套 BrRedBack 画刷，而主题字典不允许改 key），
+           把 Color 直接塞进 Brush 属性会在运行期类型不匹配。
+           于是用"中性浅面板 + 3px 红竖条 + 主色标题"表达错误：任何主题下都成立。 -->
+      <Border Grid.Row="2" Margin="0,10,0,0" Padding="12,9" CornerRadius="4"
+              Background="{DynamicResource BrG8}"
+              BorderBrush="{DynamicResource BrRed}" BorderThickness="3,0,0,0"
+              IsVisible="{Binding ErrorMessage, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding ErrorMessage}" FontSize="12" FontWeight="SemiBold"
+                       Foreground="{DynamicResource BrC1}" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding ErrorAdvice}" FontSize="11" Margin="0,3,0,0"
+                       Foreground="{DynamicResource BrG2}" TextWrapping="Wrap"
+                       IsVisible="{Binding ErrorAdvice, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+          </StackPanel>
+          <Button Grid.Column="1" Content="{DynamicResource Download.Retry}" Margin="12,0,0,0" VerticalAlignment="Center"
+                  Classes="pcl-secondary" Height="30" FontSize="12" Padding="14,0"
+                  Command="{Binding SearchCommand}"
+                  Click="SearchButton_Click"
+                  ToolTip.Tip="{DynamicResource Tip.SearchAgain}"/>
+        </Grid>
+      </Border>
+
+      <!-- 状态行：左侧是中性提示（搜索到几条、安装完成等），右侧是视图模式开关。
+           开关放在这里而不是另起一行：右栏的行都用满了，插行要整体改 Grid.Row 索引、容易错位。 -->
+      <Grid Grid.Row="3" Margin="0,10,0,0" ColumnDefinitions="*,Auto">
+
+        <TextBlock Grid.Column="0" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
+                   Text="{Binding StatusMessage}"
+                   Foreground="{DynamicResource BrG2}"
+                   IsVisible="{Binding StatusMessage, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+
+        <!-- 视图模式：搜索结果 ↔ 已安装。 -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <Button Content="{DynamicResource Download.SearchResults}" Height="24" Padding="10,0" FontSize="11"
+                  Classes="pcl-secondary"
+                  Command="{Binding ShowSearchResultsCommand}"
+                  ToolTip.Tip="{DynamicResource Tip.ShowResults}"/>
+          <Button Content="{DynamicResource Download.Installed}" Height="24" Padding="10,0" FontSize="11" Margin="6,0,0,0"
+                  Classes="pcl-secondary"
+                  Command="{Binding ShowInstalledCommand}"
+                  ToolTip.Tip="{DynamicResource Tip.ShowInstalled}"/>
+        </StackPanel>
+      </Grid>
+
+      <!-- 结果列表（仅搜索结果模式）。
+           行高 64 与 docs/SCREENSHOT_CHECK.md 的下载页量测一致（PCL-CE 的 MyCompItem Height=64）。 -->
+      <ScrollViewer Grid.Row="4" Margin="0,12,0,0" Focusable="False"
+                    IsVisible="{Binding ShowResultsPane}"
+                    VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Results}">
+          <ItemsControl.Styles>
+            <!-- 撑满宽度：否则卡片拿不到受限宽度，TextTrimming 不会生效 -->
+            <Style Selector="ContentPresenter">
+              <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            </Style>
+          </ItemsControl.Styles>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="pcl-card" MinHeight="64" Padding="12,10" Margin="0,0,0,6">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+
+                  <!-- 40x40 圆角方块：包名缩写（自绘文字，不使用 PCL 的图片资源） -->
+                  <Border Grid.Column="0" Width="40" Height="40" CornerRadius="6"
+                          Background="{DynamicResource BrC6}" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name, Converter={x:Static conv:PackageInitialConverter.Instance}}"
+                               FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrC1}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+
+                  <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
+                    <!-- 包名 -->
+                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrC1}"
+                               TextTrimming="CharacterEllipsis"/>
+
+                    <!-- 简介：单行省略 -->
+                    <TextBlock Text="{Binding Summary}" FontSize="12" Margin="0,2,0,0"
+                               Foreground="{DynamicResource BrG3}"
+                               TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding Summary, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+
+                    <!-- 元信息行：版本 / 许可证 / 下载量（+ 兜底标注）。
+                         用 WrapPanel 而不是横向 StackPanel：窄窗口下自动折行，
+                         否则超出的文字会溢出到右侧「安装」按钮上。 -->
+                    <WrapPanel Orientation="Horizontal" Margin="0,3,0,0">
+                      <TextBlock FontSize="11" Foreground="{DynamicResource BrG3}" MaxWidth="150"
+                                 TextTrimming="CharacterEllipsis"
+                                 Text="{Binding LatestVersion, Converter={x:Static conv:VersionLabelConverter.Instance}}"/>
+                      <TextBlock FontSize="11" Foreground="{DynamicResource BrG4}" Text=" · " Margin="2,0"/>
+                      <TextBlock FontSize="11" Foreground="{DynamicResource BrG3}" MaxWidth="150"
+                                 TextTrimming="CharacterEllipsis"
+                                 Text="{Binding License, Converter={x:Static conv:LicenseLabelConverter.Instance}}"/>
+                      <TextBlock FontSize="11" Foreground="{DynamicResource BrG4}" Text=" · " Margin="2,0"/>
+                      <TextBlock FontSize="11" Foreground="{DynamicResource BrG3}" MaxWidth="170"
+                                 TextTrimming="CharacterEllipsis"
+                                 Text="{Binding DownloadCount, Converter={x:Static conv:DownloadCountLabelConverter.Instance}}"/>
+
+                      <!-- ★ 兜底标注：DownloadCount 来自 GitHub Stars 时必须明说，
+                           不能让用户以为是官方下载量 -->
+                      <Border Margin="6,0,0,0" Padding="4,0" CornerRadius="2"
+                              Background="{DynamicResource BrWarnAmber}"
+                              VerticalAlignment="Center"
+                              ToolTip.Tip="{DynamicResource Tip.Downloads.Star}"
+                              IsVisible="{Binding DownloadCountIsFallback}">
+                        <TextBlock Text="{DynamicResource Download.GithubStarsFallback}" FontSize="10"
+                                   Foreground="{DynamicResource BrWarnAmberFore}"/>
+                      </Border>
+                    </WrapPanel>
+                  </StackPanel>
+
+                  <!-- 安装：命令参数直接传该卡片的数据对象（ViewModel 的 Install(PackageInfo?)）。
+                       命令挂在页面的 ViewModel 上，故用 $parent[ItemsControl] 取外层 DataContext。 -->
+                  <Button Grid.Column="2" Content="{DynamicResource Download.Install}" VerticalAlignment="Center"
+                          Classes="pcl-primary" Height="30" FontSize="12" Padding="14,0"
+                          Command="{Binding $parent[ItemsControl].DataContext.InstallCommand}"
+                          CommandParameter="{Binding}"
+                          ToolTip.Tip="{DynamicResource Tip.Install}"/>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- 空态：搜过但没有结果（有错误时让位给错误条，搜索中让位给进度条）。
+           显隐由 code-behind 的 UpdateHintVisibility 合成 —— 判定跨了四个来源
+           （结果数 / 是否搜过 / 忙碌 / 错误），单一绑定表达不了。 -->
+      <StackPanel x:Name="EmptyState" Grid.Row="4" Margin="0,40,0,0" IsVisible="False"
+                  VerticalAlignment="Top" HorizontalAlignment="Center">
+        <TextBlock Text="{DynamicResource Download.NoMatch}" FontSize="13"
+                   Foreground="{DynamicResource BrG2}" HorizontalAlignment="Center"/>
+        <TextBlock Text="{DynamicResource Download.NoMatchHint}" FontSize="11" Margin="0,4,0,0"
+                   Foreground="{DynamicResource BrG4}" HorizontalAlignment="Center"/>
+      </StackPanel>
+
+      <!-- ===== 已安装列表（仅已安装模式） =====
+           各包管理器的"已安装"语义不同，标题与空态文案由 ViewModel 的 InstalledSummary 区分：
+           npm/pnpm 是全局包、Homebrew 是 formula（可能多版本）、**git 是本地仓库**。 -->
+      <ScrollViewer Grid.Row="4" Margin="0,12,0,0" Focusable="False"
+                    IsVisible="{Binding ShowInstalledPane}"
+                    VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Installed}">
+          <ItemsControl.Styles>
+            <Style Selector="ContentPresenter">
+              <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            </Style>
+          </ItemsControl.Styles>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="pcl-card" Padding="12,10" Margin="0,0,0,8">
+                <Grid ColumnDefinitions="*,Auto">
+
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis"/>
+                    <!-- 安装位置（拿不到就整行收起，不留空行） -->
+                    <TextBlock Text="{Binding InstallPath}" FontSize="11" Margin="0,3,0,0"
+                               Foreground="{DynamicResource BrG4}" TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding InstallPath, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Version}" FontSize="12"
+                               Foreground="{DynamicResource BrG3}"
+                               IsVisible="{Binding Version, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+                    <!-- 同包多版本（Homebrew 实测会出现 brotli 1.1.0 1.2.0） -->
+                    <TextBlock Text="{Binding OtherVersions, Converter={x:Static conv:JoinToTextConverter.Instance}}"
+                               FontSize="11" Margin="8,0,0,0"
+                               Foreground="{DynamicResource BrG4}" VerticalAlignment="Center"
+                               IsVisible="{Binding OtherVersions, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- 已安装模式的空态：说明为什么是空的（而不是留一片白）。
+           WPF 用 MultiDataTrigger 组合三个条件；Avalonia 无触发器，
+           统一由 code-behind 的 UpdateHintVisibility 判定（同一处合成，避免三处各判一半）。 -->
+      <TextBlock x:Name="InstalledEmptyHint" Grid.Row="4" Margin="0,40,0,0" FontSize="12" TextWrapping="Wrap"
+                 HorizontalAlignment="Center" VerticalAlignment="Top" TextAlignment="Center"
+                 Foreground="{DynamicResource BrG3}"
+                 IsVisible="False"
+                 Text="{Binding InstalledSummary}"/>
+
+      <!-- 初始提示：还没搜过（否则右栏一片空白） -->
+      <StackPanel x:Name="IdleHint" Grid.Row="4" Margin="0,40,0,0"
+                  VerticalAlignment="Top" HorizontalAlignment="Center">
+        <TextBlock Text="{DynamicResource Download.EmptyPrompt}" FontSize="13"
+                   Foreground="{DynamicResource BrG2}" HorizontalAlignment="Center"/>
+        <TextBlock FontSize="11" Margin="0,4,0,0" HorizontalAlignment="Center"
+                   Foreground="{DynamicResource BrG4}"
+                   Text="{DynamicResource Download.EmptyHint}"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</UserControl>

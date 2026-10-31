@@ -1,0 +1,318 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:UMango.Avalonia.Converters"
+             x:Class="UMango.Avalonia.Views.ProgressView">
+  <!--
+    ============================================================================
+    进度页（Avalonia 版）
+    ============================================================================
+    与 WPF 版 `src/UMango.App/Views/ProgressView.xaml`（620 行）**同构**。
+
+    对应需求原文的两条：
+      1.「进度展示为 PCL-CE 中下载进度同 UI 设计完成，而下载进度界面于进度根据不同下载方式
+          列明子项进度」→ 左栏任务列表 + 右侧「按下载方式列明的子项进度」；
+      2.「做一个终端集成桥，实现可观测的输出……可在下载进度页原生回传终端输出，
+          而非以黑底硬嵌终端，与子中文进度同级」
+          → 终端输出用**与页面一致的底色 + 普通文本**呈现（绝不黑底绿字），
+            并且**逐行挂在对应子项那一行的下方**，与中文子项进度同级。
+
+    与 WPF 版的关键差异：**子项行直接绑 Shell 的 StepMirror.Rows**。
+      WPF 版因为要同时显示「父任务下的子项」和「子项自己的输出」，用了一个
+      MultiBinding + 转换器把 (当前子项, 本页 StepRows) 合成一行；
+      Avalonia 侧改成「直接迭代镜像行」——每行自带 Child（子项）与 Output（该子项的输出），
+      语义完全相同且不需要多绑定转换器。两个壳的**行数据来自同一份 Shell 实现**，
+      行为一致由 Shell 层的单测保证。
+  ============================================================================
+  -->
+  <Grid Margin="16,14">
+    <Grid.ColumnDefinitions>
+      <!-- 需求：左侧任务列表宽 260。 -->
+      <ColumnDefinition Width="260"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- ================= 左：任务列表 ================= -->
+    <Grid Grid.Column="0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+
+      <Grid Grid.Row="0" Margin="2,0,2,8">
+        <TextBlock Text="{DynamicResource Progress.Title}" Classes="pcl-section-title"/>
+      </Grid>
+
+      <!-- 列表：选中项高亮/键盘切换交给列表控件；默认高亮被样式换成主题色。 -->
+      <ListBox x:Name="TaskList" Grid.Row="1"
+               ItemsSource="{Binding Tasks}"
+               SelectedItem="{Binding SelectedTask}"
+               Background="Transparent" BorderThickness="0" Padding="0">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                           Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding StateMessage}" FontSize="11" Margin="0,2,0,0"
+                           Foreground="{DynamicResource BrG3}" TextTrimming="CharacterEllipsis"/>
+                <ProgressBar Height="4" Margin="0,6,0,0" Minimum="0" Maximum="100"
+                             Value="{Binding Progress, Converter={x:Static conv:FractionToPercentConverter.Instance}}"
+                             Foreground="{DynamicResource BrC3}" Background="{DynamicResource BrG6}"
+                             BorderThickness="0"/>
+              </StackPanel>
+
+              <!-- 取消按钮直接绑 TaskModel.Cancel：RelayCommand 自带可用性判断，
+                   任务没有取消回调时按钮自动置灰（界面不需要自己判断）。 -->
+              <Button Grid.Column="1" Content="{DynamicResource Progress.Cancel}"
+                      Classes="mini" Margin="8,0,0,0" VerticalAlignment="Center"
+                      Command="{Binding Cancel}"
+                      ToolTip.Tip="{DynamicResource Tip.CancelTask}"/>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Grid>
+
+    <!-- ================= 右：选中任务详情（无选中时显示空态） ================= -->
+    <Grid Grid.Column="1" Margin="16,0,0,0">
+
+      <!-- 详情区：没有选中任务时整块收起（空态另有一套）。 -->
+      <Grid IsVisible="{Binding SelectedTask, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="3*" MinHeight="110"/>
+          <RowDefinition Height="2*" MinHeight="140"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===== 顶部：任务标题 + 状态 + 总进度条 ===== -->
+        <Border Grid.Row="0" Classes="pcl-card" Padding="14,12">
+          <StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <TextBlock Grid.Column="0" Text="{Binding SelectedTask.Title}"
+                         FontSize="16" FontWeight="Bold" VerticalAlignment="Center"
+                         Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis"/>
+
+              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{Binding SelectedTask.StateMessage}" FontSize="12"
+                           Foreground="{DynamicResource BrG3}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock FontSize="12" FontWeight="SemiBold" Margin="10,0,0,0"
+                           VerticalAlignment="Center" Foreground="{DynamicResource BrC2}"
+                           Text="{Binding SelectedTask.Progress, Converter={x:Static conv:FractionToPercentConverter.Instance}}"/>
+                <!-- 走 ViewModel 的取消命令：父任务没有回调时会退一步取消它的子项。 -->
+                <Button Content="{DynamicResource Progress.CancelTask}" Classes="mini" Margin="12,0,0,0"
+                        Command="{Binding CancelTaskCommand}"
+                        CommandParameter="{Binding SelectedTask}"
+                        ToolTip.Tip="{DynamicResource Tip.CancelGroup}"/>
+              </StackPanel>
+            </Grid>
+
+            <!-- 父任务总进度：6px，与子项的 3px 形成层级。 -->
+            <ProgressBar Height="6" Margin="0,10,0,0" Minimum="0" Maximum="100"
+                         Value="{Binding SelectedTask.Progress, Converter={x:Static conv:FractionToPercentConverter.Instance}}"
+                         Foreground="{DynamicResource BrC3}" Background="{DynamicResource BrG6}"
+                         BorderThickness="0"/>
+          </StackPanel>
+        </Border>
+
+        <!-- ===== 中部：按下载方式列明的子项进度（每个子项带自己的输出） ===== -->
+        <Border Grid.Row="1" Classes="pcl-card" Padding="14,12" Margin="0,12,0,0">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+              <TextBlock Text="{DynamicResource Progress.SubProgress}" Classes="pcl-section-title"/>
+              <TextBlock FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
+                         Foreground="{DynamicResource BrG4}"
+                         Text="{DynamicResource Progress.SubProgressHint}"/>
+            </StackPanel>
+
+            <!--
+              子项行直接来自 Shell 的 StepRowMirror（Shell 层实现，两壳共用）。
+              每行自带：Child（Core 的 TaskModel：中文名/进度/状态）+ Output（该子项自己的终端输出）。
+              因此「每个子项都有独立进度条」与「输出挂在对应子项下方、与中文进度同级」都是同一份数据。
+            -->
+            <ScrollViewer Grid.Row="1" Margin="0,10,0,0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding StepMirror.Rows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Margin="0,0,0,12">
+                      <!-- 子项标题行：状态图标 + 中文名 + 独立进度条 + 状态文字 -->
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="16"/>
+                          <ColumnDefinition Width="120"/>
+                          <ColumnDefinition Width="*"/>
+                          <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 状态图标 -->
+                        <TextBlock Grid.Column="0" FontSize="12"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Text="{Binding Child.State, Converter={x:Static conv:TaskStateIconConverter.Instance}}"
+                                   Foreground="{Binding Child.State, Converter={x:Static conv:TaskStateBrushConverter.Instance}}"/>
+
+                        <!-- 子项中文名（来自 Core 的 StepNames，例如「下载」「链接与写入」）。 -->
+                        <TextBlock Grid.Column="1" Text="{Binding Child.Title}" FontSize="13"
+                                   Foreground="{DynamicResource BrG2}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding Child.Title}"/>
+
+                        <!-- 每个子项**独立**的进度条：高 3px、BrC5，与父任务的 6px 总进度条区分层级。 -->
+                        <ProgressBar Grid.Column="2" Height="3" Margin="8,0" Minimum="0" Maximum="100"
+                                     Value="{Binding Child.Progress, Converter={x:Static conv:FractionToPercentConverter.Instance}}"
+                                     Foreground="{DynamicResource BrC5}" Background="{DynamicResource BrG6}"
+                                     BorderThickness="0" VerticalAlignment="Center"/>
+
+                        <TextBlock Grid.Column="3" Text="{Binding Child.StateMessage}" FontSize="11"
+                                   Foreground="{DynamicResource BrG4}" MinWidth="34"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                      </Grid>
+
+                      <!--
+                        该子项自己的终端输出 —— 与上面的中文进度**同级**（同一列、紧跟其下），
+                        普通文本 + 页面底色，**不是黑底硬嵌终端**。
+                      -->
+                      <ItemsControl ItemsSource="{Binding Output}" Margin="24,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid Margin="0,1,0,1">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                              </Grid.ColumnDefinitions>
+                              <TextBlock Grid.Column="0"
+                                         Text="{Binding At, Converter={x:Static conv:TimeToStringConverter.Instance}}"
+                                         FontSize="11" Classes="mono" Foreground="{DynamicResource BrG4}"
+                                         VerticalAlignment="Top"/>
+                              <TextBlock Grid.Column="1" Text="{Binding Text}" Margin="8,0,0,0"
+                                         TextWrapping="Wrap" FontSize="12" Classes="mono"
+                                         Foreground="{Binding IsStdErr, Converter={x:Static conv:StdErrBrushConverter.Instance}}"/>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+
+                      <!-- 非调试模式下被裁掉的行数提示（打开调试模式即可看全）。 -->
+                      <TextBlock Text="{Binding TruncationHint}" FontSize="11" Margin="24,4,0,0"
+                                 Foreground="{DynamicResource BrG4}"
+                                 IsVisible="{Binding TruncationHint, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+
+            <!-- 没有子项时的说明：执行器正在规划，或这类任务本身不分阶段。 -->
+            <TextBlock Grid.Row="1" Margin="0,10,0,0" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource BrG4}"
+                       IsVisible="{Binding SelectedTask.Children.Count, Converter={x:Static conv:EmptyCollectionToBoolConverter.Instance}}"
+                       Text="{DynamicResource Progress.NoSubItems}"/>
+          </Grid>
+        </Border>
+
+        <!-- ===== 下部：终端输出（原生回传，普通文本，不是黑底终端） ===== -->
+        <Border Grid.Row="2" Classes="pcl-card" Padding="14,10" Margin="0,12,0,0">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <TextBlock Text="{DynamicResource Progress.TerminalOutput}" Classes="pcl-section-title"/>
+                <TextBlock FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Foreground="{DynamicResource BrG4}"
+                           Text="{DynamicResource Progress.TerminalHint}"/>
+              </StackPanel>
+
+              <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <!-- 与设置页的「调试模式」是同一个开关（Core 的静态开关 + 落盘），两处状态一致。 -->
+                <ToggleButton x:Name="DebugToggleButton" Content="{DynamicResource Progress.DebugMode}"
+                              Classes="mini" IsChecked="{Binding DebugMode}"
+                              ToolTip.Tip="{DynamicResource Tip.DebugMode}"/>
+                <Button Content="{DynamicResource Progress.Clear}" Classes="mini" Margin="8,0,0,0"
+                        Command="{Binding ClearTerminalCommand}"
+                        ToolTip.Tip="{DynamicResource Tip.ClearOutput}"/>
+              </StackPanel>
+            </Grid>
+
+            <!-- 操作反馈（如"已清空该任务的终端输出"），空时只是一行占位。 -->
+            <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" FontSize="11" Margin="0,6,0,0"
+                       Foreground="{DynamicResource BrG3}" TextTrimming="CharacterEllipsis"/>
+
+            <!-- 终端输出：普通文本 + 页面底色，**不是黑底硬嵌终端**。 -->
+            <ScrollViewer x:Name="TerminalScroll" Grid.Row="2" Margin="0,6,0,0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          ScrollChanged="OnTerminalScrollChanged">
+              <StackPanel>
+                <ItemsControl x:Name="TerminalList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid Margin="0,1,0,1">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="Auto"/>
+                          <ColumnDefinition Width="Auto"/>
+                          <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding At, Converter={x:Static conv:TimeToStringConverter.Instance}}"
+                                   FontSize="11" Classes="mono" Foreground="{DynamicResource BrG4}"
+                                   VerticalAlignment="Top"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Step, Converter={x:Static conv:BracketConverter.Instance}}"
+                                   FontSize="11" Margin="8,0,0,0" VerticalAlignment="Top"
+                                   Foreground="{DynamicResource BrC5}"
+                                   IsVisible="{Binding Step, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Text}" Margin="8,0,0,0"
+                                   TextWrapping="Wrap" FontSize="12" Classes="mono"
+                                   Foreground="{Binding IsStdErr, Converter={x:Static conv:StdErrBrushConverter.Instance}}"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <!-- 末尾的省略提示：提醒用户上面还有更早的输出（打开调试模式即可看全）。 -->
+                <TextBlock x:Name="TerminalTruncationHint" IsVisible="False"
+                           FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap"
+                           Foreground="{DynamicResource BrG4}"/>
+              </StackPanel>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <!-- ===== 空态：一个任务都没有 ===== -->
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                  IsVisible="{Binding SelectedTask, Converter={x:Static conv:InverseNotEmptyToBoolConverter.Instance}}">
+        <TextBlock Text="{DynamicResource Progress.Empty}" FontSize="14"
+                   HorizontalAlignment="Center" Foreground="{DynamicResource BrG3}"/>
+        <TextBlock FontSize="12" Margin="0,8,0,0" HorizontalAlignment="Center"
+                   TextAlignment="Center" TextWrapping="Wrap" MaxWidth="360"
+                   Foreground="{DynamicResource BrG4}"
+                   Text="{DynamicResource Progress.EmptyHint}"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</UserControl>

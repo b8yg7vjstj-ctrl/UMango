@@ -592,6 +592,7 @@ Settings.Limits.Speed=Global speed limit (KB/s, 0 = unlimited)
 Tools.Actions=Tools
 Tools.Cleanup.Title=Cleanup
 Tools.Cleanup.Summary={0} files, {1} in total
+Tools.Cleanup.FileCount={0} files
 Tools.Cleanup.Nothing=Nothing to clean up
 Tools.Cleanup.Refresh=Recount
 Tools.Cleanup.Run=Clean up

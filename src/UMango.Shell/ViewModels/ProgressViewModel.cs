@@ -71,6 +71,16 @@ public partial class ProgressViewModel : ObservableObject
     private string? _statusMessage;
 
     /// <summary>
+    /// 子项行镜像（子项 + 它自己的终端输出）。
+    ///
+    /// <para>
+    /// 下沉到 Shell 是为了让 WPF 壳与 Avalonia 壳共用同一份实现 ——
+    /// 需求里的「降低重复代码率」。这一层不含 UI 框架类型，可在 macOS 上单测。
+    /// </para>
+    /// </summary>
+    public StepRowMirror StepMirror { get; }
+
+    /// <summary>
     /// 调试模式：读写 Core 的静态开关（<see cref="TerminalBridge.DebugMode"/>）。
     /// 打开后 Core 会保留更多历史行，界面上也把终端输出与子项进度同级展开。
     /// 写入时持久化，下次启动仍然是开着的。getter 直接读静态开关（唯一权威），
@@ -97,6 +107,15 @@ public partial class ProgressViewModel : ObservableObject
     private Func<TerminalLine, bool>? _lineFilter;
 
     private readonly Dictionary<string, TerminalGroup> _groupIndex = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// 构造进度页 ViewModel。
+    /// </summary>
+    public ProgressViewModel()
+    {
+        // 调试模式读的是 Core 的静态开关（可能在设置页被改），所以传函数不传快照。
+        StepMirror = new StepRowMirror(() => DebugMode);
+    }
 
     /// <summary>
     /// 切换选中任务：**必须先退订再订阅**。

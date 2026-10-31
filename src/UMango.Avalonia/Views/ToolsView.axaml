@@ -1,0 +1,361 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:UMango.Avalonia.Converters"
+             x:Class="UMango.Avalonia.Views.ToolsView">
+  <!--
+    ============================================================================
+    工具/诊断页（Avalonia 版）：系统诊断 / 工具动作 / 合规与许可 / 关于
+    ============================================================================
+    与 WPF 版 `src/UMango.App/Views/ToolsView.xaml`（389 行）**同构**。
+
+    与 WPF 版的写法差异（观感一致，机制不同）：
+      · `Style="{DynamicResource PclCard}"`        → `Classes="pcl-card"`
+        `Style="{DynamicResource PclSectionTitle}"` → `Classes="section-title"`
+        —— WPF 用具名 Style 资源，Avalonia 用 Classes（不能把具名样式套到控件上）。
+      · `Visibility="{Binding X, Converter=BoolToVis}"` → `IsVisible="{Binding X, ...}"`
+        —— Avalonia 的 IsVisible 是 bool，没有 Collapsed 第三态，所以"空值"必须显式映射 false。
+      · 转换器用 `{x:Static conv:XxxConverter.Instance}`：Avalonia 侧没有
+        `StaticResource` 形式的转换器注册表，单例直接静态引用更省也更快。
+      · `DiagnosticSourceRow.StateBrushKey` 仍是**主题 key 字符串**（Shell 平台中立），
+        由 `conv:ThemeBrushKeyConverter` 解析成当前主题下的画刷。
+
+    约定（与其它页面一致）：
+      · 颜色一律 {DynamicResource BrXxx}，不写死色值 —— 运行时换主题必须生效。
+      · 整页放 ScrollViewer：依赖诊断明细可能很长，窗口小了必须能滚动。
+  -->
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                Padding="20,16,20,20" Background="Transparent">
+    <StackPanel MaxWidth="880" HorizontalAlignment="Left">
+
+      <!-- ===================== 1) 系统诊断卡 ===================== -->
+      <Border Classes="pcl-card" Padding="16,14">
+        <StackPanel>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Classes="section-title" Text="{DynamicResource Tools.Diagnostics}"
+                       VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Content="{DynamicResource Tools.Reprobe}" Padding="12,3" Cursor="Hand" FontSize="12"
+                    Classes="pcl"
+                    ToolTip.Tip="{DynamicResource Tip.ReprobeCli}"
+                    Command="{Binding ReproCommand}"/>
+          </Grid>
+          <TextBlock Text="{Binding ProbeTimeText}" FontSize="11" Margin="0,6,0,0"
+                     Classes="hint"/>
+
+          <!-- 系统判断：平台 / 架构 / Windows / 宿主 / 主目录 -->
+          <Grid Margin="0,10,0,0" ColumnDefinitions="96,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Tools.Platform}" FontSize="12" Margin="0,0,0,6"
+                       Classes="secondary"/>
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding PlatformSummaryText}" FontSize="12"
+                       Margin="0,0,0,6"/>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Tools.Architecture}" FontSize="12" Margin="0,0,0,6"
+                       Classes="secondary"/>
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ArchitectureText}" FontSize="12"
+                       Margin="0,0,0,6"/>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Tools.IsWindows}" FontSize="12" Margin="0,0,0,6"
+                       Classes="secondary"/>
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding HostText}" FontSize="12"
+                       Margin="0,0,0,6"/>
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Tools.HomeDirectory}" FontSize="12" Margin="0,0,0,6"
+                       Classes="secondary"/>
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding HomeDirectoryText}" FontSize="12"
+                       Margin="0,0,0,6"
+                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding HomeDirectoryText}"/>
+
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="{DynamicResource Tools.RecordFile}" FontSize="12"
+                       Classes="secondary"/>
+            <TextBlock Grid.Row="4" Grid.Column="1" FontSize="12"
+                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding RecordsPathText}">
+              <Run Text="{Binding RecordsPathText, Mode=OneWay}"/><Run Text="（"/><Run
+                Text="{Binding RecordsCountText, Mode=OneWay}"/><Run Text="）"/>
+            </TextBlock>
+          </Grid>
+
+          <!-- 初始化阶段被兜底吞掉的错误：没有任何痕迹时"为什么包源列表是空的"就只能靠猜 -->
+          <Border Margin="0,10,0,0" Padding="10,8" CornerRadius="4"
+                  Background="{DynamicResource BrG8}"
+                  IsVisible="{Binding HasInitializationWarning, Converter={x:Static conv:BoolToBoolConverter.Instance}}">
+            <TextBlock FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource BrRed}">
+              <Run Text="{DynamicResource Tools.InitWarning}" FontWeight="SemiBold"/><Run
+                Text="{Binding InitializationWarningText, Mode=OneWay}"/>
+            </TextBlock>
+          </Border>
+
+          <Border Height="1" Margin="0,12,0,10" Background="{DynamicResource BrG6}"/>
+
+          <!-- 包源 CLI 探测明细：CLI 路径 / CLI 版本 / 状态 / 明细 -->
+          <TextBlock Text="{DynamicResource Tools.ProbeDetail}" FontSize="12" FontWeight="SemiBold"/>
+          <TextBlock Text="{DynamicResource Tools.DirectoryHint}"
+                     FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
+                     Classes="secondary"/>
+
+          <Grid Margin="0,10,0,4" ColumnDefinitions="16,96,*,112">
+            <TextBlock Grid.Column="1" Text="{DynamicResource Tools.Column.Package}" FontSize="11" Classes="hint"/>
+            <TextBlock Grid.Column="2" Text="{DynamicResource Tools.CliPathVersion}" FontSize="11"
+                       Classes="hint"/>
+            <TextBlock Grid.Column="3" Text="{DynamicResource Tools.Column.State}" FontSize="11" Classes="hint"/>
+          </Grid>
+          <Border Height="1" Background="{DynamicResource BrG6}"/>
+
+          <ItemsControl ItemsSource="{Binding SourceRows}" Margin="0,2,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Margin="0,6,0,2">
+                  <Grid ColumnDefinitions="16,96,*,112">
+
+                    <TextBlock Grid.Column="0" Text="{Binding StatusGlyph}" FontSize="10"
+                               Foreground="{Binding StateBrushKey, Converter={x:Static conv:ThemeBrushKeyConverter.Instance}}"
+                               VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12" FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+
+                    <!-- CLI 路径与版本是诊断的核心：探测不到时显示"（未找到）/（未知）"而不是留空 -->
+                    <TextBlock Grid.Column="2" FontSize="11" Margin="0,0,10,0"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding InstallDirectory}">
+                      <Run Text="{Binding CliPathText, Mode=OneWay}"
+                           Foreground="{DynamicResource BrG2}"/><Run Text="  ·  "/><Run
+                        Text="{Binding CliVersionText, Mode=OneWay}"
+                        Foreground="{DynamicResource BrG4}"/>
+                    </TextBlock>
+
+                    <TextBlock Grid.Column="3" Text="{Binding StateText}" FontSize="12"
+                               Foreground="{Binding StateBrushKey, Converter={x:Static conv:ThemeBrushKeyConverter.Instance}}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                  </Grid>
+
+                  <!-- 第二行：安装目录 +（未验证提示）+ 探测明细 -->
+                  <TextBlock FontSize="11" Margin="112,2,0,0" TextWrapping="Wrap"
+                             Classes="hint">
+                    <Run Text="{DynamicResource Tools.InstallDirectory}"/><Run Text="{Binding InstallDirectory, Mode=OneWay}"/>
+                  </TextBlock>
+
+                  <TextBlock FontSize="11" Margin="112,2,0,0" TextWrapping="Wrap"
+                             Foreground="{DynamicResource BrG2}"
+                             IsVisible="{Binding HasVerificationNote, Converter={x:Static conv:BoolToBoolConverter.Instance}}">
+                    <Run Text="{DynamicResource Tools.NotVerified}"/><Run Text="{Binding VerificationNote, Mode=OneWay}"/>
+                  </TextBlock>
+
+                  <TextBlock FontSize="11" Margin="112,2,0,0" TextWrapping="Wrap"
+                             Classes="secondary"
+                             IsVisible="{Binding HasDetail, Converter={x:Static conv:BoolToBoolConverter.Instance}}">
+                    <Run Text="{Binding Detail, Mode=OneWay}"/>
+                  </TextBlock>
+
+                  <!-- CLI 缺失时的安装指引：只说"缺什么"而不说"怎么办"等于没帮上忙 -->
+                  <TextBlock FontSize="11" Margin="112,2,0,0" TextWrapping="Wrap"
+                             Classes="secondary" Text="{Binding InstallHintText}"
+                             IsVisible="{Binding ShowInstallHint, Converter={x:Static conv:BoolToBoolConverter.Instance}}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- ★ 未在真机验证的集中提示（Core 的 VerificationNote），有才显示 -->
+          <Border Margin="0,10,0,0" Padding="10,8" CornerRadius="4"
+                  Background="{DynamicResource BrG8}"
+                  IsVisible="{Binding HasVerificationNotes, Converter={x:Static conv:BoolToBoolConverter.Instance}}">
+            <TextBlock Text="{Binding VerificationText}" FontSize="11" TextWrapping="Wrap"
+                       Foreground="{DynamicResource BrG2}"/>
+          </Border>
+
+          <!-- 纯文本诊断报告：可直接复制进 issue，不必逐行截图 -->
+          <TextBlock Text="{DynamicResource Tools.Report}" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,6"/>
+          <Border Padding="10,8" CornerRadius="4" Background="{DynamicResource BrG8}"
+                  BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
+            <!--
+              用 TextBox 而不是可选中 TextBlock：TextBox 支持 Ctrl+A/Ctrl+C 与右键复制菜单，
+              各平台行为一致；只读（IsReadOnly=True）不影响主题。
+            -->
+            <TextBox x:Name="DiagnosticsReportBox" IsReadOnly="True" BorderThickness="0"
+                     Background="Transparent" FontFamily="Consolas, Menlo, monospace" FontSize="11"
+                     Foreground="{DynamicResource BrG2}" TextWrapping="NoWrap"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Disabled"/>
+          </Border>
+
+          <!-- 状态/错误提示：源是 string?，故用 NotEmptyToBool（BoolToBool 只认 bool，
+               误用在字符串上会永远 false —— 诊断页尤其不能"什么都不说"）。 -->
+          <TextBlock Text="{Binding StatusMessage}" FontSize="11" Margin="0,10,0,0"
+                     TextWrapping="Wrap" Classes="secondary"
+                     IsVisible="{Binding StatusMessage, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+          <TextBlock Text="{Binding ErrorMessage}" FontSize="11" Margin="0,6,0,0"
+                     TextWrapping="Wrap" Foreground="{DynamicResource BrRed}"
+                     IsVisible="{Binding ErrorMessage, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ===================== 2) 工具动作卡（垃圾清理 / 自定义下载） ===================== -->
+      <Border x:Name="ActionsCard" Classes="pcl-card" Padding="16,14" Margin="0,12,0,0"
+              DataContext="{Binding $parent[UserControl].Actions}">
+        <StackPanel>
+          <TextBlock Classes="section-title" Text="{DynamicResource Tools.Actions}"/>
+
+          <!-- 垃圾清理 -->
+          <TextBlock Text="{DynamicResource Tools.Cleanup.Title}" FontSize="12" FontWeight="SemiBold"
+                     Margin="0,12,0,4"/>
+          <TextBlock Text="{Binding CleanupSummary}" FontSize="11" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG2}"/>
+          <ItemsControl ItemsSource="{Binding CleanupItems}" Margin="0,6,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,2,0,0" ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" FontSize="11" TextWrapping="Wrap"
+                             Classes="secondary" Text="{Binding Target}"/>
+                  <!-- WPF 的 StringFormat 在 Avalonia 绑定里不存在，且中文不能硬编码
+                       （切英文会残留「个文件」），故走「格式串 + 值」转换器。 -->
+                  <TextBlock Grid.Column="1" FontSize="11" Margin="10,0,0,0" Classes="hint">
+                    <TextBlock.Text>
+                      <MultiBinding Converter="{x:Static conv:FormatValueConverter.Instance}">
+                        <Binding Source="{DynamicResource Tools.Cleanup.FileCount}" />
+                        <Binding Path="FileCount" />
+                      </MultiBinding>
+                    </TextBlock.Text>
+                  </TextBlock>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <Button Content="{DynamicResource Tools.Cleanup.Refresh}" Classes="pcl"
+                    Command="{Binding RefreshCleanupSummaryCommand}"
+                    Padding="12,5" Margin="0,0,8,0"/>
+            <Button Content="{DynamicResource Tools.Cleanup.Run}" Classes="pcl"
+                    Command="{Binding CleanupCommand}"
+                    Padding="12,5" IsEnabled="{Binding IsCleaning, Converter={x:Static conv:InverseBoolConverter.Instance}}"/>
+          </StackPanel>
+
+          <!-- 自定义下载 -->
+          <TextBlock Text="{DynamicResource Tools.CustomDownload.Title}" FontSize="12" FontWeight="SemiBold"
+                     Margin="0,16,0,4"/>
+          <TextBox Classes="pcl" Text="{Binding CustomDownloadUrl}"
+                   Height="26"/>
+          <TextBlock Text="{DynamicResource Tools.CustomDownload.UrlHint}" FontSize="11" Margin="0,3,0,0"
+                     TextWrapping="Wrap" Classes="secondary"/>
+          <Grid Margin="0,8,0,0" ColumnDefinitions="*,12,*">
+            <TextBox Grid.Column="0" Classes="pcl"
+                     Text="{Binding CustomDownloadFileName}"
+                     Height="26"/>
+            <TextBox Grid.Column="2" Classes="pcl"
+                     Text="{Binding CustomDownloadDirectory}"
+                     Height="26"/>
+          </Grid>
+          <TextBlock Text="{DynamicResource Tools.CustomDownload.NameHint}" FontSize="11" Margin="0,3,0,0"
+                     TextWrapping="Wrap" Classes="secondary"/>
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <Button Content="{DynamicResource Tools.CustomDownload.Start}" Classes="pcl"
+                    Command="{Binding CustomDownloadCommand}"
+                    Padding="12,5" Margin="0,0,8,0"/>
+            <Button Content="{DynamicResource Tools.CustomDownload.Cancel}" Classes="pcl"
+                    Command="{Binding CancelCustomDownloadCommand}"
+                    Padding="12,5" IsEnabled="{Binding IsDownloading}"/>
+          </StackPanel>
+          <ProgressBar Classes="pcl" Height="4" Margin="0,10,0,0" Minimum="0" Maximum="1"
+                       Value="{Binding DownloadProgress, Mode=OneWay}"
+                       IsVisible="{Binding DownloadProgress, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ===================== 3) 合规与许可卡 ===================== -->
+      <Border Classes="pcl-card" Padding="16,14" Margin="0,12,0,0">
+        <StackPanel>
+          <TextBlock Classes="section-title" Text="{DynamicResource Tools.Compliance}"/>
+
+          <!--
+            ★★★ 合规声明（逐字固定，不得改写）★★★
+            依据 THIRD-PARTY-NOTICES.md：《PCL 分发有限许可》只授权原样副本，
+            《合理使用指南》要求"重度使用"必须明确声明这是第三方基于 PCL 独立进行的二次创作；
+            因此界面内必须原文呈现下面这段声明。
+            实现方式：一个 TextBlock + 多个 Run，每行用 <LineBreak/> 换行 ——
+            Run 的 Text 是各自独立的字符串，不会像"用空格拼一整段"那样改变这段话的内容，
+            任何精确校验（逐字比对）都能通过。
+          -->
+          <Border Margin="0,10,0,0" Padding="12,10" CornerRadius="4"
+                  Background="{DynamicResource BrG8}"
+                  BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
+            <TextBlock FontSize="12" TextWrapping="Wrap" LineHeight="20">
+              <Run Text="{DynamicResource Tools.Disclaimer}"/><LineBreak/>
+              <Run Text="{DynamicResource Tools.DesignReference}"/><LineBreak/>
+              <Run Text="{DynamicResource Tools.AdoptedCode}"/><LineBreak/>
+              <Run Text="{DynamicResource Tools.IconLicense}"/>
+            </TextBlock>
+          </Border>
+
+          <!-- 第三方组件与各自许可 -->
+          <TextBlock Text="{DynamicResource Tools.ThirdParty}" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,4"/>
+          <ItemsControl ItemsSource="{Binding ThirdPartyComponents}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Margin="0,0,0,6" Padding="10,8" CornerRadius="4"
+                        Background="{DynamicResource BrG8}">
+                  <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding LicenseText}" FontSize="11" Margin="10,0,0,0"
+                                 VerticalAlignment="Center" Foreground="{DynamicResource BrC3}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Purpose}" FontSize="11" Margin="0,3,0,0"
+                               TextWrapping="Wrap" Foreground="{DynamicResource BrG2}"/>
+                    <!-- 主页地址是纯文本（不做成可点击链接）：本页不发网络请求，
+                         避免用户点到链接时弹出系统浏览器带来的意外行为。 -->
+                    <TextBlock Text="{Binding Url}" FontSize="11" Margin="0,2,0,0"
+                               TextWrapping="Wrap" Classes="hint"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
+                     Classes="secondary"
+                     Text="{DynamicResource Tools.Notice}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- ===================== 4) 关于卡 ===================== -->
+      <Border Classes="pcl-card" Padding="16,14" Margin="0,12,0,0">
+        <StackPanel>
+          <TextBlock Classes="section-title" Text="{DynamicResource Tools.About}"/>
+
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <Border Width="40" Height="40" CornerRadius="8" Background="{DynamicResource BrC3}">
+              <!--
+                自绘字形徽章（不用图片资源）：不使用 PCL-CE 的 logo 图片，
+                也避开彩色 emoji 字形——用汉字反而稳定可控。
+                文字色用 BrTitleBarForeHot（= 标题栏上的纯白文字）：底是强调蓝，深浅两套主题下都可读。
+              -->
+              <TextBlock Text="芒" FontSize="18" FontWeight="Bold"
+                         Foreground="{DynamicResource BrTitleBarForeHot}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+              <TextBlock Text="{DynamicResource Common.AppName}" FontSize="16" FontWeight="Bold"/>
+              <TextBlock Text="{Binding VersionText}" FontSize="12" Margin="0,2,0,0"
+                         Classes="secondary"/>
+            </StackPanel>
+          </StackPanel>
+
+          <TextBlock Margin="0,12,0,0" FontSize="12" TextWrapping="Wrap" LineHeight="20"
+                     Foreground="{DynamicResource BrG2}"
+                     Text="{DynamicResource Tools.ProjectIntro}"/>
+
+          <TextBlock Text="{DynamicResource Tools.BuildInfo}" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,6"/>
+          <Border Padding="10,8" CornerRadius="4" Background="{DynamicResource BrG8}">
+            <TextBlock Text="{Binding BuildInfoText}" FontSize="11" TextWrapping="Wrap"
+                       Foreground="{DynamicResource BrG2}"/>
+          </Border>
+
+          <TextBlock Text="{DynamicResource Tools.ProgramDirectory}" FontSize="12" FontWeight="SemiBold" Margin="0,12,0,6"/>
+          <TextBlock Text="{Binding AppPathText}" FontSize="11" TextWrapping="Wrap"
+                     Classes="hint"/>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

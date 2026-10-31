@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:UMango.Avalonia.Converters"
+             x:Class="UMango.Avalonia.Views.FeedbackView">
+  <!--
+    ============================================================================
+    反馈页（Avalonia 版）
+    ============================================================================
+    与 WPF 版 `src/UMango.App/Views/FeedbackView.xaml`（123 行）**同构**。
+
+    对应 PCL-CE 的「反馈」页（PageSetupFeedback）—— PCL 那份位于受限许可目录，
+    这里只借鉴语义（标签分类 + 草稿 + 提交），实现是重新写的。
+
+    两段式布局：
+      · 上半：反馈列表（按分类分组，组标题 + 条目）；
+      · 下半：提交区（标题 / 正文 / 复制草稿）。
+
+    框架差异（都只是写法，观感一致）：
+      · WPF 的 `Style="{DynamicResource PclCard}"` → Avalonia 的 `Classes="pcl-card"`；
+      · WPF 的 `Visibility` + BoolToVis 转换器 → Avalonia 的 `IsVisible` + BoolToBool；
+      · WPF 的 `UpdateSourceTrigger=PropertyChanged` → Avalonia 同名属性（语义一致）。
+  ============================================================================
+  -->
+  <Grid Margin="20,16,20,20">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- ============ 操作条 ============ -->
+    <Grid Grid.Row="0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="11" TextWrapping="Wrap"
+                 Foreground="{DynamicResource BrG3}"
+                 Text="{Binding StatusMessage}"/>
+
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+        <Button Content="{DynamicResource Feedback.Refresh}" Height="26" Padding="12,0" FontSize="12"
+                Classes="pcl-secondary"
+                Command="{Binding LoadCommand}"/>
+        <Button Content="{DynamicResource Feedback.FillDiagnostics}" Height="26" Padding="12,0" FontSize="12"
+                Classes="pcl-secondary"
+                Command="{Binding FillDiagnosticsCommand}"/>
+        <Button Content="{DynamicResource Feedback.Copy}" Height="26" Padding="12,0" FontSize="12"
+                Classes="pcl-primary"
+                Command="{Binding CopyDraftCommand}"/>
+      </StackPanel>
+    </Grid>
+
+    <!-- ============ 反馈列表 ============ -->
+    <Border Grid.Row="1" Margin="0,10,0,0" Classes="pcl-card" Padding="0">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 未配置源时的提示 -->
+        <Border Grid.Row="0" Margin="10,10,10,0" Padding="10,8" CornerRadius="4"
+                Background="{DynamicResource BrG8}"
+                IsVisible="{Binding HasSource, Converter={x:Static conv:InverseNotEmptyToBoolConverter.Instance}}">
+          <TextBlock Text="{DynamicResource Feedback.NoSourceHint}" FontSize="12" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrG3}"/>
+        </Border>
+
+        <!-- 错误 -->
+        <Border Grid.Row="0" Margin="10,10,10,0" Padding="10,8" CornerRadius="4"
+                Background="{DynamicResource BrRedBack}"
+                IsVisible="{Binding ErrorMessage, Converter={x:Static conv:NotEmptyToBoolConverter.Instance}}">
+          <TextBlock Text="{Binding ErrorMessage}" FontSize="12" TextWrapping="Wrap"
+                     Foreground="{DynamicResource BrRed}"/>
+        </Border>
+
+        <ListBox Grid.Row="1" Margin="8" ItemsSource="{Binding Groups}"
+                 Classes="pcl"
+                 Background="Transparent" BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Margin="0,0,0,10">
+                <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" Margin="4,4,0,4"
+                           Foreground="{DynamicResource BrC1}"/>
+                <ItemsControl ItemsSource="{Binding Items}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Margin="4,0,4,6" Padding="10,8" CornerRadius="4"
+                              Background="{DynamicResource BrG8}"
+                              BorderBrush="{DynamicResource BrG6}" BorderThickness="1">
+                        <StackPanel>
+                          <TextBlock Text="{Binding Title}" FontSize="12" TextWrapping="Wrap"
+                                     Foreground="{DynamicResource BrC1}"/>
+                          <TextBlock Text="{Binding Content}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
+                                     Foreground="{DynamicResource BrG3}"/>
+                          <TextBlock FontSize="10" Margin="0,4,0,0" Foreground="{DynamicResource BrG4}"
+                                     Text="{Binding Author}"/>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Border>
+
+    <!-- ============ 提交区 ============ -->
+    <Border Grid.Row="2" Margin="0,10,0,0" Classes="pcl-card" Padding="12,10">
+      <StackPanel>
+        <TextBlock Classes="pcl-section-title" Text="{DynamicResource Feedback.DraftTitle}"/>
+        <TextBox Text="{Binding DraftTitle}"
+                 Margin="0,8,0,0" Padding="6,4" FontSize="12"/>
+        <TextBox Text="{Binding DraftBody}"
+                 Margin="0,6,0,0" Height="90" Padding="6,4" FontSize="12"
+                 AcceptsReturn="True" TextWrapping="Wrap"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>
