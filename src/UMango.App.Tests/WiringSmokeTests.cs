@@ -1,5 +1,4 @@
 using UMango.Shell.ViewModels;
-using UMango.Shell.ViewModels;
 using UMango.Core.App.Tasks;
 using UMango.Core.Configuration;
 using UMango.Core.Logging;
