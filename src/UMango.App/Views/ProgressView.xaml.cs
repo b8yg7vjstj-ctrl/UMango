@@ -14,7 +14,6 @@ using UMango.Core.Terminal;
 using UMango.Core.Localization;
 using UMango.App.Localization;
 using UMango.Shell.Services;
-using UMango.Shell.ViewModels;
 
 namespace UMango.App.Views;
 
@@ -74,64 +73,6 @@ public sealed class StepRowSourceConverter : IMultiValueConverter
 }
 
 /// <summary>
-/// 子项视图行：一个 Core 子项（<see cref="TaskModel"/>）+ 它自己的终端输出。
-///
-/// 为什么要这一层（而不是直接把 ViewModel 的 TerminalGroups 绑到子项行上）：
-///   1. TerminalGroups 只包含"已经有输出"的子项，而需求要求**每个子项都有独立进度条**，
-///      两者条目数不一致，直接绑会让没有输出的子项在界面上消失；
-///   2. 把输出挂到"它所属的那一行下面"需要按子项标题即时分发，并且要处理
-///      清空（Reset）/调试模式切换后的重建，用绑定重求值技巧做这件事很脆，
-///      放在视图层用一个显式的镜像集合更可控、也更好读；
-///   3. 进度/状态/中文名仍然直接绑定 Child（Core 对象），这里**不复制**任何业务数据，
-///      只镜像"输出行"这一份展示数据。
-/// </summary>
-public sealed class StepRow : ObservableObject
-{
-    private string? _truncationHint;
-    private int _totalLines;
-
-    public StepRow(TaskModel child) => Child = child;
-
-    /// <summary>对应的 Core 子项：中文名、进度、状态都来自它。</summary>
-    public TaskModel Child { get; }
-
-    /// <summary>该子项的终端输出（时间正序，超出界面上限时从头裁剪）。</summary>
-    public ObservableCollection<TerminalLine> Output { get; } = [];
-
-    /// <summary>「已省略 N 行」提示；没有被省略时为 null（界面用触发器折叠）。</summary>
-    public string? TruncationHint
-    {
-        get => _truncationHint;
-        private set => SetProperty(ref _truncationHint, value);
-    }
-
-    /// <summary>追加一行并按上限裁剪（调试模式传 int.MaxValue 表示不裁剪）。</summary>
-    public void Append(TerminalLine line, int limit)
-    {
-        _totalLines++;
-        Output.Add(line);
-        while (Output.Count > limit) Output.RemoveAt(0);
-        UpdateHint();
-    }
-
-    /// <summary>重新计数（整体重建输出前调用）。</summary>
-    public void Reset()
-    {
-        _totalLines = 0;
-        Output.Clear();
-        TruncationHint = null;
-    }
-
-    private void UpdateHint()
-    {
-        var omitted = _totalLines - Output.Count;
-        TruncationHint = omitted > 0
-            ? ViewText.L("Progress.EarlierOmitted", omitted)
-            : null;
-    }
-}
-
-/// <summary>
 /// 进度页（Views/ProgressView.xaml 的代码层）。
 ///
 /// 职责边界：业务数据（任务、子项、进度、状态、终端行缓冲）全部来自
@@ -164,10 +105,7 @@ public partial class ProgressView : UserControl
     /// {RelativeSource AncestorType=ProgressView} 拿到它，把子项映射成行（见 StepRowSourceConverter）。
     /// 行对象一旦建好就不再替换 —— 模板持有的是行实例，替换会让输出断流。
     /// </summary>
-    public ObservableCollection<StepRow> StepRows { get; } = [];
-
-    /// <summary>当前挂过 Children.CollectionChanged 的那个任务（切任务时要摘掉，避免串台）。</summary>
-    private TaskModel? _childHost;
+    public ObservableCollection<StepRow> StepRows => _vm.StepMirror.Rows;
 
     private bool _hooked;
     private bool _terminalPinned = true;
@@ -347,9 +285,6 @@ public partial class ProgressView : UserControl
         }
     }
 
-    /// <summary>子项集合变化（安装执行器规划完成后才把子项加进来）→ 重建子项行。</summary>
-    private void OnChildrenChanged(object? sender, NotifyCollectionChangedEventArgs e) => RebuildStepRows();
-
     private void AutoSelectNewestIfIdle()
     {
         if (_vm.SelectedTask is not null || _vm.Tasks.Count == 0) return;
@@ -365,103 +300,22 @@ public partial class ProgressView : UserControl
 
     // ================================================================
     // 子项行 + 挂在子项下的输出
+    //
+    // 全部委派给 Shell 的 StepRowMirror —— WPF 壳与 Avalonia 壳共用同一份实现，
+    // 避免两套壳的进度页行为漂移（需求里的「降低重复代码率」）。
     // ================================================================
 
-    /// <summary>
-    /// 让"子项行"与当前选中任务的 Children 对齐：补上新出现的子项、摘掉已不属于它的、
-    /// 并把顺序调整成与 Children 完全一致（子项是异步加进来的，顺序必须和上方进度行对得上）。
-    ///
-    /// 注意：**已有的行对象绝不重建**，只 Reset 内容 —— ChildStepTemplate 持有行实例，
-    /// 换掉实例会让那一路输出断流（行还在，但界面再也收不到新的输出）。
-    /// </summary>
-    private void RebuildStepRows()
-    {
-        var task = _vm.SelectedTask;
-        AttachChildren(task);
+    /// <summary>重建子项行（补新的、摘旧的、顺序对齐）。</summary>
+    private void RebuildStepRows() => _vm.StepMirror.Rebuild(_vm.SelectedTask);
 
-        if (task is not null)
-        {
-            foreach (var child in task.Children)
-                if (!ContainsRowFor(child))
-                    StepRows.Add(new StepRow(child));
+    /// <summary>整体重建每行的输出（清空后重放当前源集合）。</summary>
+    private void RebuildStepOutputs() => _vm.StepMirror.RebuildOutputs(_vm.TerminalLines);
 
-            // 摘掉不再属于本任务的子项（例如切换了选中任务）。
-            for (var i = StepRows.Count - 1; i >= 0; i--)
-                if (!ContainsChild(task, StepRows[i].Child))
-                    StepRows.RemoveAt(i);
+    /// <summary>把一行输出分发到它所属的子项行。</summary>
+    private void AppendToStep(TerminalLine line) => _vm.StepMirror.AppendToStep(line);
 
-            // 顺序对齐：Move 会保持行对象不变，只调整集合中的位置。
-            for (var i = 0; i < task.Children.Count; i++)
-            {
-                var row = RowFor(task.Children[i]);
-                if (row is null) continue;
-                var current = StepRows.IndexOf(row);
-                if (current != i) StepRows.Move(current, i);
-            }
-        }
-        else
-        {
-            StepRows.Clear();
-        }
-
-        RebuildStepOutputs();
-    }
-
-    private bool ContainsRowFor(TaskModel child) => RowFor(child) is not null;
-
-    private StepRow? RowFor(TaskModel child)
-    {
-        foreach (var row in StepRows)
-            if (ReferenceEquals(row.Child, child)) return row;
-        return null;
-    }
-
-    private static bool ContainsChild(TaskModel task, TaskModel child)
-    {
-        foreach (var item in task.Children)
-            if (ReferenceEquals(item, child)) return true;
-        return false;
-    }
-
-    private void RebuildStepOutputs()
-    {
-        foreach (var row in StepRows) row.Reset();
-        foreach (var line in _vm.TerminalLines) AppendToStep(line);
-    }
-
-    private void AppendToStep(TerminalLine line)
-    {
-        // 未归属到任何子项的行（命令行回显、退出码汇总等）不硬塞给某个子项 ——
-        // 它们仍然出现在下方终端区，所以不会"看不见的输出"。
-        if (string.IsNullOrEmpty(line.Step)) return;
-
-        var limit = _vm.DebugMode ? int.MaxValue : StepTailLimit;
-        foreach (var row in StepRows)
-        {
-            if (!string.Equals(row.Child.Title, line.Step, StringComparison.Ordinal)) continue;
-            row.Append(line, limit);
-            return;
-        }
-    }
-
-    private void AttachChildren(TaskModel? task)
-    {
-        if (ReferenceEquals(_childHost, task)) return;
-        DetachChildren();
-        if (task is null) return;
-
-        // 子项是**异步**出现的：执行器先建父任务，PlanAsync 之后才 Add 子项。
-        // 因此必须订阅 Children 的变化，否则"先看到任务、后看到子项"这一步界面不会更新。
-        task.Children.CollectionChanged += OnChildrenChanged;
-        _childHost = task;
-    }
-
-    private void DetachChildren()
-    {
-        if (_childHost is null) return;
-        _childHost.Children.CollectionChanged -= OnChildrenChanged;
-        _childHost = null;
-    }
+    /// <summary>摘掉对旧任务子项集合的订阅。</summary>
+    private void DetachChildren() => _vm.StepMirror.Detach();
 
     // ================================================================
     // 终端区（时间顺序的全量输出）
