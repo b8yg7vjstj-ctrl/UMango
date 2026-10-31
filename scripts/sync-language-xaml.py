@@ -46,10 +46,28 @@ def xml_escape(value: str) -> str:
     return escaped.replace("\n", "&#x0a;").replace("\r", "&#x0d;")
 
 
+# XML 实体：5 个具名实体 + 数字字符引用（&#x0a; / &#10;）。
+# 必须**一次扫描**替换，不能逐个 replace —— 否则 "&amp;lt;" 会被解两次变成 "<"，
+# 而 "&amp;#x0a;" 会被解成字面的 "&#x0a;"（本该是换行）。
+XML_ENTITY_RE = re.compile(r"&(?:#x(?P<hex>[0-9a-fA-F]+)|#(?P<dec>[0-9]+)|(?P<named>lt|gt|quot|apos|amp));")
+
+XML_NAMED_ENTITIES = {"lt": "<", "gt": ">", "quot": '"', "apos": "'", "amp": "&"}
+
+
 def xml_unescape(value: str) -> str:
-    return (value.replace("&lt;", "<").replace("&gt;", ">")
-                 .replace("&quot;", '"').replace("&apos;", "'")
-                 .replace("&amp;", "&"))
+    """把 XML 实体还原成原字符。
+
+    换行在 .xaml 里写成数字字符引用 ``&#x0a;``（裸换行会被 XAML 解析器压成空格），
+    所以**必须**能把它解回真正的换行，否则 --check 的诊断会把
+    含换行的键（如 Tools.ProjectIntro）误报成"值不同"。
+    """
+    def replace(match: re.Match[str]) -> str:
+        if match.group("named"):
+            return XML_NAMED_ENTITIES[match.group("named")]
+        code = int(match.group("hex"), 16) if match.group("hex") else int(match.group("dec"))
+        return chr(code)
+
+    return XML_ENTITY_RE.sub(replace, value)
 
 
 def unescape(value: str) -> str:
