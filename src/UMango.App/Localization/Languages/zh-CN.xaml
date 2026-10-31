@@ -622,6 +622,7 @@
     <sys:String x:Key="Tools.Actions">工具</sys:String>
     <sys:String x:Key="Tools.Cleanup.Title">垃圾清理</sys:String>
     <sys:String x:Key="Tools.Cleanup.Summary">共 {0} 个文件，{1}</sys:String>
+    <sys:String x:Key="Tools.Cleanup.FileCount">{0} 个文件</sys:String>
     <sys:String x:Key="Tools.Cleanup.Nothing">没有可清理的内容</sys:String>
     <sys:String x:Key="Tools.Cleanup.Refresh">重新统计</sys:String>
     <sys:String x:Key="Tools.Cleanup.Run">清理</sys:String>

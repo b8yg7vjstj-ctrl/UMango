@@ -607,6 +607,7 @@
     <sys:String x:Key="Tools.Actions">Tools</sys:String>
     <sys:String x:Key="Tools.Cleanup.Title">Cleanup</sys:String>
     <sys:String x:Key="Tools.Cleanup.Summary">{0} files, {1} in total</sys:String>
+    <sys:String x:Key="Tools.Cleanup.FileCount">{0} files</sys:String>
     <sys:String x:Key="Tools.Cleanup.Nothing">Nothing to clean up</sys:String>
     <sys:String x:Key="Tools.Cleanup.Refresh">Recount</sys:String>
     <sys:String x:Key="Tools.Cleanup.Run">Clean up</sys:String>
