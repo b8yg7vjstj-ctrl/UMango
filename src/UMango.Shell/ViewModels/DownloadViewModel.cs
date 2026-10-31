@@ -155,7 +155,7 @@ public partial class DownloadViewModel : ObservableObject
                 ? L("Download.Noun.GitRepo")
                 : L("Download.Noun.Installed");
             return count == 0
-                ? L("Download.Empty.NoInstalled", category.Title, noun[1..])
+                ? L("Download.Empty.NoInstalled", category.Title, noun)
                 : L("Download.Count.Installed", category.Title, count, noun);
         }
     }

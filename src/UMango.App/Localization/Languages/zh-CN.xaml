@@ -69,10 +69,10 @@
     <sys:String x:Key="Download.Mode.Results">搜索结果</sys:String>
     <sys:String x:Key="Download.LoadingInstalled">正在读取已安装列表…</sys:String>
     <sys:String x:Key="Download.Empty.NeedSource">请先在左栏选择一个包源</sys:String>
-    <sys:String x:Key="Download.Noun.GitRepo">个本地仓库</sys:String>
-    <sys:String x:Key="Download.Noun.Installed">个已安装包</sys:String>
-    <sys:String x:Key="Download.Empty.NoInstalled">{0} 下没有已安装的{1}</sys:String>
-    <sys:String x:Key="Download.Count.Installed">{0}：共 {1} {2}</sys:String>
+    <sys:String x:Key="Download.Noun.GitRepo">本地仓库</sys:String>
+    <sys:String x:Key="Download.Noun.Installed">已安装包</sys:String>
+    <sys:String x:Key="Download.Empty.NoInstalled">{0} 下没有{1}</sys:String>
+    <sys:String x:Key="Download.Count.Installed">{0}：共 {1} 个{2}</sys:String>
     <sys:String x:Key="Download.ReprobeDone">已重新探测 {0} 个包源。</sys:String>
     <sys:String x:Key="Download.Cli.Missing">未检测到 {0} 的命令行工具。{1}</sys:String>
     <sys:String x:Key="Download.Cli.OtherOs">{0} 只在其它操作系统上可用。</sys:String>

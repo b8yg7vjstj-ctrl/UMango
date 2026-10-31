@@ -64,7 +64,7 @@
     <sys:String x:Key="Download.Empty.NeedSource">Pick a package source in the left pane first</sys:String>
     <sys:String x:Key="Download.Noun.GitRepo">local repositories</sys:String>
     <sys:String x:Key="Download.Noun.Installed">installed packages</sys:String>
-    <sys:String x:Key="Download.Empty.NoInstalled">Nothing installed under {0}</sys:String>
+    <sys:String x:Key="Download.Empty.NoInstalled">No {1} under {0}</sys:String>
     <sys:String x:Key="Download.Count.Installed">{0}: {1} {2}</sys:String>
     <sys:String x:Key="Download.ReprobeDone">Re-probed {0} package sources.</sys:String>
     <sys:String x:Key="Download.Cli.Missing">No CLI tool found for {0}. {1}</sys:String>
