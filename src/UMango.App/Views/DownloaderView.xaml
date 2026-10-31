@@ -98,7 +98,7 @@
           <!-- 错误条 -->
           <Border Margin="0,10,0,0" Padding="10,8" CornerRadius="4"
                   Background="{DynamicResource BrRedBack}"
-                  Visibility="{Binding ErrorMessage, Converter={StaticResource BoolToVis}}">
+                  Visibility="{Binding ErrorMessage, Converter={StaticResource NotEmptyToVis}}">
             <TextBlock Text="{Binding ErrorMessage}" FontSize="12" TextWrapping="Wrap"
                        Foreground="{DynamicResource BrRed}"/>
           </Border>

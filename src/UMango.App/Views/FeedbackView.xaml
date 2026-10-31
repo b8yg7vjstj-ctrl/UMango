@@ -68,7 +68,7 @@
         <!-- 错误 -->
         <Border Grid.Row="0" Margin="10,10,10,0" Padding="10,8" CornerRadius="4"
                 Background="{DynamicResource BrRedBack}"
-                Visibility="{Binding ErrorMessage, Converter={StaticResource BoolToVis}}">
+                Visibility="{Binding ErrorMessage, Converter={StaticResource NotEmptyToVis}}">
           <TextBlock Text="{Binding ErrorMessage}" FontSize="12" TextWrapping="Wrap"
                      Foreground="{DynamicResource BrRed}"/>
         </Border>
