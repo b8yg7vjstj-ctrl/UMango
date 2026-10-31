@@ -115,7 +115,10 @@ def render_avalonia(
     lines.append("  ⚠ 本文件是**生成产物**，请勿手工编辑。")
     lines.append(f"    源头：src/UMango.App/Themes/Tokens.{'Dark' if dark else 'Light'}.{family}.xaml")
     lines.append("    重新生成：python3 scripts/sync-theme-tokens.py")
-    lines.append("    校验（CI）：python3 scripts/sync-theme-tokens.py --check")
+    # ⚠ 注释里不能出现 "--"（XML 规范：注释内不得含 "--"），所以这里不写
+    #   原样的双横线 check 参数，否则整个文件不是合法 XML，
+    #   Avalonia 的 XAML 预处理器会直接报 AVLN1001。
+    lines.append("    校验（CI）：python3 scripts/sync-theme-tokens.py 的 check 模式")
     lines.append("  ============================================================================")
     lines.append("-->")
     lines.append('<ResourceDictionary xmlns="https://github.com/avaloniaui"')
