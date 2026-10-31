@@ -38,10 +38,7 @@ public partial class MainWindow : Window
     /// </summary>
     private bool _wired;
 
-    /// <summary>正在按 VM 反向设置顶部高亮（避免回调再回写 VM 造成回环）。</summary>
-    private bool _syncingTab;
-
-    /// <summary>正在按 VM 反向设置左栏选中项（同上）。</summary>
+    /// <summary>正在按 VM 反向设置左栏选中项（避免回调再回写 VM 造成回环）。</summary>
     private bool _syncingNav;
 
     /// <summary>正在把导航栈的变化写回左栏（与 <see cref="_syncingNav"/> 是一对镜像开关）。</summary>
@@ -54,9 +51,6 @@ public partial class MainWindow : Window
     private readonly NavigationHost _nav = new(
         new NavigationService(
             NavStackMapping.PageId(AppTab.Home, "overview"), "概览"));
-
-    /// <summary>五个选项卡对应的页面（Avalonia 侧是叠放的 UserControl，只改 IsVisible）。</summary>
-    private Control? _visiblePage;
 
     public MainWindow()
     {
@@ -130,22 +124,20 @@ public partial class MainWindow : Window
         _shell.CurrentTab = tab;
     }
 
-    /// <summary>把顶部 banner 的高亮状态对齐到 VM（VM 是唯一真相来源）。</summary>
+    /// <summary>
+    /// 把顶部 banner 的高亮状态对齐到 VM（VM 是唯一真相来源）。
+    ///
+    /// Avalonia 侧不需要 WPF 那个 <c>_syncingTab</c> 防回环开关：
+    /// banner 是普通 <c>Button</c>（靠 "active" 样式类表示选中），
+    /// 不存在 RadioButton 的 Checked 回调回写 VM 这条路径。
+    /// </summary>
     private void SyncTabCheck()
     {
-        _syncingTab = true;
-        try
-        {
-            SetTabActive(TabHome, _shell.CurrentTab == AppTab.Home);
-            SetTabActive(TabDownload, _shell.CurrentTab == AppTab.Download);
-            SetTabActive(TabProgress, _shell.CurrentTab == AppTab.Progress);
-            SetTabActive(TabSettings, _shell.CurrentTab == AppTab.Settings);
-            SetTabActive(TabTools, _shell.CurrentTab == AppTab.Tools);
-        }
-        finally
-        {
-            _syncingTab = false;
-        }
+        SetTabActive(TabHome, _shell.CurrentTab == AppTab.Home);
+        SetTabActive(TabDownload, _shell.CurrentTab == AppTab.Download);
+        SetTabActive(TabProgress, _shell.CurrentTab == AppTab.Progress);
+        SetTabActive(TabSettings, _shell.CurrentTab == AppTab.Settings);
+        SetTabActive(TabTools, _shell.CurrentTab == AppTab.Tools);
     }
 
     /// <summary>
