@@ -410,7 +410,7 @@ public partial class SettingsView : UserControl
 
         var cancel = new Button
         {
-            Content = ShellText.L("Common.Cancel"),
+            Content = ShellText.L("Common.Action.Cancel"),
             MinWidth = 80,
             HorizontalContentAlignment = HorizontalAlignment.Center,
         };
@@ -418,7 +418,7 @@ public partial class SettingsView : UserControl
 
         var ok = new Button
         {
-            Content = ShellText.L("Common.Ok"),
+            Content = ShellText.L("Common.Action.Confirm"),
             MinWidth = 80,
             Margin = new Thickness(10, 0, 0, 0),
             HorizontalContentAlignment = HorizontalAlignment.Center,
