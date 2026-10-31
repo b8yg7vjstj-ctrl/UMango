@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:UMango.App"
              xmlns:views="clr-namespace:UMango.App.Views"
+             xmlns:services="clr-namespace:UMango.App.Services"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
     <ResourceDictionary>
@@ -24,6 +25,11 @@
       <local:BoolToVisibilityInvertConverter x:Key="BoolToVisInvert"/>
       <local:InverseBoolConverter x:Key="InverseBool"/>
       <views:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis"/>
+      <!--
+        主题 token 名 → 画刷。Shell 层（平台中立）只给得出 token 名，
+        画刷由各壳用自己的资源查找解析（见 ThemeBrushKeyConverter 的说明）。
+      -->
+      <services:ThemeBrushKeyConverter x:Key="ThemeBrushKey"/>
     </ResourceDictionary>
   </Application.Resources>
 </Application>

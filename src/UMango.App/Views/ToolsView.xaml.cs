@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UMango.App.Services;
@@ -13,7 +12,6 @@ using UMango.Core.Platform;
 using UMango.Core.Terminal;
 using UMango.Core.Localization;
 using UMango.App.Localization;
-using UMango.Shell.ViewModels;
 using UMango.Shell.Services;
 using UMango.Shell.ViewModels;
 
@@ -424,7 +422,7 @@ public sealed class DiagnosticSourceRow
         var categoryState = category is { } c ? c.AvailabilityState : availability.State;
         State = categoryState;
         StateText = StateToText(categoryState);
-        StateBrush = StateToBrush(categoryState);
+        StateBrushKey = StateToBrushKey(categoryState);
         // 字形与状态语义一致：● 可用 / ○ 需要处理（未装 CLI、不可达）/ ▬ 平台不支持。
         StatusGlyph = categoryState switch
         {
@@ -459,7 +457,12 @@ public sealed class DiagnosticSourceRow
     public AvailabilityState State { get; }
     public string StateText { get; }
     public string StatusGlyph { get; }
-    public Brush StateBrush { get; }
+
+    /// <summary>
+    /// 状态颜色对应的**主题 key**（不是画刷）。
+    /// 各壳用各自的资源查找把它解析成画刷，因此颜色仍随主题（浅/深、PCL/Fluent）变化。
+    /// </summary>
+    public string StateBrushKey { get; }
     public bool SupportedHere { get; }
     public string CliPathText { get; }
     public string CliVersionText { get; }
@@ -480,12 +483,16 @@ public sealed class DiagnosticSourceRow
         _ => ViewText.L("State.Unreachable")
     };
 
-    private static Brush StateToBrush(AvailabilityState state) => state switch
+    /// <summary>
+    /// 状态 → 主题 key。
+    /// 键名与 Shell 侧原实现完全一致（BrC3/BrC6/BrRed/BrG3），两壳观感才一致。
+    /// </summary>
+    private static string StateToBrushKey(AvailabilityState state) => state switch
     {
-        AvailabilityState.Available => ThemeBrushes.Get("BrC3", "#1370F3"),
-        AvailabilityState.Degraded => ThemeBrushes.Get("BrC6", "#D5E6FD"),
-        AvailabilityState.NotInstalled or AvailabilityState.Unreachable => ThemeBrushes.Get("BrRed", "#FF4C4C"),
-        _ => ThemeBrushes.Get("BrG3", "#8C8C8C")
+        AvailabilityState.Available => "BrC3",
+        AvailabilityState.Degraded => "BrC6",
+        AvailabilityState.NotInstalled or AvailabilityState.Unreachable => "BrRed",
+        _ => "BrG3"
     };
 }
 

@@ -13,7 +13,7 @@
       · 卡片用共用样式 PclCard，小节标题用 PclSectionTitle。
       · 整页放 ScrollViewer：依赖诊断明细可能很长，窗口小了必须能滚动。
       · 状态点颜色例外地由 ViewModel 按主题 key 解析后以 Brush 传出
-        （见 DiagnosticSourceRow.StateBrush）：这样颜色仍随主题变化，而不用在 XAML 里写死。
+        （见 DiagnosticSourceRow.StateBrushKey + ThemeBrushKey 转换器）：这样颜色仍随主题变化，而不用在 XAML 里写死。
   -->
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                 Padding="20,16,20,20" Background="Transparent">
@@ -128,7 +128,7 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0" Text="{Binding StatusGlyph}" FontSize="10"
-                               Foreground="{Binding StateBrush}" VerticalAlignment="Center"/>
+                               Foreground="{Binding StateBrushKey, Converter={StaticResource ThemeBrushKey}}" VerticalAlignment="Center"/>
 
                     <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12" FontWeight="SemiBold"
                                Foreground="{DynamicResource BrC1}" VerticalAlignment="Center"
@@ -145,7 +145,7 @@
                     </TextBlock>
 
                     <TextBlock Grid.Column="3" Text="{Binding StateText}" FontSize="12"
-                               Foreground="{Binding StateBrush}" VerticalAlignment="Center"
+                               Foreground="{Binding StateBrushKey, Converter={StaticResource ThemeBrushKey}}" VerticalAlignment="Center"
                                HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
                   </Grid>
 
