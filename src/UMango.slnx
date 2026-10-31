@@ -7,4 +7,5 @@
   <Project Path="UMango.Shell.Tests/UMango.Shell.Tests.csproj" />
   <Project Path="UMango.App.Tests/UMango.App.Tests.csproj" />
   <Project Path="../tools/XamlAudit/XamlAudit.csproj" />
+  <Project Path="../tools/LocalizationAudit/LocalizationAudit.csproj" />
 </Solution>
