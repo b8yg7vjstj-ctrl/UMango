@@ -60,6 +60,53 @@ public class LocalizationTextProviderTests : IDisposable
         Assert.Equal("Any.Key", LocalizationService.Text("Any.Key"));
     }
 
+    // ===== 带参重载的契约：绝不抛异常 =====
+
+    [Fact]
+    public void 带参取文案_实参刚好时按模板格式化()
+    {
+        LocalizationService.SetTextProvider(new DelegateProvider(
+            k => k == "Counts" ? "共 {0} 条，成功 {1}" : null));
+
+        Assert.Equal("共 3 条，成功 2", LocalizationService.Text("Counts", 3, 2));
+    }
+
+    [Fact]
+    public void 带参取文案_实参少于占位符时不抛异常()
+    {
+        // **兑现类文档里的承诺**：「不会抛异常」。
+        // 曾经就有一个真实缺陷：诊断页把 3 个占位符的模板当单参调用，
+        // string.Format 抛 FormatException，而它发生在构造函数里 ——
+        // Avalonia 壳因此**启动即崩溃**。
+        LocalizationService.SetTextProvider(new DelegateProvider(
+            k => k == "Counts" ? "共 {0} 条，成功 {1}" : null));
+
+        var ex = Record.Exception(() => LocalizationService.Text("Counts", 3));
+
+        Assert.Null(ex);
+        // 兜底后至少要保留已经给到的内容，别把整句话都丢掉
+        Assert.Contains("3", LocalizationService.Text("Counts", 3));
+    }
+
+    [Fact]
+    public void 带参取文案_实参多于占位符时不抛异常()
+    {
+        LocalizationService.SetTextProvider(new DelegateProvider(
+            k => k == "Greeting" ? "你好，{0}" : null));
+
+        var ex = Record.Exception(() => LocalizationService.Text("Greeting", "世界", "多余"));
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void 带参取文案_键不存在时返回键本身()
+    {
+        LocalizationService.SetTextProvider(new DelegateProvider(_ => null));
+
+        Assert.Equal("Missing.Key", LocalizationService.Text("Missing.Key", 1, 2));
+    }
+
     private sealed class DelegateProvider : ITextProvider
     {
         private readonly Func<string, string?> _f;

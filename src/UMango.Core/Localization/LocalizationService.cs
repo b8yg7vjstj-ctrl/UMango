@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using UMango.Core.Logging;
 
 namespace UMango.Core.Localization;
 
@@ -58,11 +59,80 @@ public static class LocalizationService
     /// <summary>
     /// 取文案并按 <paramref name="args"/> 格式化（等价 <c>string.Format(Text(key), args)</c>）。
     /// 用于「未检测到 {0} 的命令行工具」这类带占位符的句子。
+    ///
+    /// <para>
+    /// **不会抛异常** —— 与 <see cref="Text(string)"/> 同一个契约。
+    /// 模板占位符个数与实参个数对不上时（比如文案改了但调用点没跟着改），
+    /// 这里不让 <see cref="FormatException"/> 把整个应用带崩，而是补齐空位、
+    /// 记一条警告日志，然后返回可读的句子。
+    /// </para>
+    ///
+    /// <para>
+    /// 这条不是纸面承诺：曾经就有一个真实缺陷 —— 诊断页把
+    /// <c>Tools.Report.RecordCount</c>（3 个占位符）当单参调用，
+    /// 导致 Avalonia 壳在 <b>启动即崩溃</b>（构造函数里取文案）。
+    /// </para>
     /// </summary>
     public static string Text(string key, params object?[] args)
     {
         var template = Text(key);
-        return args.Length == 0 ? template : string.Format(template, args);
+        if (args is null || args.Length == 0) return template;
+        return SafeFormat(key, template, args);
+    }
+
+    /// <summary>
+    /// 安全的格式化：参数个数对不上时不抛异常。
+    /// </summary>
+    private static string SafeFormat(string key, string template, object?[] args)
+    {
+        try
+        {
+            return string.Format(template, args);
+        }
+        catch (FormatException ex)
+        {
+            Log.Warn("Localization",
+                $"文案键「{key}」的占位符与实参个数不匹配：{ex.Message}；模板=「{template}」，实参={args.Length} 个");
+        }
+
+        // 兜底一：把缺失的实参补成空串再试一次（模板本身合法时就能得到可读结果）
+        var needed = MaxPlaceholderIndex(template) + 1;
+        if (needed > args.Length)
+        {
+            var padded = new object?[needed];
+            Array.Copy(args, padded, args.Length);
+            for (var i = args.Length; i < needed; i++) padded[i] = string.Empty;
+            try
+            {
+                return string.Format(template, padded);
+            }
+            catch (FormatException)
+            {
+                // 模板本身还有别的问题（格式说明符非法等）→ 走兜底二
+            }
+        }
+
+        // 兜底二：把占位符整段去掉，至少返回一句没有花括号的文字。
+        return PlaceholderPattern.Replace(template, string.Empty);
+    }
+
+    /// <summary>匹配 <c>{数字}</c> 形式的占位符（跳过 <c>{{</c> 转义）。</summary>
+    private static readonly System.Text.RegularExpressions.Regex PlaceholderPattern =
+        new(@"(?<!\{)\{\d+[^}]*\}", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>匹配 <c>{数字}</c> 并抓出索引（跳过 <c>{{</c> 转义）。</summary>
+    private static readonly System.Text.RegularExpressions.Regex PlaceholderIndexPattern =
+        new(@"(?<!\{)\{(\d+)", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>模板里最大的占位符索引；没有占位符时返回 -1。</summary>
+    private static int MaxPlaceholderIndex(string template)
+    {
+        var max = -1;
+        foreach (System.Text.RegularExpressions.Match m in PlaceholderIndexPattern.Matches(template))
+        {
+            if (int.TryParse(m.Groups[1].Value, out var index) && index > max) max = index;
+        }
+        return max;
     }
 
     /// <summary>当前 UI 语言。</summary>

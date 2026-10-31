@@ -239,7 +239,11 @@ public partial class ToolsDiagnosticsViewModel : ObservableObject
         sb.AppendLine($"{VersionText}｜{PlatformSummaryText}｜{HostText}");
         sb.AppendLine(L("Tools.Report.HomeDir", HomeDirectoryText));
         sb.AppendLine(L("Tools.Report.RecordPath", RecordsPathText));
-        sb.AppendLine(L("Tools.Report.RecordCount", RecordsCountText));
+        // ⚠ 必须传**三个原始计数**，不能传已经预格式化好的 RecordsCountText：
+        //   模板 "Tools.Report.RecordCount" 有 3 个占位符（总数/成功/失败），
+        //   少传会抛 FormatException；传预格式化字符串则语义也是错的。
+        sb.AppendLine(L("Tools.Report.RecordCount", AppServices.Records.TotalCount,
+            AppServices.Records.SuccessCount, AppServices.Records.FailureCount));
         sb.AppendLine(L("Tools.Report.DebugOut", L(TerminalBridge.DebugMode ? "Common.On" : "Common.Off")));
         if (AppServices.LastError is { } initError) sb.AppendLine(L("Tools.Report.InitWarning", initError));
         sb.AppendLine();
