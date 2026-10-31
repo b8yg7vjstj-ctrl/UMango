@@ -1,9 +1,9 @@
-using UMango.App.Services;
+using UMango.Shell.Services;
 using UMango.Shell.ViewModels;
 using UMango.Core.UI.Navigation;
 using Xunit;
 
-namespace UMango.App.Tests;
+namespace UMango.Shell.Tests;
 
 /// <summary>
 /// 导航宿主测试：Core 的导航栈 → 外壳状态（副标题 / 返回按钮可用性 / 是否次级页）。

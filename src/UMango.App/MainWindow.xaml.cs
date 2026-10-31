@@ -8,7 +8,6 @@ using UMango.Core.Animation;
 
 using UMango.App.Themes;
 using UMango.Shell.Services;
-using UMango.Shell.ViewModels;
 using ThemeKind = UMango.Shell.Theming.ThemeKind;
 
 namespace UMango.App;
@@ -60,7 +59,7 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
     /// 并在标题栏下方显示副标题（:1476-1505）。
     /// UMango 之前只有"折叠子视图"式的下载器，没有通用的页栈。
     /// </summary>
-    private readonly Services.NavigationHost _nav = new(
+    private readonly UMango.Shell.Services.NavigationHost _nav = new(
         new Core.UI.Navigation.NavigationService(
             Shell.Services.NavStackMapping.PageId(AppTab.Home, "overview"), "概览"));
 
@@ -116,13 +115,13 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
         {
             switch (e.PropertyName)
             {
-                case nameof(Services.NavigationHost.Subtitle):
+                case nameof(UMango.Shell.Services.NavigationHost.Subtitle):
                     SubTitleText.Text = _nav.Subtitle ?? string.Empty;
                     break;
-                case nameof(Services.NavigationHost.IsSecondary):
+                case nameof(UMango.Shell.Services.NavigationHost.IsSecondary):
                     SubTitleBar.Visibility = _nav.IsSecondary ? Visibility.Visible : Visibility.Collapsed;
                     break;
-                case nameof(Services.NavigationHost.CanGoBack):
+                case nameof(UMango.Shell.Services.NavigationHost.CanGoBack):
                     BtnBack.IsEnabled = _nav.CanGoBack;
                     break;
             }
