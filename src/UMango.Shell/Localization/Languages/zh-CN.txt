@@ -485,6 +485,16 @@ Settings.Proxy.Status.None=当前不使用代理，所有请求直连。
 Settings.Proxy.Status.Custom=当前使用自定义代理：{0}
 Settings.Proxy.Status.SystemFound=已读取到系统代理：{0}
 Settings.Proxy.Status.SystemNone=未读取到系统代理（系统未启用代理或读取失败），当前按直连处理。
+# ==== DoH 设置 ====
+Settings.Doh.Section=DNS over HTTPS（DoH）
+Settings.Doh.Hint=用加密的 DNS 查询代替系统 DNS。留空表示不启用 DoH —— UMango 不会访问任何默认 DNS 地址。
+Settings.Doh.Upstreams=上游地址
+Settings.Doh.UpstreamsHint=多个地址用英文逗号分隔，每个地址必须包含 http:// 或 https://。
+Settings.Doh.CacheTtl=缓存时间（秒）
+Settings.Doh.Timeout=查询超时（毫秒）
+Settings.Doh.Status.Enabled=DoH 已启用，改动已立即生效。
+Settings.Doh.Status.Disabled=未启用 DoH，当前使用系统 DNS。
+Settings.Doh.Failed=保存 DoH 设置失败：{0}
 Homepage.Section=自定义主页
 Homepage.ManifestPath=清单文件：{0}
 Homepage.NoManifest=未配置自定义主页。把 JSON 清单放到上面的路径即可，文件改动会自动生效。

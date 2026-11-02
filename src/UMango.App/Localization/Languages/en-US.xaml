@@ -493,6 +493,17 @@
     <sys:String x:Key="Settings.Proxy.Status.Custom">Using the custom proxy: {0}</sys:String>
     <sys:String x:Key="Settings.Proxy.Status.SystemFound">System proxy detected: {0}</sys:String>
     <sys:String x:Key="Settings.Proxy.Status.SystemNone">No system proxy was found (the system has none enabled, or it could not be read); requests go out directly for now.</sys:String>
+
+    <!-- ============ DoH settings ============ -->
+    <sys:String x:Key="Settings.Doh.Section">DNS over HTTPS (DoH)</sys:String>
+    <sys:String x:Key="Settings.Doh.Hint">Resolve host names through encrypted DNS instead of the system resolver. Leave it empty to keep DoH off — UMango then contacts no DNS server at all.</sys:String>
+    <sys:String x:Key="Settings.Doh.Upstreams">Upstream servers</sys:String>
+    <sys:String x:Key="Settings.Doh.UpstreamsHint">Separate several addresses with commas; each one must contain http:// or https://.</sys:String>
+    <sys:String x:Key="Settings.Doh.CacheTtl">Cache lifetime (seconds)</sys:String>
+    <sys:String x:Key="Settings.Doh.Timeout">Query timeout (milliseconds)</sys:String>
+    <sys:String x:Key="Settings.Doh.Status.Enabled">DoH is enabled; the change took effect immediately.</sys:String>
+    <sys:String x:Key="Settings.Doh.Status.Disabled">DoH is off; the system resolver is used.</sys:String>
+    <sys:String x:Key="Settings.Doh.Failed">Failed to save the DoH settings: {0}</sys:String>
     <sys:String x:Key="Homepage.Section">Custom homepage</sys:String>
     <sys:String x:Key="Homepage.ManifestPath">Manifest file: {0}</sys:String>
     <sys:String x:Key="Homepage.NoManifest">No custom homepage configured. Drop a JSON manifest at the path above; edits apply automatically.</sys:String>

@@ -478,6 +478,16 @@ Settings.Proxy.Status.None=No proxy is in use; all requests go out directly.
 Settings.Proxy.Status.Custom=Using the custom proxy: {0}
 Settings.Proxy.Status.SystemFound=System proxy detected: {0}
 Settings.Proxy.Status.SystemNone=No system proxy was found (the system has none enabled, or it could not be read); requests go out directly for now.
+# ==== DoH settings ====
+Settings.Doh.Section=DNS over HTTPS (DoH)
+Settings.Doh.Hint=Resolve host names through encrypted DNS instead of the system resolver. Leave it empty to keep DoH off — UMango then contacts no DNS server at all.
+Settings.Doh.Upstreams=Upstream servers
+Settings.Doh.UpstreamsHint=Separate several addresses with commas; each one must contain http:// or https://.
+Settings.Doh.CacheTtl=Cache lifetime (seconds)
+Settings.Doh.Timeout=Query timeout (milliseconds)
+Settings.Doh.Status.Enabled=DoH is enabled; the change took effect immediately.
+Settings.Doh.Status.Disabled=DoH is off; the system resolver is used.
+Settings.Doh.Failed=Failed to save the DoH settings: {0}
 Homepage.Section=Custom homepage
 Homepage.ManifestPath=Manifest file: {0}
 Homepage.NoManifest=No custom homepage configured. Drop a JSON manifest at the path above; edits apply automatically.

@@ -146,6 +146,96 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    // ==================== DoH ====================
+
+    private string _dohUpstreams = "";
+    private int _dohCacheTtl = 300;
+    private int _dohTimeout = 5000;
+    private string _dohStatusMessage = "";
+
+    /// <summary>
+    /// DoH 上游地址（逗号分隔；留空 = 不启用 DoH，走系统 DNS）。
+    ///
+    /// 写穿到设置服务后，<c>AppServices</c> 订阅的变更事件会立刻把新配置套到解析器上
+    /// 并清空缓存（见 <c>AppServices.CreateService</c> 里的 DoH 分派），
+    /// 所以这里不必自己去碰解析器。
+    /// </summary>
+    public string DohUpstreams
+    {
+        get => _dohUpstreams;
+        set
+        {
+            if (value == _dohUpstreams) return;
+            _dohUpstreams = value;
+            OnPropertyChanged(nameof(DohUpstreams));
+            ApplyDohSettings();
+        }
+    }
+
+    /// <summary>DoH 缓存生存时间（秒）。</summary>
+    public int DohCacheTtl
+    {
+        get => _dohCacheTtl;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 86400);
+            if (clamped == _dohCacheTtl) return;
+            _dohCacheTtl = clamped;
+            OnPropertyChanged(nameof(DohCacheTtl));
+            ApplyDohSettings();
+        }
+    }
+
+    /// <summary>DoH 查询超时（毫秒）。</summary>
+    public int DohTimeout
+    {
+        get => _dohTimeout;
+        set
+        {
+            var clamped = Math.Clamp(value, 200, 60000);
+            if (clamped == _dohTimeout) return;
+            _dohTimeout = clamped;
+            OnPropertyChanged(nameof(DohTimeout));
+            ApplyDohSettings();
+        }
+    }
+
+    /// <summary>DoH 当前状态提示（启用 / 未启用 / 保存失败）。</summary>
+    public string DohStatusMessage
+    {
+        get => _dohStatusMessage;
+        private set
+        {
+            if (value == _dohStatusMessage) return;
+            _dohStatusMessage = value;
+            OnPropertyChanged(nameof(DohStatusMessage));
+        }
+    }
+
+    private void ApplyDohSettings()
+    {
+        try
+        {
+            var settings = AppSettings.Settings;
+            settings.Set(UiSettings.DohUpstreamsKey, _dohUpstreams.Trim());
+            settings.Set(UiSettings.DohCacheTtlKey, _dohCacheTtl);
+            settings.Set(UiSettings.DohTimeoutKey, _dohTimeout);
+            AppSettings.Save();
+
+            // 设置变更事件已经会重套一次配置，这里再显式调一次是为了覆盖
+            // "值与已保存值相同"这条短路分支（那种情况下不会触发变更事件）。
+            AppServices.RefreshDnsSettings();
+
+            DohStatusMessage = string.IsNullOrWhiteSpace(_dohUpstreams)
+                ? ShellText.L("Settings.Doh.Status.Disabled")
+                : ShellText.L("Settings.Doh.Status.Enabled");
+        }
+        catch (Exception ex)
+        {
+            DohStatusMessage = ShellText.L("Settings.Doh.Failed", ex.Message);
+        }
+    }
+
 
     /// <summary>
     /// 灰度（哀悼日）模式开关。写到 <see cref="GrayModeController.GrayModeKey"/> 是唯一权威；
@@ -926,6 +1016,11 @@ public partial class SettingsViewModel : ObservableObject
         // 否则启动时 PersistProxySettings 会用空密码覆盖掉已保存的密码。
         _proxyPassword = AppSettings.Settings.Get<string>(UiSettings.ProxyPasswordKey);
         ApplyProxySettings();
+
+        // 回显已保存的 DoH 配置（否则输入框是空的，用户会以为没保存过）。
+        _dohUpstreams = AppSettings.Settings.Get<string>(UiSettings.DohUpstreamsKey);
+        _dohCacheTtl = AppSettings.Settings.Get<int>(UiSettings.DohCacheTtlKey);
+        _dohTimeout = AppSettings.Settings.Get<int>(UiSettings.DohTimeoutKey);
 
         // 窗口外观 + 下载限额：回显保存值。
         _windowOpacity = AppSettings.Settings.Get<int>(UiSettings.WindowOpacityKey);
