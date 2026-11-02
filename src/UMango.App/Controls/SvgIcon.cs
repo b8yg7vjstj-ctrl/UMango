@@ -116,13 +116,12 @@ public class SvgIcon : FrameworkElement
         if (Elements.Count == 0)
             return;
 
-        var model = _model!;
-        var bounds = ComputeBounds();
-
         var options = new SvgPaintOptions(
             IconBrush ?? SystemColors.ControlTextBrush,
             StrokeThickness,
             UseOriginalColor);
+
+        var (scale, offsetX, offsetY) = ComputePlacement();
 
         foreach (var element in Elements)
         {
@@ -130,7 +129,12 @@ public class SvgIcon : FrameworkElement
             if (geometry is null)
                 continue;
 
-            drawingContext.PushTransform(new TranslateTransform(bounds.Left, bounds.Top));
+            // 一次把「缩放 + 平移」合成单个仿射矩阵：
+            //   x' = scale·x + offsetX
+            //   y' = scale·y + offsetY
+            // 用一个矩阵而不是叠加多个 PushTransform，既避免依赖推入次序，
+            // 也保证每个图元只被变换一次。
+            drawingContext.PushTransform(new MatrixTransform(scale, 0D, 0D, scale, offsetX, offsetY));
             element.Draw(drawingContext, options);
             drawingContext.Pop();
         }
@@ -143,8 +147,8 @@ public class SvgIcon : FrameworkElement
             return new Size(0, 0);
 
         var model = _model;
-        var width = model.Width - model.MinX;
-        var height = model.Height - model.MinY;
+        var width = model.Width;
+        var height = model.Height;
         if (width <= 0 || height <= 0)
             return new Size(0, 0);
 
@@ -157,21 +161,33 @@ public class SvgIcon : FrameworkElement
         return new Size(width * scale, height * scale);
     }
 
-    private Rect ComputeBounds()
+    /// <summary>
+    /// 算出「viewBox 坐标 → 控件像素坐标」的放置参数。
+    ///
+    /// 两个要点：
+    ///   1. **要缩放**：SVG 几何是 viewBox 坐标系（lucide 是 24×24），
+    ///      而控件可能只有 16×16 —— 不缩放就会画到框外面去；
+    ///   2. **要减掉 viewBox 的原点偏移**（minX/minY）：viewBox 不一定从 (0,0) 起。
+    /// </summary>
+    private (double Scale, double OffsetX, double OffsetY) ComputePlacement()
     {
         var model = _model!;
-        var width = model.Width - model.MinX;
-        var height = model.Height - model.MinY;
-        var actual = ActualWidth > 0 ? ActualWidth : width;
-        var actualHeight = ActualHeight > 0 ? ActualHeight : height;
-        var scale = width > 0 ? actual / width : 1D;
-        var scaleY = height > 0 ? actualHeight / height : 1D;
-        var scaleValue = Math.Min(scale, scaleY);
-        return new Rect(
-            (actual - width * scaleValue) / 2D,
-            (actualHeight - height * scaleValue) / 2D,
-            width * scaleValue,
-            height * scaleValue);
+        var contentWidth = model.Width;
+        var contentHeight = model.Height;
+        if (contentWidth <= 0 || contentHeight <= 0)
+            return (1D, 0D, 0D);
+
+        var actualWidth = ActualWidth > 0 ? ActualWidth : contentWidth;
+        var actualHeight = ActualHeight > 0 ? ActualHeight : contentHeight;
+
+        var scale = Math.Min(actualWidth / contentWidth, actualHeight / contentHeight);
+        if (scale <= 0 || double.IsNaN(scale) || double.IsInfinity(scale))
+            scale = 1D;
+
+        // 先把 viewBox 原点挪到 (0,0)，再等比缩放，最后在控件里居中。
+        var offsetX = (actualWidth - contentWidth * scale) / 2D - model.MinX * scale;
+        var offsetY = (actualHeight - contentHeight * scale) / 2D - model.MinY * scale;
+        return (scale, offsetX, offsetY);
     }
 
     private void EnsureModel()
