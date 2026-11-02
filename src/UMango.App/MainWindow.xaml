@@ -118,7 +118,28 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="ListBoxItem">
-            <Grid Background="Transparent" MinHeight="{DynamicResource ListItemHeight}">
+            <!--
+              MouseEnter/MouseLeave 挂在模板根 Grid 上：
+              它铺满整项（Background=Transparent 保证能收到鼠标消息），
+              指针在项内移动（图标↔文字）不会重复触发 Enter/Leave。
+            -->
+            <Grid Background="Transparent" MinHeight="{DynamicResource ListItemHeight}"
+                  MouseEnter="NavItem_MouseEnter" MouseLeave="NavItem_MouseLeave">
+              <!--
+                悬停底色块 —— 对应 PCL-CE 的 MyListItem.RectBack（内容之下、跨整行）。
+                PCL 的观感是「底色块从 0.8 缩放 + 0 透明度长到 1.0 并淡入」，
+                所以独立成一层，缩放与透明度交给代码里的 PCL 原版动画 API 驱动
+                （见 MainWindow.xaml.cs 的 NavItem_MouseEnter / NavItem_MouseLeave）。
+                注意：ScaleTransform 写在模板里而不是共享资源 —— 每个 ListBoxItem
+                必须有自己的一份，否则所有项会共用同一个变换。
+              -->
+              <Border x:Name="HoverBd" Background="{DynamicResource BrG8}" CornerRadius="6"
+                      BorderBrush="{DynamicResource BrG6}" BorderThickness="1"
+                      IsHitTestVisible="False" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                  <ScaleTransform ScaleX="0.8" ScaleY="0.8"/>
+                </Border.RenderTransform>
+              </Border>
               <Border x:Name="Bd" Background="Transparent"/>
               <Border x:Name="Bar" Width="3" HorizontalAlignment="Left" Visibility="Collapsed"
                       Background="{DynamicResource BrC3}"/>
@@ -126,9 +147,6 @@
               <ContentPresenter Margin="16,6,10,6" VerticalAlignment="Center"/>
             </Grid>
             <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrG8}"/>
-              </Trigger>
               <Trigger Property="IsSelected" Value="True">
                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrC6}"/>
                 <Setter TargetName="Bar" Property="Visibility" Value="Visible"/>

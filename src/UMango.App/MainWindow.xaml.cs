@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using UMango.App.Animation;
 using UMango.Shell.ViewModels;
 using UMango.Core.Animation;
@@ -721,6 +722,124 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
         {
             _shell.SelectNavCommand.Execute(nav);
         }
+    }
+
+    // ================= 左栏悬停动效（PCL-CE MyListItem 语义） =================
+
+    /// <summary>
+    /// 左栏项悬停：底色块淡入 + 由 0.8 放大到 1.0。
+    ///
+    /// 数值逐字取自 PCL-CE 的 <c>MyListItem</c>（Apache-2.0）：
+    ///   · 悬停时长 120ms（<c>MouseOver</c> 分支的 <c>time</c>）；
+    ///   · 底色块缩放时长 = time × 1.6 = 192ms，缩放目标 1.0；
+    ///   · 缓动用 <c>AniEaseOutFluent</c>（PCL 原版的「平滑结束」）。
+    ///
+    /// 为什么走 PCL 原版动画 API：<c>ModAnimation</c> 是逐字采用的 PCL 代码本体，
+    /// 且它的 <c>AaOpacity</c> / <c>AaScaleTransform</c> 收的是**相对增量**而非绝对值
+    /// （见 ModAnimation.cs 的 AniType.Number / AniType.ScaleTransform 分支），
+    /// 所以这里必须把「目标值 - 当前值」算好再传进去。
+    ///
+    /// 主题口径：不限主题（PCL 经典与 Fluent10 都有悬停反馈）。
+    /// 原因：模板里已去掉 <c>IsMouseOver</c> 触发器，悬停视觉完全由这一层承担，
+    /// 若按主题门控，Fluent10 下悬停就彻底没有反馈了。
+    /// 但用户设置里的「关闭动画」仍然尊重 —— 关闭时直接落到终态（见下方分支）。
+    /// </summary>
+    private void NavItem_MouseEnter(object sender, MouseEventArgs e)
+    {
+        var parts = TryGetNavHoverParts(sender);
+        if (parts is null) return;
+
+        var (bd, scale, groupName) = parts.Value;
+
+        if (!AppSettings.Animation.Enabled)
+        {
+            // 动画关闭：直接落终态，不播补间（PCL 的「无动画分支」等价终态）。
+            bd.Opacity = 1d;
+            scale.ScaleX = 1d;
+            scale.ScaleY = 1d;
+            return;
+        }
+
+        var group = new List<PCL.ModAnimation.AniData>
+        {
+            // 透明度：当前值 → 1（相对增量）
+            PCL.ModAnimation.AaOpacity(bd, 1d - bd.Opacity, 120, 0,
+                new PCL.ModAnimation.AniEaseOutFluent()),
+            // 缩放：当前值 → 1（相对增量；PCL 原版此时目标同样是 1.0）
+            PCL.ModAnimation.AaScaleTransform(bd, 1d - scale.ScaleX, 192, 0,
+                new PCL.ModAnimation.AniEaseOutFluent()),
+        };
+        // 动画组名按项唯一：AniStart 会先 AniStop 同名组，
+        // 若所有项共用一个名字，一项的悬停会打断另一项正在播的动画。
+        PCL.ModAnimation.AniStart(group, groupName);
+    }
+
+    /// <summary>
+    /// 左栏项离开：底色块淡出并缩回。
+    ///
+    /// 数值取自 PCL-CE <c>MyListItem</c> 的离开分支（<c>MouseLeave</c>，time = 180ms）：
+    /// 透明度归零、缩放回到底色块的初始值 0.8。
+    ///
+    /// 与 PCL 原版的**一处简化**（已在 XAML 注释里对应说明）：
+    /// PCL 离开时是两段缩放（先到 0.996，再用 1ms 的「之后」段落到 0.75），
+    /// 净效果是回到 0.75；这里一步回到模板初始的 0.8。
+    /// 差别在于：0.75 之后再次悬停时 PCL 会有一段「从 0.75 弹回 1.0」的位移，
+    /// 而模板初始值是 0.8，回到初始值能让「离开 → 再进入」的观感连续、不出现跳变。
+    /// </summary>
+    private void NavItem_MouseLeave(object sender, MouseEventArgs e)
+    {
+        var parts = TryGetNavHoverParts(sender);
+        if (parts is null) return;
+
+        var (bd, scale, groupName) = parts.Value;
+
+        if (!AppSettings.Animation.Enabled)
+        {
+            bd.Opacity = 0d;
+            scale.ScaleX = 0.8d;
+            scale.ScaleY = 0.8d;
+            return;
+        }
+
+        var group = new List<PCL.ModAnimation.AniData>
+        {
+            PCL.ModAnimation.AaOpacity(bd, -bd.Opacity, 180),
+            PCL.ModAnimation.AaScaleTransform(bd, 0.8d - scale.ScaleX, 180, 0,
+                new PCL.ModAnimation.AniEaseOutFluent()),
+        };
+        // 与进入用同一个组名 → 离开会打断正在播的进入动画（PCL 同样如此）。
+        PCL.ModAnimation.AniStart(group, groupName);
+    }
+
+    /// <summary>
+    /// 从事件源里取出左栏项的悬停底色块、它的缩放变换，以及该项独享的动画组名。
+    ///
+    /// 取元素的路径：事件源是模板根 Grid → <c>TemplatedParent</c> 就是这一项的
+    /// <see cref="ListBoxItem"/> → 用它的 <c>Template.FindName</c> 拿到模板内具名的
+    /// <c>HoverBd</c>（<c>ControlTemplate</c> 内的名字要靠模板找，直接
+    /// <c>FindName</c> 在嵌套名字域下不一定命中）。
+    ///
+    /// 组名按项唯一：用该项的导航 Key（Shell 侧 <see cref="NavItem"/>），
+    /// 找不到时退回到实例哈希，保证不同项不会互相打断动画。
+    /// </summary>
+    private static (Border Bd, System.Windows.Media.ScaleTransform Scale, string GroupName)? TryGetNavHoverParts(
+        object sender)
+    {
+        if (sender is not FrameworkElement fe) return null;
+        if (fe.TemplatedParent is not ListBoxItem item) return null;
+
+        var bd = item.Template?.FindName("HoverBd", item) as Border;
+        if (bd is null) return null;
+
+        var scale = bd.RenderTransform as System.Windows.Media.ScaleTransform;
+        if (scale is null) return null;
+
+        var key = (item.DataContext as NavItem)?.Key;
+        var groupName = "UMango NavHover " + (string.IsNullOrEmpty(key)
+            ? item.GetHashCode().ToString()
+            : key);
+
+        return (bd, scale, groupName);
     }
 
     /// <summary>
