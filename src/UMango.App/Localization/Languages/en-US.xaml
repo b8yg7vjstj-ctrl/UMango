@@ -15,6 +15,7 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!-- ============ Common ============ -->
+    <sys:String x:Key="Common.AppName">UMango</sys:String>
     <sys:String x:Key="Common.Action.Confirm">OK</sys:String>
     <sys:String x:Key="Common.Action.Cancel">Cancel</sys:String>
     <sys:String x:Key="Common.Action.Refresh">Refresh</sys:String>

@@ -14,6 +14,7 @@
 #   ② en-US = 叠加层，只写"变了的键"，重复键覆盖兜底层。
 
 # ==== Common ====
+Common.AppName=UMango
 Common.Action.Confirm=OK
 Common.Action.Cancel=Cancel
 Common.Action.Refresh=Refresh
