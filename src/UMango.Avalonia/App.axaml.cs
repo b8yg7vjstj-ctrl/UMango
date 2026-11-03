@@ -21,6 +21,10 @@ public partial class App : Application
         UMango.Shell.Services.ShellCapabilities.GrayModeApplier = new Services.AvaloniaGrayModeApplier();
         UMango.Shell.Services.ShellCapabilities.MusicOutput = CreateMusicOutput();
 
+        // 对话框宿主：安装前的二次确认（DownloadViewModel.ConfirmInstallAsync）
+        // 经 PclUiBridge 找宿主；不注册的话该壳会按"不阻断"处理，等于确认开关无效。
+        UMango.Shell.Services.PclUiBridge.DialogHost = new Services.AvaloniaDialogHost();
+
         base.OnFrameworkInitializationCompleted();
     }
 

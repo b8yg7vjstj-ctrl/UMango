@@ -139,6 +139,48 @@ public class OtherViewModelTests
             ICollection<MsgBoxButtonInfo> buttons, MsgBoxTheme theme, bool block) => 0;
     }
 
+    /// <summary>
+    /// 异步对话框宿主（Avalonia 壳的形态）：验证 <see cref="PclUiBridge.ShowDialogAsync"/>
+    /// 的异步分支确实被 await 到，而不是被当成"没有宿主"直接放行。
+    /// </summary>
+    [Fact]
+    public async Task 异步对话框宿主取消时同样不会执行安装()
+    {
+        var vm = new DownloadViewModel();
+        await vm.InitializeAsync();
+
+        var category = vm.VisibleCategories.FirstOrDefault(c => c.Available);
+        if (category is null) return;
+
+        AppSettings.Settings.Set(UiSettings.ConfirmBeforeInstallKey, true);
+
+        var previous = PclUiBridge.DialogHost;
+        PclUiBridge.DialogHost = new AsyncCancelDialogHost();
+        try
+        {
+            await vm.InstallCommand.ExecuteAsync(
+                new PackageInfo { Source = category.Kind, Name = "__umango_not_a_real_package__" });
+
+            var cancelled = UMango.Core.Localization.LocalizationService.Text(
+                "Download.Confirm.Cancelled", "__umango_not_a_real_package__");
+            Assert.Equal(cancelled, vm.StatusMessage);
+            Assert.Null(vm.ErrorMessage);
+        }
+        finally
+        {
+            PclUiBridge.DialogHost = previous;
+        }
+    }
+
+    private sealed class AsyncCancelDialogHost : PclUiBridge.IAsyncDialogHost
+    {
+        public int? ShowDialog(string message, string caption,
+            ICollection<MsgBoxButtonInfo> buttons, MsgBoxTheme theme, bool block) => 0;
+
+        public Task<int?> ShowDialogAsync(string message, string caption,
+            ICollection<MsgBoxButtonInfo> buttons, MsgBoxTheme theme) => Task.FromResult<int?>(0);
+    }
+
     // ================= ToolsViewModel =================
 
     [Fact]

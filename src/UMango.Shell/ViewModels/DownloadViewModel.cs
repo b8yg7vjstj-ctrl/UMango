@@ -463,7 +463,7 @@ public partial class DownloadViewModel : ObservableObject
         {
             // 二次确认必须在真正执行之前：安装会改动系统，默认应当先问一句。
             // 设置里关掉（behavior.confirmBeforeInstall=false）则直接执行。
-            if (!ConfirmInstall(target, category)) return;
+            if (!await ConfirmInstallAsync(target, category)) return;
 
             StatusMessage = L("Download.Installing", target.Name);
 
@@ -493,17 +493,20 @@ public partial class DownloadViewModel : ObservableObject
     /// <para>
     /// 为什么不走 <see cref="MsgBoxWrapper"/>：它是同步事件契约，没有订阅者时
     /// <c>ShowWithCustomButtons</c> 直接返回 0 —— 而 0 恰好是「取消」的值。
-    /// Avalonia 壳目前没有接线（<see cref="PclUiBridge.DialogHost"/> 未注册），
-    /// 走那边会把每次都误判成取消，导致该壳永远装不上包。
     /// 因此这里只认宿主能力：宿主存在才弹框，不存在就按「不阻断」处理。
     /// </para>
+    ///
+    /// <para>
+    /// 为什么是 async：Avalonia 的模态对话框返回 Task 且不跑嵌套消息循环，
+    /// 同步等它会在 UI 线程上死锁；<see cref="PclUiBridge.ShowDialogAsync"/>
+    /// 对同步宿主（WPF）仍按原样阻塞，对异步宿主（Avalonia）才真正 await。
+    /// </para>
     /// </summary>
-    private bool ConfirmInstall(PackageInfo target, PackageSourceCategory? category)
+    private async Task<bool> ConfirmInstallAsync(PackageInfo target, PackageSourceCategory? category)
     {
         if (!AppSettings.Settings.Get<bool>(UiSettings.ConfirmBeforeInstallKey)) return true;
 
-        var host = PclUiBridge.DialogHost;
-        if (host is null) return true;
+        if (PclUiBridge.DialogHost is null) return true;
 
         var source = category?.Title ?? target.Source.ToString();
         var buttons = new[]
@@ -512,12 +515,11 @@ public partial class DownloadViewModel : ObservableObject
             new MsgBoxButtonInfo(L("Common.Action.Cancel"), CancelButtonValue),
         };
 
-        var result = host.ShowDialog(
+        var result = await PclUiBridge.ShowDialogAsync(
             L("Download.Confirm.InstallBody", target.Name, source),
             L("Download.Confirm.InstallTitle"),
             buttons,
-            MsgBoxTheme.Warning,
-            block: true);
+            MsgBoxTheme.Warning);
 
         // 宿主返回 null = 它自己没法显示（例如没有 UI 线程）：
         // 与 PclUiBridge 的降级语义一致，按「不阻断」处理，不能把安装卡死。

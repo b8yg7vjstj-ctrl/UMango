@@ -69,6 +69,47 @@ public static class PclUiBridge
     }
 
     /// <summary>
+    /// 支持**异步**对话框的宿主（可选能力）。
+    ///
+    /// <para>
+    /// 为什么需要它：<see cref="IDialogHost.ShowDialog"/> 是同步阻塞语义，
+    /// WPF 的 <c>Window.ShowDialog()</c> 自带嵌套消息循环，所以在 UI 线程上阻塞没问题；
+    /// Avalonia 的 <c>ShowDialog&lt;T&gt;</c> 返回 <c>Task</c> 且**不跑嵌套循环**，
+    /// 在 UI 线程上等它就等于死锁。业务方（安装前二次确认）因此改走
+    /// <see cref="ShowDialogAsync"/>：宿主是异步实现就 await，是同步实现就照旧直接调用。
+    /// </para>
+    /// </summary>
+    public interface IAsyncDialogHost : IDialogHost
+    {
+        /// <summary>异步显示模态对话框并等待结果；无法显示时返回 null。</summary>
+        Task<int?> ShowDialogAsync(string message, string caption,
+            ICollection<MsgBoxButtonInfo> buttons, MsgBoxTheme theme);
+    }
+
+    /// <summary>
+    /// 显示对话框（优先异步宿主，其次同步宿主）。
+    ///
+    /// <para>
+    /// 没有宿主时返回 <c>null</c>，由调用方决定"不阻断"还是"中止"——
+    /// 与 <see cref="OnMsgBox"/> 的降级语义一致：任何 UI 缺失都不该让业务逻辑崩掉。
+    /// </para>
+    /// </summary>
+    public static async Task<int?> ShowDialogAsync(string message, string caption,
+        ICollection<MsgBoxButtonInfo> buttons, MsgBoxTheme theme)
+    {
+        var host = DialogHost;
+        if (host is null) return null;
+
+        if (host is IAsyncDialogHost asyncHost)
+        {
+            return await asyncHost.ShowDialogAsync(message, caption, buttons, theme);
+        }
+
+        // 同步宿主：由它自己负责线程编组与阻塞（WPF 的 ShowDialog 会跑嵌套消息循环）
+        return host.ShowDialog(message, caption, buttons, theme, block: true);
+    }
+
+    /// <summary>
     /// 当前生效的对话框宿主。
     ///
     /// 由界面壳在启动时设置（WPF 壳在 <c>App.OnStartup</c>，Avalonia 壳在 <c>App.axaml.cs</c>）。
