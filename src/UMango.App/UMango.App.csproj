@@ -39,12 +39,8 @@
          否则 pack:// URI 取不到它。.hlsl 是对应的源码，一并带上便于追溯。 -->
     <Resource Include="Assets\Shaders\AdaptiveBlur.ps" />
     <Resource Include="Assets\Shaders\AdaptiveBlur.hlsl" />
-    <!-- SVG 图标包：SvgIconLoader 按 pack URI
-         pack://application:,,,/UMango;component/Assets/IconPacks/{pack}/{name}.svg 取资源，
-         所以 Build Action 必须是 Resource（不是 Content / None），
-         且目录层级必须与 pack URI 的拼法一致（Assets/IconPacks/<包名>/<图标名>.svg）。
-         目录名即包名：lucide（ISC，见 THIRD-PARTY-NOTICES.md §2）。
-         图标标识写法为 "lucide/home"（包名/图标名）。 -->
-    <Resource Include="Assets\IconPacks\**\*.svg" />
+    <!-- SVG 图标包已移到 UMango.Shell（两个壳共用一份资源）：
+         src/UMango.Shell/Assets/IconPacks/<包名>/<图标名>.svg，
+         由 UMango.Shell.Icons.SvgIconLoader 读内嵌资源。 -->
   </ItemGroup>
 </Project>

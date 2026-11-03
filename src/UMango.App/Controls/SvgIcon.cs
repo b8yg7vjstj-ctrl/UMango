@@ -6,20 +6,17 @@
 // 原文采用 Apache-2.0 许可，允许逐字复用。
 // 采用时做的改动：
 //   1. 命名空间 PCL.Core.UI.Controls.SvgIcon → UMango.App.Controls；
-//   2. 原版把「加载 pack URI 里的 svg」与「画」写在一起，
-//      UMango 拆成 SvgIconLoader（加载/缓存）与 SvgIcon（控件）两个文件，
-//      加载器支持从任意流读入（便于测试与自定义图标包）；
+//   2. **加载器已上移到 UMango.Shell.Icons.SvgIconLoader**（图标包是两个壳共用的
+//      一份内嵌资源）；本文件只剩「把中性路径模型画出来」的 WPF 部分；
 //   3. 原版的 SvgIconModel 在 Core 内是 internal，这里改为公开的
 //      UMango.Core.UI.Svg.SvgIconModel，App 层直接复用；
 //   4. 原版固定用 SystemColors.ControlTextBrush 作默认笔刷，
 //      UMango 保留该默认，但允许外部指定（跟随主题色）。
 
-using System.Collections.Concurrent;
-using System.IO;
-using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using UMango.Core.UI.Svg;
+using UMango.Shell.Icons;
 
 namespace UMango.App.Controls;
 
@@ -218,62 +215,7 @@ public class SvgIcon : FrameworkElement
     }
 }
 
-/// <summary>SVG 图标加载器（含缓存）。</summary>
-public static class SvgIconLoader
-{
-    /// <summary>默认图标包名。</summary>
-    public const string DefaultIconPack = SvgIconKey.DefaultIconPack;
+// 图标加载（读内嵌资源 + 解析 + 缓存）已上移到 UMango.Shell.Icons.SvgIconLoader：
+// 图标包是 WPF 与 Avalonia 共用的同一份资源，加载逻辑只应有一份。
+// 本文件只保留「把中性路径模型画成 WPF Geometry」这一层。
 
-    private static readonly ConcurrentDictionary<string, Lazy<SvgIconModel?>> Cache =
-        new(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>按标识加载图标（从程序集的图标包资源读）。</summary>
-    public static SvgIconModel? Load(string? icon, string? defaultPack = null)
-    {
-        var key = SvgIconKey.TryParse(icon, defaultPack ?? DefaultIconPack);
-        if (key is null)
-            return null;
-
-        var cacheKey = key.Value.ToString();
-        return Cache.GetOrAdd(cacheKey, _ => new Lazy<SvgIconModel?>(() => LoadCore(key.Value))).Value;
-    }
-
-    /// <summary>从 SVG 源码解析图标（不走资源、不入缓存）。</summary>
-    public static SvgIconModel? ParseSource(string svg)
-    {
-        try
-        {
-            var root = SvgSourceParser.ParseSource(svg);
-            return SvgDocumentParser.Parse(root);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    /// <summary>清空缓存。</summary>
-    public static void ClearCache() => Cache.Clear();
-
-    private static SvgIconModel? LoadCore(SvgIconKey key)
-    {
-        try
-        {
-            var assemblyName = typeof(SvgIconLoader).Assembly.GetName().Name ?? "UMango";
-            var uri = new Uri(
-                $"pack://application:,,,/{assemblyName};component/Assets/IconPacks/{key.Pack}/{key.Name}.svg",
-                UriKind.Absolute);
-            var info = Application.GetResourceStream(uri);
-            if (info is null)
-                return null;
-
-            using var stream = info.Stream;
-            using var reader = new StreamReader(stream, Encoding.UTF8, true);
-            return ParseSource(reader.ReadToEnd());
-        }
-        catch
-        {
-            return null;
-        }
-    }
-}

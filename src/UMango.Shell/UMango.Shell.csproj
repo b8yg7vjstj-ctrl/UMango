@@ -47,4 +47,13 @@
     <EmbeddedResource Include="Localization\Languages\*.txt" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- SVG 图标包（lucide，ISC 许可，见 THIRD-PARTY-NOTICES.md §2）。
+         放在 Shell 而不是某个壳里：图标是纯数据（.svg 文本），两个壳用同一份，
+         避免 WPF 与 Avalonia 各存一套后必然发散。
+         逻辑资源名 = UMango.Shell.Assets.IconPacks.<包名>.<图标名>.svg
+         （由 UMango.Shell.Icons.SvgIconLoader 读取）。 -->
+    <EmbeddedResource Include="Assets\IconPacks\**\*.svg" />
+  </ItemGroup>
+
 </Project>
