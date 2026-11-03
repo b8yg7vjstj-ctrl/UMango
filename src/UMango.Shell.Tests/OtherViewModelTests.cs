@@ -1,6 +1,9 @@
 using UMango.Shell.ViewModels;
+using UMango.Shell.Services;
 using UMango.Core.App.Tasks;
+using UMango.Core.Configuration;
 using UMango.Core.PackageManagers;
+using PCL.Core.UI;
 using Xunit;
 
 namespace UMango.Shell.Tests;
@@ -14,6 +17,10 @@ public class OtherViewModelTests
     [Fact]
     public void 下载页默认不显示平台不支持的包源()
     {
+        // 这个键现在被下载页与设置页共用且会持久化：
+        // 进程内先前的用例可能把它设成 true，所以显式回到默认值再断言。
+        AppSettings.Settings.Set(UiSettings.ShowUnsupportedSourcesKey, false);
+
         var vm = new DownloadViewModel();
         Assert.False(vm.ShowUnsupported);
 
@@ -24,6 +31,9 @@ public class OtherViewModelTests
     [Fact]
     public async Task 下载页能加载包源分类_且标题为包管理器名子标题为安装目录()
     {
+        // 默认过滤后只应剩下当前平台支持的包源 —— 同上，先把这个开关归位。
+        AppSettings.Settings.Set(UiSettings.ShowUnsupportedSourcesKey, false);
+
         var vm = new DownloadViewModel();
         await vm.InitializeAsync();
 
@@ -61,6 +71,60 @@ public class OtherViewModelTests
         Assert.Null(vm.ErrorMessage);
         Assert.Equal("", vm.Query);
         Assert.Empty(vm.Results);
+    }
+
+    [Fact]
+    public void 显示不支持的包源开关会写穿到设置服务_并在新实例上生效()
+    {
+        AppSettings.Settings.Set(UiSettings.ShowUnsupportedSourcesKey, false);
+
+        var vm = new DownloadViewModel();
+        vm.ShowUnsupported = true;
+
+        Assert.True(AppSettings.Settings.Get<bool>(UiSettings.ShowUnsupportedSourcesKey));
+        // 新建实例（相当于重新进入下载页）必须读到持久值，而不是回到默认 false
+        Assert.True(new DownloadViewModel().ShowUnsupported);
+    }
+
+    [Fact]
+    public async Task 安装前二次确认被取消时不会执行安装()
+    {
+        var vm = new DownloadViewModel();
+        await vm.InitializeAsync();
+
+        var category = vm.VisibleCategories.FirstOrDefault(c => c.Available);
+        if (category is null) return;   // 没有任何可用包源就跳过
+
+        AppSettings.Settings.Set(UiSettings.ConfirmBeforeInstallKey, true);
+
+        var previous = PclUiBridge.DialogHost;
+        PclUiBridge.DialogHost = new CancelDialogHost();
+        try
+        {
+            // 包名故意用不存在的名字：若取消逻辑失效、真的走到执行器，
+            // 用例会因为状态变成"正在安装"而红，而不是去改动机器。
+            await vm.InstallCommand.ExecuteAsync(
+                new PackageInfo { Source = category.Kind, Name = "__umango_not_a_real_package__" });
+
+            // 文案用与 ViewModel 同一条本地化 API 生成，避免断言依赖当前 Provider 是
+            // KeyOnly 还是查表实现（两者的输出形态不同）。
+            var cancelled = UMango.Core.Localization.LocalizationService.Text(
+                "Download.Confirm.Cancelled", "__umango_not_a_real_package__");
+            Assert.Equal(cancelled, vm.StatusMessage);
+
+            Assert.Null(vm.ErrorMessage);
+        }
+        finally
+        {
+            PclUiBridge.DialogHost = previous;
+        }
+    }
+
+    /// <summary>永远返回「取消」的对话框宿主。</summary>
+    private sealed class CancelDialogHost : PclUiBridge.IDialogHost
+    {
+        public int? ShowDialog(string message, string caption,
+            ICollection<MsgBoxButtonInfo> buttons, MsgBoxTheme theme, bool block) => 0;
     }
 
     // ================= ToolsViewModel =================

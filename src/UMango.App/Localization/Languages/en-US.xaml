@@ -251,6 +251,9 @@
     <sys:String x:Key="Nav.About">About</sys:String>
     <sys:String x:Key="Download.Installing">Installing {0}… step progress and terminal output are on the Progress page.</sys:String>
     <sys:String x:Key="Download.InstallDone">Installed: {0} ({1:0.0}s).</sys:String>
+    <sys:String x:Key="Download.Confirm.InstallTitle">Confirm installation</sys:String>
+    <sys:String x:Key="Download.Confirm.InstallBody">About to install "{0}" from {1}. This will change your system. Continue?</sys:String>
+    <sys:String x:Key="Download.Confirm.Cancelled">Installation cancelled: {0}</sys:String>
     <sys:String x:Key="Download.InstallFailed">Failed to install {0}.</sys:String>
     <sys:String x:Key="Download.Unexpected">Unexpected error; retry. If it keeps happening, check diagnostics on the Tools page.</sys:String>
     <sys:String x:Key="Download.ExportedTo">Exported to desktop: {0}</sys:String>
@@ -546,6 +549,14 @@
     <sys:String x:Key="Settings.Hidden.Hint">Comma-separated names of the entries to hide, for example TabDownload,ToolLogs. Available names: TabDownload / TabProgress / TabSettings / TabTools / ToolDownloader / ToolLogs / ToolDiagnostics / ToolLicenses / ToolFeedback / ToolMusic / ToolAbout. Unknown names are ignored.</sys:String>
     <sys:String x:Key="Settings.Hidden.ForceShow">Temporarily show all entries (ignore the list above)</sys:String>
     <sys:String x:Key="Settings.Hidden.Failed">Failed to save the hidden-entry settings: {0}</sys:String>
+
+    <!-- ============ Behavior settings ============ -->
+    <sys:String x:Key="Settings.Behavior.Section">Behavior</sys:String>
+    <sys:String x:Key="Settings.Behavior.Hint">These two options control how installing behaves and which sources the list shows. Changes apply immediately and are saved.</sys:String>
+    <sys:String x:Key="Settings.Behavior.ShowUnsupported">Show sources unsupported on this platform</sys:String>
+    <sys:String x:Key="Settings.Behavior.ShowUnsupportedHint">Hidden by default. Turn it on to see why those sources are unavailable (for example, winget is Windows-only).</sys:String>
+    <sys:String x:Key="Settings.Behavior.ConfirmInstall">Confirm before installing</sys:String>
+    <sys:String x:Key="Settings.Behavior.ConfirmInstallHint">Installing really changes your system, so a confirmation is shown by default. When off, clicking Install runs immediately.</sys:String>
     <sys:String x:Key="Settings.Blur.Section">Advanced material</sys:String>
     <sys:String x:Key="Settings.Blur.Hint">Apply a frosted-glass blur to the interface, like PCL's advanced material. Blurring costs some rendering performance, so low-end machines can turn it off.</sys:String>
     <sys:String x:Key="Settings.Blur.Enable">Enable interface blur</sys:String>

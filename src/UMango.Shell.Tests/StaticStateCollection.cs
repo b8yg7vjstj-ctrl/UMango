@@ -3,6 +3,35 @@ using Xunit;
 namespace UMango.Shell.Tests;
 
 /// <summary>
+/// 把测试进程的数据目录重定向到临时目录。
+///
+/// <para>
+/// 为什么必须做：<c>AppSettings.Settings</c> 在**静态初始化**时就把
+/// <c>AppPaths.Current.SettingsFile</c> 快照成了字段，之后再改 <c>AppPaths.Current</c> 无效。
+/// 不隔离的话，本进程里任何一次设置写入（设置页测试改动画倍率、
+/// 下载页测试打开「显示不支持的包源」……）都会落到**用户真实的** settings.json 上，
+/// 既污染真实配置，也让"默认值是 false"这类断言受本机历史值影响而随机变红。
+/// </para>
+///
+/// <para>
+/// 环境变量是唯一能在首次访问 <c>AppPaths</c> 之前生效的手段，
+/// 而模块初始化器保证在所有测试代码之前执行。
+/// </para>
+/// </summary>
+internal static class TestEnvironment
+{
+    [System.Runtime.CompilerServices.ModuleInitializer]
+    internal static void RedirectDataDirectory()
+    {
+        var root = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(), "umango-shell-tests-" + System.Environment.ProcessId);
+
+        System.Environment.SetEnvironmentVariable("UMANGO_DATA_DIR", root);
+        UMango.Core.Platform.AppPaths.Reset();
+    }
+}
+
+/// <summary>
 /// 触碰**全局静态状态**的测试归到同一个集合，由 xUnit 串行执行。
 ///
 /// <para>

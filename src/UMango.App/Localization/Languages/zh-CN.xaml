@@ -257,6 +257,9 @@
     <sys:String x:Key="Nav.About">关于</sys:String>
     <sys:String x:Key="Download.Installing">正在安装 {0}…子项进度与终端输出见「进度」页。</sys:String>
     <sys:String x:Key="Download.InstallDone">安装完成：{0}（耗时 {1:0.0} 秒）。</sys:String>
+    <sys:String x:Key="Download.Confirm.InstallTitle">确认安装</sys:String>
+    <sys:String x:Key="Download.Confirm.InstallBody">即将安装「{0}」（来自 {1}）。安装会真实改动系统，确定继续吗？</sys:String>
+    <sys:String x:Key="Download.Confirm.Cancelled">已取消安装：{0}</sys:String>
     <sys:String x:Key="Download.InstallFailed">安装 {0} 失败。</sys:String>
     <sys:String x:Key="Download.Unexpected">出现未预期的错误，可重试；若持续出现请到「工具」页查看系统诊断。</sys:String>
     <sys:String x:Key="Download.ExportedTo">已导出到桌面：{0}</sys:String>
@@ -560,6 +563,14 @@
     <sys:String x:Key="Settings.Hidden.Hint">用逗号分隔要藏起来的入口名，例如 TabDownload,ToolLogs。可用名字：TabDownload / TabProgress / TabSettings / TabTools / ToolDownloader / ToolLogs / ToolDiagnostics / ToolLicenses / ToolFeedback / ToolMusic / ToolAbout。写错的名字会被忽略。</sys:String>
     <sys:String x:Key="Settings.Hidden.ForceShow">临时显示全部入口（忽略上面的隐藏设置）</sys:String>
     <sys:String x:Key="Settings.Hidden.Failed">保存隐藏设置失败：{0}</sys:String>
+
+    <!-- ============ 行为设置 ============ -->
+    <sys:String x:Key="Settings.Behavior.Section">行为</sys:String>
+    <sys:String x:Key="Settings.Behavior.Hint">这两项决定「安装」时的交互与包源列表的可见范围，改动立即生效并持久化。</sys:String>
+    <sys:String x:Key="Settings.Behavior.ShowUnsupported">显示当前平台不支持的包源</sys:String>
+    <sys:String x:Key="Settings.Behavior.ShowUnsupportedHint">默认隐藏。打开后可以看见那些包源为何不可用（例如 winget 仅限 Windows）。</sys:String>
+    <sys:String x:Key="Settings.Behavior.ConfirmInstall">安装前二次确认</sys:String>
+    <sys:String x:Key="Settings.Behavior.ConfirmInstallHint">安装会真实改动系统，默认开启确认；关闭后点安装直接执行。</sys:String>
     <sys:String x:Key="Settings.Blur.Section">高级材质</sys:String>
     <sys:String x:Key="Settings.Blur.Hint">给界面开启毛玻璃模糊效果（与 PCL 的「高级材质」一致）。模糊会占用一些渲染资源，低端设备可以关掉。</sys:String>
     <sys:String x:Key="Settings.Blur.Enable">启用界面模糊</sys:String>

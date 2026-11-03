@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PCL.Core.UI;
+using UMango.Core.Configuration;
 using UMango.Core.Execution;
 using UMango.Core.Install;
 using UMango.Core.Localization;
@@ -66,9 +68,24 @@ public partial class DownloadViewModel : ObservableObject
     private bool _initializing;
 
     /// <summary>
+    /// 构造时把「行为」设置读进来作为初值。
+    ///
+    /// 为什么必须读：<see cref="ShowUnsupported"/> 的持久值由设置页维护
+    /// （<c>UiSettings.ShowUnsupportedSourcesKey</c>），下载页每次新建会丢掉它，
+    /// 表现为"设置里开了，回到下载页又变回默认值"。
+    /// </summary>
+    public DownloadViewModel()
+    {
+        _showUnsupported = AppSettings.Settings.Get<bool>(UiSettings.ShowUnsupportedSourcesKey);
+    }
+
+    /// <summary>
     /// 是否显示当前平台不支持的包源。
     /// 故意写成手写属性而不是 [ObservableProperty]：它一变，依赖它的
     /// <see cref="VisibleCategories"/> 就变了，必须顺带通知界面重新取列表。
+    ///
+    /// 写穿到设置服务并立即落盘：这个开关在设置页也有入口，
+    /// 两处必须是同一份值（见 <c>SettingsViewModel.ShowUnsupportedSources</c>）。
     /// </summary>
     public bool ShowUnsupported
     {
@@ -76,6 +93,8 @@ public partial class DownloadViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _showUnsupported, value)) return;
+            AppSettings.Settings.Set(UiSettings.ShowUnsupportedSourcesKey, value);
+            AppSettings.Save();
             OnPropertyChanged(nameof(VisibleCategories));
         }
     }
@@ -417,6 +436,10 @@ public partial class DownloadViewModel : ObservableObject
 
         try
         {
+            // 二次确认必须在真正执行之前：安装会改动系统，默认应当先问一句。
+            // 设置里关掉（behavior.confirmBeforeInstall=false）则直接执行。
+            if (!ConfirmInstall(target, category)) return;
+
             StatusMessage = L("Download.Installing", target.Name);
 
             // 版本跟随搜索结果里展示的版本，保证"装的就是看到的"；
@@ -438,6 +461,54 @@ public partial class DownloadViewModel : ObservableObject
             ApplyError(ex, category);
         }
     }
+
+    /// <summary>
+    /// 安装前二次确认。返回 true 表示继续安装，false 表示用户取消。
+    ///
+    /// <para>
+    /// 为什么不走 <see cref="MsgBoxWrapper"/>：它是同步事件契约，没有订阅者时
+    /// <c>ShowWithCustomButtons</c> 直接返回 0 —— 而 0 恰好是「取消」的值。
+    /// Avalonia 壳目前没有接线（<see cref="PclUiBridge.DialogHost"/> 未注册），
+    /// 走那边会把每次都误判成取消，导致该壳永远装不上包。
+    /// 因此这里只认宿主能力：宿主存在才弹框，不存在就按「不阻断」处理。
+    /// </para>
+    /// </summary>
+    private bool ConfirmInstall(PackageInfo target, PackageSourceCategory? category)
+    {
+        if (!AppSettings.Settings.Get<bool>(UiSettings.ConfirmBeforeInstallKey)) return true;
+
+        var host = PclUiBridge.DialogHost;
+        if (host is null) return true;
+
+        var source = category?.Title ?? target.Source.ToString();
+        var buttons = new[]
+        {
+            new MsgBoxButtonInfo(L("Common.Action.Confirm"), ConfirmButtonValue),
+            new MsgBoxButtonInfo(L("Common.Action.Cancel"), CancelButtonValue),
+        };
+
+        var result = host.ShowDialog(
+            L("Download.Confirm.InstallBody", target.Name, source),
+            L("Download.Confirm.InstallTitle"),
+            buttons,
+            MsgBoxTheme.Warning,
+            block: true);
+
+        // 宿主返回 null = 它自己没法显示（例如没有 UI 线程）：
+        // 与 PclUiBridge 的降级语义一致，按「不阻断」处理，不能把安装卡死。
+        if (result is null) return true;
+
+        if (result != ConfirmButtonValue)
+        {
+            StatusMessage = L("Download.Confirm.Cancelled", target.Name);
+            return false;
+        }
+
+        return true;
+    }
+
+    private const int ConfirmButtonValue = 1;
+    private const int CancelButtonValue = 0;
 
     /// <summary>
     /// 切换包源分类时清空上一轮结果与提示。

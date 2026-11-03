@@ -355,6 +355,41 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _isDark;
 
+    // ==================== 行为 ====================
+
+    /// <summary>
+    /// 是否显示当前平台不支持的包源。
+    ///
+    /// 与下载页的左栏开关是**同一个键**（<see cref="UiSettings.ShowUnsupportedSourcesKey"/>）：
+    /// 两处都必须写穿到设置服务并落盘，否则会出现"设置页开了、下载页还是隐藏"的错位。
+    /// </summary>
+    public bool ShowUnsupportedSources
+    {
+        get => AppSettings.Settings.Get<bool>(UiSettings.ShowUnsupportedSourcesKey);
+        set
+        {
+            if (ShowUnsupportedSources == value) return;
+            AppSettings.Settings.Set(UiSettings.ShowUnsupportedSourcesKey, value);
+            AppSettings.Save();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 安装前二次确认。关闭后点「安装」会直接执行（见 <c>DownloadViewModel.ConfirmInstall</c>）。
+    /// </summary>
+    public bool ConfirmBeforeInstall
+    {
+        get => AppSettings.Settings.Get<bool>(UiSettings.ConfirmBeforeInstallKey);
+        set
+        {
+            if (ConfirmBeforeInstall == value) return;
+            AppSettings.Settings.Set(UiSettings.ConfirmBeforeInstallKey, value);
+            AppSettings.Save();
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>中性反馈（应用主题、清空记录的结果）。</summary>
     [ObservableProperty]
     private string? _statusMessage;
