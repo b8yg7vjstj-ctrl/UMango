@@ -270,6 +270,30 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// 左栏项右侧快捷按钮的点击分发（与 WPF 壳的 NavQuickButton_Click 同构）。
+    ///
+    /// <para>
+    /// 按动作标识分发而不是绑命令：<see cref="NavItemButton"/> 属于 Shell 层，
+    /// 不能引用界面框架的命令类型。壳在这里把标识翻译成具体命令 ——
+    /// 与「页面自己 new 自己的 ViewModel」的外壳约定一致，外壳不缓存页面 VM。
+    /// </para>
+    /// </summary>
+    private void OnNavQuickButtonClick(object? sender, RoutedEventArgs e)
+    {
+        // 先标记已处理：否则点击会冒泡到 ListBoxItem，顺带把这一项切成选中。
+        e.Handled = true;
+
+        if (sender is not Control { Tag: string action }) return;
+
+        switch (action)
+        {
+            case "logs.openFolder":
+                (ViewLog.DataContext as LogViewModel)?.OpenFolderCommand.Execute(null);
+                break;
+        }
+    }
+
+    /// <summary>
     /// 二级导航变化 → 同步到导航栈。
     /// 规则本身在 <see cref="NavStackMapping"/>（纯逻辑，可测）；这里只负责执行。
     /// </summary>

@@ -87,6 +87,7 @@
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
                   <controls:SvgIcon Grid.Column="0" Width="16" Height="16"
                                     Margin="0,0,10,0" VerticalAlignment="Center"
@@ -99,6 +100,32 @@
                                Foreground="{DynamicResource BrG3}" TextTrimming="CharacterEllipsis"
                                IsVisible="{Binding HasSubtitle}" />
                   </StackPanel>
+                  <!--
+                    右侧快捷按钮（PCL 的 MyListItem.Buttons）：只在鼠标悬停该项时出现。
+                    显隐用 $parent[ListBoxItem].IsPointerOver —— DataTemplate 里拿不到容器，
+                    只能往上找（同页 DownloadView 里已有 $parent[ItemsControl] 的用法）。
+                  -->
+                  <ItemsControl Grid.Column="2" Margin="6,0,0,0" VerticalAlignment="Center"
+                                ItemsSource="{Binding Buttons}"
+                                IsVisible="{Binding $parent[ListBoxItem].IsPointerOver}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="2" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Button Classes="nav-quick" Padding="3"
+                                Background="Transparent" BorderThickness="0"
+                                Tag="{Binding Action}" ToolTip.Tip="{Binding ToolTip}"
+                                Click="OnNavQuickButtonClick">
+                          <controls:SvgIcon Width="14" Height="14"
+                                            Icon="{Binding Icon}"
+                                            IconBrush="{DynamicResource BrG3}" />
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
                 </Grid>
               </StackPanel>
             </DataTemplate>
