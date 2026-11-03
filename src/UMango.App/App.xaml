@@ -31,12 +31,6 @@
         画刷由各壳用自己的资源查找解析（见 ThemeBrushKeyConverter 的说明）。
       -->
       <services:ThemeBrushKeyConverter x:Key="ThemeBrushKey"/>
-      <!--
-        左栏导航项的 Key → SVG 图标标识。
-        Shell 的 NavItem 只有 Key 没有图标字段（改它属于共享层改动），
-        所以映射表放在 WPF 侧（Controls/NavIconMap.cs），由本转换器在模板里查表。
-      -->
-      <controls:NavIconConverter x:Key="NavIconConv"/>
     </ResourceDictionary>
   </Application.Resources>
 </Application>

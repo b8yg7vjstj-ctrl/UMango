@@ -46,6 +46,24 @@ public class IconResourceTests
     }
 
     [Fact]
+    public void 每个左栏导航项都有可加载的图标()
+    {
+        var shell = new UMango.Shell.ViewModels.ShellViewModel();
+
+        foreach (var tab in Enum.GetValues<UMango.Shell.ViewModels.AppTab>())
+        {
+            shell.CurrentTab = tab;
+
+            Assert.NotEmpty(shell.LeftMenu);
+            foreach (var item in shell.LeftMenu)
+            {
+                Assert.False(string.IsNullOrEmpty(item.Icon), $"导航项 {item.Key} 没有配图标");
+                Assert.True(SvgIconLoader.Load(item.Icon) is not null, $"导航项 {item.Key} 的图标取不到");
+            }
+        }
+    }
+
+    [Fact]
     public void 不存在的图标返回空而不是抛异常()
     {
         Assert.Null(SvgIconLoader.Load("lucide/__not_exist__"));

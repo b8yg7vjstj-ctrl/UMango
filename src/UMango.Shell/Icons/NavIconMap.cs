@@ -1,22 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// 左栏导航图标映射 —— 只属于 WPF 壳这一层。
+// 左栏导航 Key → SVG 图标标识 的映射表。
 //
-// 为什么放在 App 层而不是 Shell/Core：
-//   · Shell 的 <c>NavItem</c>（src/UMango.Shell/ViewModels/ShellViewModel.cs）只有
-//     Key / Title / Subtitle / IsSecondary / GroupTitle 五个字段，**没有图标字段**；
-//     给它加字段属于共享层改动（会牵动 Avalonia 与 Core 的公共契约），不在本次范围内。
-//   · Core 的 <c>IconRegistry</c> 是「图标管理」用的登记/选择机制
-//     （对应 PCL 的 IconManager），不是「某个导航项配哪个图标」的映射表，用它不合适。
-//   所以：Shell 继续只产出 Key，图标由本文件在 WPF 侧按 Key 查表得到。
+// 为什么放在 Shell（而不是某个壳）：
+//   · 图标资源本身已上移到 UMango.Shell（两个壳共用一份）；
+//   · 映射关系是纯数据，与 UI 框架无关 —— 放在壳里意味着两个壳各维护一份，
+//     加一个导航项时必然有一边忘记补图标；
+//   · NavItem.Icon 直接由 Key 推导，两个壳的模板都只绑一个属性即可。
 //
-// 图标资源在 <c>Assets/IconPacks/lucide/</c>（lucide 图标集，ISC 许可，
-// 见 THIRD-PARTY-NOTICES.md §2）。标识写法是「包名/图标名」，例如 <c>lucide/home</c>。
+// 图标标识写法是「包名/图标名」，例如 lucide/home（包见 Assets/IconPacks/）。
 
-using System.Globalization;
-using System.Windows.Data;
-
-namespace UMango.App.Controls;
+namespace UMango.Shell.Icons;
 
 /// <summary>
 /// 左栏导航 Key → SVG 图标标识 的映射表。
@@ -62,19 +56,4 @@ public static class NavIconMap
             return string.Empty;
         return Icons.TryGetValue(navKey, out var name) ? $"{Pack}/{name}" : string.Empty;
     }
-}
-
-/// <summary>
-/// 把导航 Key 转成 SVG 图标标识的转换器（供 XAML 绑定用）。
-/// </summary>
-public sealed class NavIconConverter : IValueConverter
-{
-    /// <summary>单例（转换器无状态）。</summary>
-    public static readonly NavIconConverter Instance = new();
-
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => NavIconMap.Resolve(value as string);
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => Binding.DoNothing;
 }

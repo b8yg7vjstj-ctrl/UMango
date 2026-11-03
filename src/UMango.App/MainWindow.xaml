@@ -68,8 +68,8 @@
         </TextBlock>
         <!--
           图标 + 标题行：图标用 lucide 图标集（16×16，与 PCL 的 MyListItem 一致）。
-          图标标识由导航项的 Key 查表得到（Controls/NavIconMap.cs）——
-          Shell 的 NavItem 没有图标字段，改它属于共享层改动，所以映射放在 WPF 侧。
+          图标标识由 Shell 的 <c>NavItem.Icon</c> 提供（Key → 图标名的映射在 Shell，
+          两个壳共用；资源本身内嵌在 UMango.Shell 里）。
         -->
         <Grid>
           <Grid.ColumnDefinitions>
@@ -79,7 +79,7 @@
           </Grid.ColumnDefinitions>
           <controls:SvgIcon Grid.Column="0" Width="16" Height="16"
                             VerticalAlignment="Center" Margin="0,0,10,0"
-                            Icon="{Binding Key, Converter={StaticResource NavIconConv}}"
+                            Icon="{Binding Icon}"
                             IconBrush="{DynamicResource BrC1}"/>
           <StackPanel Grid.Column="1">
             <TextBlock Text="{Binding Title}" FontSize="13"

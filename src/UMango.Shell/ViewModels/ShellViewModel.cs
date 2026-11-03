@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using UMango.Core.Localization;
 using CommunityToolkit.Mvvm.Input;
+using UMango.Shell.Icons;
 
 namespace UMango.Shell.ViewModels;
 
@@ -49,6 +50,15 @@ public sealed record NavItem(
 
     /// <summary>是否要显示右侧快捷按钮（跨壳共用；空列表等价于没有）。</summary>
     public bool HasButtons => Buttons is { Count: > 0 };
+
+    /// <summary>
+    /// 这一项对应的 SVG 图标标识（如 <c>lucide/home</c>），由 Key 查 <see cref="NavIconMap"/> 得到。
+    ///
+    /// 为什么做成派生属性而不是构造参数：图标纯粹由 Key 决定，两个壳都绑这一个属性就够，
+    /// 不必各自维护一份映射（那样加导航项时总有一边会忘记补图标）。
+    /// 没有对应图标时返回空串，图标控件应渲染成空白而不是报错。
+    /// </summary>
+    public string Icon => NavIconMap.Resolve(Key);
 }
 
 /// <summary>

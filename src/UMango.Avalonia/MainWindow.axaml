@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:UMango.Avalonia.Views"
+        xmlns:controls="using:UMango.Avalonia.Controls"
         x:Class="UMango.Avalonia.MainWindow"
         Title="UMango"
         Width="980" Height="640"
@@ -78,11 +79,27 @@
                            Margin="-16,6,0,2" Padding="13,0,0,0"
                            Foreground="{DynamicResource BrG3}"
                            IsVisible="{Binding HasGroupTitle}" />
-                <TextBlock Text="{Binding Title}" FontSize="13"
-                           Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="0,2,0,0"
-                           Foreground="{DynamicResource BrG3}" TextTrimming="CharacterEllipsis"
-                           IsVisible="{Binding HasSubtitle}" />
+                <!--
+                  图标 + 标题行：图标标识来自 Shell 的 NavItem.Icon（Key → 图标名的映射
+                  与资源都在共享层），渲染由 Controls/SvgIcon 负责 —— 与 WPF 版同构。
+                -->
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <controls:SvgIcon Grid.Column="0" Width="16" Height="16"
+                                    Margin="0,0,10,0" VerticalAlignment="Center"
+                                    Icon="{Binding Icon}"
+                                    IconBrush="{DynamicResource BrC1}" />
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding Title}" FontSize="13"
+                               Foreground="{DynamicResource BrC1}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Subtitle}" FontSize="11" Margin="0,2,0,0"
+                               Foreground="{DynamicResource BrG3}" TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding HasSubtitle}" />
+                  </StackPanel>
+                </Grid>
               </StackPanel>
             </DataTemplate>
           </ListBox.ItemTemplate>
