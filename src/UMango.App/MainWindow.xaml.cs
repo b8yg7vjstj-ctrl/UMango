@@ -724,6 +724,36 @@ public partial class MainWindow : Window, Services.IWindowAppearanceTarget
         }
     }
 
+    // ================= 左栏项右侧快捷按钮（PCL MyListItem.Buttons 语义） =================
+
+    /// <summary>
+    /// 左栏项右侧快捷按钮的点击分发。
+    ///
+    /// <para>
+    /// 为什么按动作标识分发而不是绑命令：<see cref="NavItemButton"/> 属于 Shell 层，
+    /// 不能引用界面框架的命令类型。壳在这里把标识翻译成具体命令，
+    /// 与「页面自己 new 自己的 ViewModel」的外壳约定一致 —— 外壳不缓存页面 VM，
+    /// 只在需要时从页面的 DataContext 取一次。
+    /// </para>
+    /// </summary>
+    private void NavQuickButton_Click(object sender, RoutedEventArgs e)
+    {
+        // 先标记已处理：否则点击会冒泡到 ListBoxItem，顺带把这一项切成选中，
+        // 表现为"点了一个快捷按钮，页面也跟着跳了"。
+        e.Handled = true;
+
+        if (sender is not FrameworkElement { Tag: string action }) return;
+
+        switch (action)
+        {
+            case "logs.openFolder":
+                (ViewLog.DataContext as LogViewModel)?.OpenFolderCommand.Execute(null);
+                break;
+            default:
+                break;
+        }
+    }
+
     // ================= 左栏悬停动效（PCL-CE MyListItem 语义） =================
 
     /// <summary>

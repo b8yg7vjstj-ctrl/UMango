@@ -75,6 +75,7 @@
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
           </Grid.ColumnDefinitions>
           <controls:SvgIcon Grid.Column="0" Width="16" Height="16"
                             VerticalAlignment="Center" Margin="0,0,10,0"
@@ -99,9 +100,75 @@
               </TextBlock.Style>
             </TextBlock>
           </StackPanel>
+          <!--
+            右侧快捷按钮：对应 PCL-CE 的 MyListItem.Buttons（MyIconButton：小图标 +
+            悬停提示，默认只在鼠标悬停该项时出现）。
+            显隐用 ListBoxItem 的 IsMouseOver 判断，而不是在模板里加触发器 ——
+            DataTemplate 拿不到容器，只能用 RelativeSource 往上找。
+          -->
+          <ItemsControl Grid.Column="2" Margin="6,0,0,0" VerticalAlignment="Center"
+                        ItemsSource="{Binding Buttons}" Focusable="False">
+            <ItemsControl.Style>
+              <Style TargetType="ItemsControl">
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                  <DataTrigger
+                      Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                      Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </ItemsControl.Style>
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Style="{StaticResource NavQuickButtonStyle}"
+                        ToolTip="{Binding ToolTip}"
+                        Tag="{Binding Action}"
+                        Click="NavQuickButton_Click">
+                  <controls:SvgIcon Width="14" Height="14"
+                                    Icon="{Binding Icon}"
+                                    IconBrush="{DynamicResource BrG3}"/>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </Grid>
       </StackPanel>
     </DataTemplate>
+
+    <!--
+      左栏项右侧的快捷按钮（PCL 的 MyIconButton）：
+      透明底、悬停显浅底，只有 14×14 的图标 —— 不抢标题的视觉重量。
+    -->
+    <Style x:Key="NavQuickButtonStyle" TargetType="Button">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="3"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="ToolTipService.ShowDuration" Value="8000"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Margin="{TemplateBinding Padding}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrG7}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 
     <!--
       左栏菜单项容器：**整块替换 ControlTemplate**（= 关闭默认选中高亮）。

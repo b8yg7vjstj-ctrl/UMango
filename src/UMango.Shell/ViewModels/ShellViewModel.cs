@@ -34,7 +34,8 @@ public sealed record NavItem(
     string Title,
     string? Subtitle = null,
     bool IsSecondary = false,
-    string? GroupTitle = null)
+    string? GroupTitle = null,
+    IReadOnlyList<NavItemButton>? Buttons = null)
 {
     /// <summary>
     /// 这一项是否要显示分组标题行。
@@ -45,7 +46,20 @@ public sealed record NavItem(
 
     /// <summary>是否要显示副标题行（同上，跨壳共用的判定）。</summary>
     public bool HasSubtitle => !string.IsNullOrEmpty(Subtitle);
+
+    /// <summary>是否要显示右侧快捷按钮（跨壳共用；空列表等价于没有）。</summary>
+    public bool HasButtons => Buttons is { Count: > 0 };
 }
+
+/// <summary>
+/// 左栏项右侧的快捷按钮（对应 PCL-CE 的 <c>MyListItem.Buttons</c> /
+/// <c>MyIconButton</c>：小图标 + 悬停提示，默认只在鼠标悬停在该项时出现）。
+///
+/// <paramref name="Action"/> 是**动作标识**而不是命令对象：
+/// Shell 层不能引用界面框架的命令类型，具体执行由各壳按标识分发
+/// （WPF 在 MainWindow 的点击处理器里，Avalonia 同理）。
+/// </summary>
+public sealed record NavItemButton(string Action, string Icon, string ToolTip);
 
 /// <summary>
 /// 外壳 ViewModel：选项卡状态 + 随选项卡变化的左栏菜单。
@@ -185,7 +199,8 @@ public partial class ShellViewModel : ObservableObject
         [
             // 下载器放在工具页下，对应 PCL-CE 的「百宝箱」位置
             new NavItem("downloader", L("Nav.Downloader"), GroupTitle: L("Nav.Group.Tools")),
-            new NavItem("logs", L("Nav.Logs"), IsSecondary: true),
+            new NavItem("logs", L("Nav.Logs"), IsSecondary: true,
+                Buttons: [new NavItemButton("logs.openFolder", "lucide/scroll-text", L("Common.Action.OpenFolder"))]),
             new NavItem("diagnostics", L("Nav.Diagnostics"), IsSecondary: true),
             new NavItem("licenses", L("Nav.Licenses"), IsSecondary: true),
             new NavItem("feedback", L("Nav.Feedback"), IsSecondary: true),
