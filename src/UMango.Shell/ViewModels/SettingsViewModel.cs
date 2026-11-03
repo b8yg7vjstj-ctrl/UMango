@@ -1068,6 +1068,23 @@ public partial class SettingsViewModel : ObservableObject
         _downloadSpeedLimit = AppSettings.Settings.Get<int>(UiSettings.DownloadSpeedLimitKey);
 
         RefreshRecords();
+
+        // 「行为」两项与下载页共用同一组键：下载页改了值，这里的勾选状态要跟着走，
+        // 否则两个入口会各显示一半（一边是勾上、一边是没勾），看起来像设置没生效。
+        AppSettings.Settings.Changed += OnSharedBehaviorKeyChanged;
+    }
+
+    /// <summary>别的入口（下载页左栏开关）改了共用键时刷新设置页的勾选状态。</summary>
+    private void OnSharedBehaviorKeyChanged(string key)
+    {
+        if (key == UiSettings.ShowUnsupportedSourcesKey)
+        {
+            OnPropertyChanged(nameof(ShowUnsupportedSources));
+        }
+        else if (key == UiSettings.ConfirmBeforeInstallKey)
+        {
+            OnPropertyChanged(nameof(ConfirmBeforeInstall));
+        }
     }
 
     /// <summary>

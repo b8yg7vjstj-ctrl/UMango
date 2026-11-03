@@ -73,10 +73,35 @@ public partial class DownloadViewModel : ObservableObject
     /// 为什么必须读：<see cref="ShowUnsupported"/> 的持久值由设置页维护
     /// （<c>UiSettings.ShowUnsupportedSourcesKey</c>），下载页每次新建会丢掉它，
     /// 表现为"设置里开了，回到下载页又变回默认值"。
+    ///
+    /// 为什么先 <see cref="AppSettings.Load"/>：下载页可能是**最先构造**的页面
+    /// （MainWindow 的 XAML 里就建好了），此时设置文件还没被任何人读过；
+    /// Load 是幂等的，先摸一次才不会把用户已保存的选择当成默认值。
+    ///
+    /// 为什么订阅 <c>Changed</c>：设置页也提供同一个开关，用户在那边改完之后
+    /// 不重启就要生效 —— 否则下载页会一直停在构造时的旧值上。
     /// </summary>
     public DownloadViewModel()
     {
+        AppSettings.Load();
         _showUnsupported = AppSettings.Settings.Get<bool>(UiSettings.ShowUnsupportedSourcesKey);
+
+        AppSettings.Settings.Changed += OnSharedBehaviorKeyChanged;
+    }
+
+    /// <summary>外部（设置页）改了共用键时同步本页的开关状态。</summary>
+    private void OnSharedBehaviorKeyChanged(string key)
+    {
+        if (key != UiSettings.ShowUnsupportedSourcesKey) return;
+
+        var value = AppSettings.Settings.Get<bool>(UiSettings.ShowUnsupportedSourcesKey);
+        if (value == _showUnsupported) return;
+
+        // 直接改字段而不是走 setter：setter 会再写一次设置服务，
+        // 虽然值相同会被短路，但没必要制造这条无意义的往返。
+        _showUnsupported = value;
+        OnPropertyChanged(nameof(ShowUnsupported));
+        OnPropertyChanged(nameof(VisibleCategories));
     }
 
     /// <summary>

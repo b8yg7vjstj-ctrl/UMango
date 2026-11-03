@@ -87,6 +87,18 @@ public class OtherViewModelTests
     }
 
     [Fact]
+    public void 设置页改动会实时同步到已存在的下载页实例()
+    {
+        AppSettings.Settings.Set(UiSettings.ShowUnsupportedSourcesKey, false);
+        var vm = new DownloadViewModel();
+        Assert.False(vm.ShowUnsupported);
+
+        // 下载页在启动时就构造好了，用户在设置页打开开关后不能要求重启才生效。
+        AppSettings.Settings.Set(UiSettings.ShowUnsupportedSourcesKey, true);
+        Assert.True(vm.ShowUnsupported);
+    }
+
+    [Fact]
     public async Task 安装前二次确认被取消时不会执行安装()
     {
         var vm = new DownloadViewModel();
