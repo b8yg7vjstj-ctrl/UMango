@@ -31,6 +31,7 @@
              xmlns:local="clr-namespace:UMango.App.Views"
              xmlns:core="clr-namespace:UMango.Core.App.Tasks;assembly=UMango.Core"
              xmlns:term="clr-namespace:UMango.Core.Terminal;assembly=UMango.Core"
+             xmlns:controls="clr-namespace:UMango.App.Controls"
              IsVisibleChanged="OnIsVisibleChanged"
              FontFamily="{DynamicResource UiFont}">
   <!--
@@ -184,10 +185,10 @@
         <TextBlock Grid.Column="0" Text="{Binding At, StringFormat={}{0:HH:mm:ss}}"
                    FontFamily="{StaticResource MonoFont}" FontSize="11"
                    Foreground="{DynamicResource BrG4}" VerticalAlignment="Top"/>
-        <TextBlock Grid.Column="1" Text="{Binding Text}" Margin="8,0,0,0"
-                   TextWrapping="Wrap" FontFamily="{StaticResource MonoFont}" FontSize="12">
-          <TextBlock.Style>
-            <Style TargetType="TextBlock">
+        <controls:AnsiTextBlock Grid.Column="1" Ansi="{Binding Text}" Margin="8,0,0,0"
+                                TextWrapping="Wrap" FontFamily="{StaticResource MonoFont}" FontSize="12">
+          <controls:AnsiTextBlock.Style>
+            <Style TargetType="controls:AnsiTextBlock">
               <!-- 普通输出用 BrG2；stderr 用 BrRed 区分，但仍然是**同一个列表里的普通文本**。 -->
               <Setter Property="Foreground" Value="{DynamicResource BrG2}"/>
               <Style.Triggers>
@@ -196,8 +197,8 @@
                 </DataTrigger>
               </Style.Triggers>
             </Style>
-          </TextBlock.Style>
-        </TextBlock>
+          </controls:AnsiTextBlock.Style>
+        </controls:AnsiTextBlock>
       </Grid>
     </DataTemplate>
 
@@ -229,10 +230,10 @@
             </Style>
           </TextBlock.Style>
         </TextBlock>
-        <TextBlock Grid.Column="2" Text="{Binding Text}" Margin="8,0,0,0"
-                   TextWrapping="Wrap" FontFamily="{StaticResource MonoFont}" FontSize="12">
-          <TextBlock.Style>
-            <Style TargetType="TextBlock">
+        <controls:AnsiTextBlock Grid.Column="2" Ansi="{Binding Text}" Margin="8,0,0,0"
+                                TextWrapping="Wrap" FontFamily="{StaticResource MonoFont}" FontSize="12">
+          <controls:AnsiTextBlock.Style>
+            <Style TargetType="controls:AnsiTextBlock">
               <Setter Property="Foreground" Value="{DynamicResource BrG2}"/>
               <Style.Triggers>
                 <DataTrigger Binding="{Binding IsStdErr}" Value="True">
@@ -240,8 +241,8 @@
                 </DataTrigger>
               </Style.Triggers>
             </Style>
-          </TextBlock.Style>
-        </TextBlock>
+          </controls:AnsiTextBlock.Style>
+        </controls:AnsiTextBlock>
       </Grid>
     </DataTemplate>
 
@@ -562,6 +563,11 @@
                 <TextBlock FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
                            Foreground="{DynamicResource BrG4}"
                            Text="{DynamicResource Progress.TerminalHint}"/>
+                <!-- 过滤：只影响显示，导出仍然包含全部行 -->
+                <TextBox x:Name="TerminalFilterBox" Width="160" Height="24" Margin="12,0,0,0"
+                         VerticalContentAlignment="Center" FontSize="11"
+                         ToolTip="{DynamicResource Terminal.Filter}"
+                         TextChanged="TerminalFilterBox_TextChanged"/>
               </StackPanel>
 
               <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -572,6 +578,14 @@
                 <Button Content="{DynamicResource Progress.Clear}" Style="{StaticResource MiniButton}" Margin="8,0,0,0"
                         Command="{Binding ClearTerminalCommand}"
                         ToolTip="{DynamicResource Tip.ClearOutput}"/>
+                <!-- 打开独立终端窗口（WPF 独有；共享层导航不增项，避免影响另一壳） -->
+                <Button Content="{DynamicResource Terminal.Open}" Style="{StaticResource MiniButton}" Margin="8,0,0,0"
+                        Click="OpenTerminal_Click"
+                        ToolTip="{DynamicResource Terminal.InputHint}"/>
+                <!-- 导出当前任务的完整终端输出（不受上面的过滤影响） -->
+                <Button Content="{DynamicResource Terminal.Export}" Style="{StaticResource MiniButton}" Margin="8,0,0,0"
+                        Click="ExportTerminal_Click"
+                        ToolTip="{DynamicResource Progress.TerminalHint}"/>
               </StackPanel>
             </Grid>
 

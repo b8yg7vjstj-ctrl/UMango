@@ -1,0 +1,112 @@
+<Window x:Class="UMango.App.Views.TerminalWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:UMango.App.Controls"
+        Title="{DynamicResource Terminal.Title}"
+        Width="900" Height="560" MinWidth="620" MinHeight="380"
+        Background="{DynamicResource BrBg}"
+        FontFamily="{DynamicResource UiFont}"
+        WindowStartupLocation="CenterOwner"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+  <Grid Margin="12">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- 说明：这是「可观测输出」工具，不是终端模拟器。-->
+    <TextBlock Grid.Row="0" Text="{DynamicResource Terminal.Hint}"
+               FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource BrG3}"/>
+
+    <!-- 命令输入行 -->
+    <Grid Grid.Row="1" Margin="0,10,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <TextBox x:Name="CommandBox" Grid.Column="0" Height="30" VerticalContentAlignment="Center"
+               FontFamily="Consolas, Menlo, monospace" FontSize="13"
+               Text="{Binding Command, UpdateSourceTrigger=PropertyChanged}"
+               ToolTip="{DynamicResource Terminal.InputHint}"
+               KeyDown="CommandBox_KeyDown"/>
+
+      <Button Grid.Column="1" Content="{DynamicResource Terminal.Run}" Margin="8,0,0,0"
+              Style="{DynamicResource PclPrimaryButton}"
+              Command="{Binding RunCommand}"/>
+
+      <Button Grid.Column="2" Content="{DynamicResource Terminal.Stop}" Margin="8,0,0,0"
+              Style="{DynamicResource PclButton}"
+              Command="{Binding StopCommand}"
+              IsEnabled="{Binding IsRunning}"/>
+    </Grid>
+
+    <!-- 过滤 + 清空/导出 -->
+    <Grid Grid.Row="2" Margin="0,8,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <TextBlock Grid.Column="0" Text="{DynamicResource Terminal.Filter}" FontSize="11"
+                 VerticalAlignment="Center" Foreground="{DynamicResource BrG3}"/>
+
+      <TextBox Grid.Column="1" Margin="8,0,0,0" Height="26" VerticalContentAlignment="Center"
+               FontSize="12"
+               Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"/>
+
+      <Button Grid.Column="2" Content="{DynamicResource Terminal.Clear}" Margin="8,0,0,0"
+              Style="{DynamicResource PclButton}" Command="{Binding ClearCommand}"/>
+
+      <Button Grid.Column="3" Content="{DynamicResource Terminal.Export}" Margin="8,0,0,0"
+              Style="{DynamicResource PclButton}" Command="{Binding ExportCommand}"/>
+    </Grid>
+
+    <!-- 输出区：等宽字体 + ANSI 颜色（不是黑底终端，跟随主题） -->
+    <Border Grid.Row="3" Margin="0,10,0,0" Padding="10,8"
+            Background="{DynamicResource BrCard}"
+            BorderBrush="{DynamicResource BrG6}" BorderThickness="1" CornerRadius="4">
+      <ScrollViewer x:Name="OutputScroll" VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Auto">
+        <ItemsControl x:Name="OutputList" ItemsSource="{Binding VisibleLines}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <controls:AnsiTextBlock Ansi="{Binding Text}"
+                                      FontFamily="Consolas, Menlo, monospace"
+                                      FontSize="12" TextWrapping="NoWrap">
+                <controls:AnsiTextBlock.Style>
+                  <Style TargetType="controls:AnsiTextBlock">
+                    <Setter Property="Foreground" Value="{DynamicResource BrG1}"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsError}" Value="True">
+                        <Setter Property="Foreground" Value="{DynamicResource BrError}"/>
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsInfo}" Value="True">
+                        <Setter Property="Foreground" Value="{DynamicResource BrG3}"/>
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding IsCommand}" Value="True">
+                        <Setter Property="Foreground" Value="{DynamicResource BrC3}"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </controls:AnsiTextBlock.Style>
+              </controls:AnsiTextBlock>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+
+    <!-- 状态行 -->
+    <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Margin="0,8,0,0"
+               FontSize="11" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource BrG3}"/>
+  </Grid>
+</Window>

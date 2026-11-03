@@ -257,6 +257,24 @@
     <sys:String x:Key="Download.InstallFailed">Failed to install {0}.</sys:String>
     <sys:String x:Key="Download.Unexpected">Unexpected error; retry. If it keeps happening, check diagnostics on the Tools page.</sys:String>
     <sys:String x:Key="Download.ExportedTo">Exported to desktop: {0}</sys:String>
+
+    <!-- ============ Terminal ============ -->
+    <sys:String x:Key="Terminal.Title">Terminal</sys:String>
+    <sys:String x:Key="Terminal.Hint">Run command-line tools here and watch the output stream in real time. It reuses ProcessRunner's streaming output only; it is not a full terminal emulator (interactive input is not supported).</sys:String>
+    <sys:String x:Key="Terminal.InputHint">Type a command and press Enter, for example: brew --version</sys:String>
+    <sys:String x:Key="Terminal.Run">Run</sys:String>
+    <sys:String x:Key="Terminal.Stop">Stop</sys:String>
+    <sys:String x:Key="Terminal.Clear">Clear</sys:String>
+    <sys:String x:Key="Terminal.Export">Export</sys:String>
+    <sys:String x:Key="Terminal.Empty">No output yet.</sys:String>
+    <sys:String x:Key="Terminal.Running">Running: {0}</sys:String>
+    <sys:String x:Key="Terminal.Done">Finished: {0} ({1:0.0}s, exit code {2})</sys:String>
+    <sys:String x:Key="Terminal.Cancelled">Cancelled: {0}</sys:String>
+    <sys:String x:Key="Terminal.Failed">Failed to run: {0}</sys:String>
+    <sys:String x:Key="Terminal.Exported">Exported: {0}</sys:String>
+    <sys:String x:Key="Terminal.ExportFailed">Export failed: {0}</sys:String>
+    <sys:String x:Key="Terminal.Filter">Filter</sys:String>
+    <sys:String x:Key="Terminal.Open">Open terminal</sys:String>
     <sys:String x:Key="Advice.CliMissing">No CLI tool found for this source. Install it, then click "Refresh sources" here.</sys:String>
     <sys:String x:Key="Advice.CliMissingWithHint">Install that CLI tool first ({0})</sys:String>
     <sys:String x:Key="Advice.UnsupportedFeature">This source does not support search. Try another source, or install by exact package name.</sys:String>

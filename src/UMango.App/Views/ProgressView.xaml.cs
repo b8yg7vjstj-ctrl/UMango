@@ -119,6 +119,71 @@ public partial class ProgressView : UserControl
     /// <summary>是否已经做过一次完整初始化（订阅 + 两侧镜像重建）。</summary>
     private bool _initialized;
 
+    /// <summary>已打开的终端窗口（再次点击时复用，而不是无限开新窗口）。</summary>
+    private Views.TerminalWindow? _terminalWindow;
+
+    /// <summary>终端输出区的过滤视图（只影响显示，不改 _terminalTail 内容）。</summary>
+    private ListCollectionView _terminalView = null!;
+
+    /// <summary>终端输出过滤：按关键字包含匹配（大小写不敏感）。</summary>
+    private void TerminalFilterBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var keyword = (TerminalFilterBox.Text ?? "").Trim();
+
+        _terminalView.Filter = keyword.Length == 0
+            ? null
+            : item => item is TerminalLine line
+                      && line.Text.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+
+        _terminalView.Refresh();
+    }
+
+    /// <summary>
+    /// 导出当前任务的完整终端输出到桌面。
+    ///
+    /// 取的是 TerminalBridge 的完整行（而不是界面上截断后的 _terminalTail）——
+    /// 导出是为了排障，缺行就失去意义。
+    /// </summary>
+    private void ExportTerminal_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var task = _vm.SelectedTask;
+            var lines = task is null
+                ? _vm.TerminalLines.ToList()
+                : UMango.Core.Terminal.TerminalBridge.For(task.Title).Lines.ToList();
+
+            var directory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var path = System.IO.Path.Combine(directory, $"umango-terminal-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+            System.IO.File.WriteAllLines(path, lines.Select(l => l.Text));
+
+            _vm.StatusMessage = UMango.Core.Localization.LocalizationService.Text("Terminal.Exported", path);
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusMessage = UMango.Core.Localization.LocalizationService.Text("Terminal.ExportFailed", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// 打开独立终端窗口。
+    ///
+    /// 为什么不做成工具页的子页：那需要往 Shell 的 LeftMenu 里加一项，
+    /// 而左栏是两个壳共用的 —— 会连带改变 Avalonia 壳的菜单（项目约定只开发 WPF）。
+    /// </summary>
+    private void OpenTerminal_Click(object sender, RoutedEventArgs e)
+    {
+        if (_terminalWindow is { IsLoaded: true })
+        {
+            _terminalWindow.Activate();
+            return;
+        }
+
+        _terminalWindow = new Views.TerminalWindow { Owner = Window.GetWindow(this) };
+        _terminalWindow.Closed += (_, _) => _terminalWindow = null;
+        _terminalWindow.Show();
+    }
+
     public ProgressView()
     {
         InitializeComponent();
@@ -128,8 +193,9 @@ public partial class ProgressView : UserControl
 
         // 终端区的数据源在构造时挂上：集合引用固定，之后只改内容不改引用，
         // 这样清空/切任务/改调试模式都不会重建控件树。
-        // （子项列表不在这里挂：它在 XAML 里直接绑 SelectedTask.Children。）
-        TerminalList.ItemsSource = _terminalTail;
+        // 套一层 ListCollectionView 是为了支持过滤（过滤只影响显示，不影响 _terminalTail 本身）。
+        _terminalView = new ListCollectionView(_terminalTail);
+        TerminalList.ItemsSource = _terminalView;
 
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;

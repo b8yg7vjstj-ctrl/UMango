@@ -263,6 +263,24 @@
     <sys:String x:Key="Download.InstallFailed">安装 {0} 失败。</sys:String>
     <sys:String x:Key="Download.Unexpected">出现未预期的错误，可重试；若持续出现请到「工具」页查看系统诊断。</sys:String>
     <sys:String x:Key="Download.ExportedTo">已导出到桌面：{0}</sys:String>
+
+    <!-- ============ 终端 ============ -->
+    <sys:String x:Key="Terminal.Title">终端</sys:String>
+    <sys:String x:Key="Terminal.Hint">在这里直接执行命令行工具并查看实时输出。它只复用 ProcessRunner 的流式输出，不是完整的终端模拟器（不支持交互式输入）。</sys:String>
+    <sys:String x:Key="Terminal.InputHint">输入命令后按回车执行，例如 brew --version</sys:String>
+    <sys:String x:Key="Terminal.Run">执行</sys:String>
+    <sys:String x:Key="Terminal.Stop">停止</sys:String>
+    <sys:String x:Key="Terminal.Clear">清空</sys:String>
+    <sys:String x:Key="Terminal.Export">导出</sys:String>
+    <sys:String x:Key="Terminal.Empty">暂无输出。</sys:String>
+    <sys:String x:Key="Terminal.Running">正在执行：{0}</sys:String>
+    <sys:String x:Key="Terminal.Done">执行结束：{0}（耗时 {1:0.0} 秒，退出码 {2}）</sys:String>
+    <sys:String x:Key="Terminal.Cancelled">已取消：{0}</sys:String>
+    <sys:String x:Key="Terminal.Failed">执行失败：{0}</sys:String>
+    <sys:String x:Key="Terminal.Exported">已导出：{0}</sys:String>
+    <sys:String x:Key="Terminal.ExportFailed">导出失败：{0}</sys:String>
+    <sys:String x:Key="Terminal.Filter">过滤</sys:String>
+    <sys:String x:Key="Terminal.Open">打开终端</sys:String>
     <sys:String x:Key="Advice.CliMissing">未找到该包源的命令行工具，请先安装它，然后回到本页点「刷新包源」。</sys:String>
     <sys:String x:Key="Advice.CliMissingWithHint">请先安装该命令行工具（{0}）</sys:String>
     <sys:String x:Key="Advice.UnsupportedFeature">该包源不支持搜索，可换一个包源，或直接按包名安装。</sys:String>
